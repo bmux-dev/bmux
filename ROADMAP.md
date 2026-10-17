@@ -110,7 +110,7 @@ The tmux command surface that most plugins and dotfiles depend on.
 - [ ] Hyperlinks (OSC 8).
 - [ ] Synchronized output passthrough (`?2026`).
 - [ ] Opt-in passthrough for graphics protocols (`allow-passthrough`).
-- [ ] Linux exercised in CI and day-to-day use, not only as a build target.
+- [ ] Linux exercised in day-to-day interactive use (CI already runs on Ubuntu).
 
 ## Milestone 9: multiple clients
 
@@ -125,5 +125,5 @@ The tmux command surface that most plugins and dotfiles depend on.
 
 - [ ] Tagged releases with prebuilt macOS/Linux binaries (GoReleaser).
 - [ ] Homebrew tap (`brew install josephferrero/tap/bmux`).
-- [ ] Neovim navigation snippet/plugin documented for `Ctrl-h/j/k/l` edge crossing.
+- [x] [Neovim navigation snippet documented](docs/editor-navigation.md) for `Ctrl-h/j/k/l` edge crossing.
 - [ ] Migration guide: tmux config and plugin → bmux equivalent.

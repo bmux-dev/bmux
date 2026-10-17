@@ -105,3 +105,19 @@ stale readers cannot replace the current preview. A new operation name prevents
 older PTY-resizing servers from mutating state for a native-viewport request.
 Picker titles contain only identity and list position; normal refresh/scope
 metadata is not rendered as chrome.
+
+## User-visible behavior details
+
+- Attached-client snapshots are coalesced to at most 30 updates per second.
+  Each snapshot carries the visible viewport for each displayed pane, not its
+  full scrollback. Preview timing is described above.
+- Large pastes travel as bounded chunks. The server assembles and validates the
+  complete paste before submitting one logical request to the PTY input bridge.
+  Incomplete assemblies never submit partial input.
+- Pane shutdown has a 1.25-second budget. It sends HUP and CONT, closes PTY I/O,
+  then escalates to TERM at about 0.5 seconds and KILL at about 1 second if jobs
+  remain. Session/server shutdown shares a deadline across panes rather than
+  adding a budget per pane.
+- Picker rename and delete requests carry the selected session's creation-time
+  generation. The server rejects an action if that name now identifies another
+  session. Explicit CLI rename/kill commands instead target the current name.
