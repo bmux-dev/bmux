@@ -1,0 +1,5 @@
+/bin/
+/bmux
+*.test
+*.out
+.DS_Store
