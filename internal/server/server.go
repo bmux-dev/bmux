@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -185,6 +186,10 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		if err := s.ReloadSettings(); err != nil {
 			result.Error = err.Error()
 		}
+	case "environment":
+		// Panes start from this environment; bmux restart passes it on, so
+		// a restart from inside a pane never leaks that pane's variables.
+		result.Env = os.Environ()
 	case "pane-command":
 		if item == nil {
 			result.Error = "session not found"

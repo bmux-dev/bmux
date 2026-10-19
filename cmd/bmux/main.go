@@ -270,7 +270,14 @@ func restartServer(socket string) error {
 			return err
 		}
 		cmd := exec.Command(executable, "restart")
+		// A pane's environment holds whatever its programs added, such as an
+		// agent's marker that it spawned this shell, and every new pane would
+		// inherit it. The new server keeps the running server's environment;
+		// only servers that predate the request get this pane's.
 		cmd.Env = append(os.Environ(), "BMUX_SESSION=")
+		if r, err := client.Request(socket, protocol.Request{Op: "environment"}); err == nil && len(r.Env) > 0 {
+			cmd.Env = r.Env
+		}
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 		if err := cmd.Start(); err != nil {
 			return err

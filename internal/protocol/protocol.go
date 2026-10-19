@@ -185,4 +185,7 @@ type Response struct {
 	// including a refused send; Text is capture-pane's visible screen.
 	Pane *PaneActivity `json:"pane,omitempty"`
 	Text string        `json:"text,omitempty"`
+	// Env is the server's own environment (environment), which a restart
+	// started from inside a pane gives the new server.
+	Env []string `json:"env,omitempty"`
 }
