@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"io"
@@ -53,6 +54,8 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		modes: make(map[int]bool), done: make(chan struct{}), stopDone: make(chan struct{}), revision: 1, epoch: 1,
 	}
 	s.term.SetScrollbackSize(10000)
+	// Make DECRQM report synchronized updates as supported (reset), not unknown.
+	_, _ = s.term.WriteString(syncEnd)
 	s.term.SetCallbacks(vt.Callbacks{
 		Title:            func(t string) { s.title = t },
 		CursorVisibility: func(v bool) { s.visible = v },
@@ -135,21 +138,35 @@ func dimensions(w, h int) (int, int) {
 func (s *pane) readOutput() {
 	defer s.closeIO()
 	buf := make([]byte, 32768)
+	var sync syncOutput
 	for {
+		_ = s.pty.SetReadDeadline(sync.deadline())
 		n, err := s.pty.Read(buf)
 		if n > 0 {
-			s.mu.Lock()
-			s.trackHistory(func() { _, _ = s.term.Write(buf[:n]) })
-			// Fence the fast drain before another state-serialized operation
-			// can classify its input as user data.
-			_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
-			s.revision++
-			s.mu.Unlock()
+			s.apply(sync.feed(buf[:n], time.Now()))
+		}
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			s.apply(sync.flush())
+			continue
 		}
 		if err != nil {
+			s.apply(sync.flush())
 			return
 		}
 	}
+}
+
+func (s *pane) apply(output []byte) {
+	if len(output) == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.trackHistory(func() { _, _ = s.term.Write(output) })
+	// Fence the fast drain before another state-serialized operation
+	// can classify its input as user data.
+	_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
+	s.revision++
 }
 
 func (s *pane) closeIO() {
