@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"golang.org/x/term"
 )
@@ -109,6 +110,13 @@ func waitEditorForeground(t *testing.T, p *pane, want bool) {
 
 func startTestEditor(t *testing.T, s *session, id int) *pane {
 	t.Helper()
+	return startNavigationHelper(t, s, id, "nvim")
+}
+
+// startNavigationHelper runs a copy of the test binary named program in the
+// pane, printing each byte it reads, and waits until it gets navigation keys.
+func startNavigationHelper(t *testing.T, s *session, id int, program string) *pane {
+	t.Helper()
 	executable, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +126,7 @@ func startTestEditor(t *testing.T, s *session, id int) *pane {
 		t.Fatal(err)
 	}
 	defer source.Close()
-	path := filepath.Join(t.TempDir(), "nvim")
+	path := filepath.Join(t.TempDir(), program)
 	destination, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +177,30 @@ func TestEditorNavigationForwardsAllFourKeysAndResumesAfterExit(t *testing.T) {
 	}
 	if focusedPaneID(s) != 2 {
 		t.Fatal("shell pane navigation did not resume after editor exit")
+	}
+}
+
+func TestPassThroughProgramsGetNavigationKeys(t *testing.T) {
+	s := editorNavigationSession(t)
+	useConfig(t, New("/bin/sh"), "[keys]\npass-through = [\"fzf\"]\n")
+	p := startNavigationHelper(t, s, 1, "fzf")
+	if err := s.input(protocol.Request{Op: "select-pane", PaneID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.input(protocol.Request{Op: "navigate-pane", Direction: "right"}); err != nil {
+		t.Fatal(err)
+	}
+	awaitFrame(t, p, func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "CTRL_0c") })
+	if focusedPaneID(s) != 1 {
+		t.Fatal("a pass-through program's navigation key moved bmux focus")
+	}
+	// Off the list, the same program no longer gets them.
+	activeSettings.Store(settingsFrom(config.Default()))
+	if err := s.input(protocol.Request{Op: "navigate-pane", Direction: "right"}); err != nil {
+		t.Fatal(err)
+	}
+	if focusedPaneID(s) != 2 {
+		t.Fatal("navigation went to a program that isn't on the pass-through list")
 	}
 }
 

@@ -11,8 +11,18 @@
 | Ctrl-k | Up |
 | Ctrl-l | Right |
 
-Outside Vim/Neovim, bmux takes these keys to navigate panes. They do not reach
-other programs, including fzf and your shell. **Ctrl-l will not clear the shell.**
+Outside Vim/Neovim, bmux takes these keys to navigate panes. By default they
+do not reach other programs, including fzf and your shell, so **Ctrl-l will
+not clear the shell.** List programs that should get them too in the config
+file, and unbind a key to give it back everywhere:
+
+```toml
+[keys]
+pass-through = ["fzf", "lazygit"]
+
+[keys.root]
+"C-l" = "none"
+```
 
 When Vim or Neovim is the foreground application, bmux forwards the keys to the
 editor. Editor split navigation needs mappings. To cross from an editor edge

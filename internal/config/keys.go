@@ -12,10 +12,13 @@ import (
 // Keys rebinds keys, written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x,
 // "S-pageup" Shift-PageUp, "|" a plain character. Root keys work without the
 // prefix; prefix keys follow it. "none" unbinds a key, so it reaches the
-// application (root) or does nothing (prefix).
+// application (root) or does nothing (prefix). PassThrough names programs
+// that, like Vim and Neovim, receive Ctrl-h/j/k/l when navigate keys are
+// pressed with them in front; the server reads it.
 type Keys struct {
-	Root   map[string]string `toml:"root"`
-	Prefix map[string]string `toml:"prefix"`
+	PassThrough []string          `toml:"pass-through"`
+	Root        map[string]string `toml:"root"`
+	Prefix      map[string]string `toml:"prefix"`
 }
 
 // Unbound removes a key's binding.
@@ -180,6 +183,15 @@ func (c Config) Bindings() (root, prefix map[string]string) {
 
 // repairKeys canonicalizes key names and drops bindings that can't work.
 func (c *Config) repairKeys(bad func(string, ...any)) {
+	passThrough := c.Keys.PassThrough[:0]
+	for _, name := range c.Keys.PassThrough {
+		if name == "" || strings.ContainsRune(name, '/') {
+			bad("keys.pass-through %q must be a program name, not a path", name)
+			continue
+		}
+		passThrough = append(passThrough, name)
+	}
+	c.Keys.PassThrough = passThrough
 	prefixKey := ""
 	if letter, err := PrefixKey(c.Prefix); err == nil {
 		prefixKey = "C-" + string(letter)

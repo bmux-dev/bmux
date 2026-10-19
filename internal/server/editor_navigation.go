@@ -16,8 +16,10 @@ func isEditorCommand(command string) bool {
 	return false
 }
 
-func editorMatch(command string) string {
-	if isEditorCommand(command) {
+// navigationMatch picks out programs that get navigation keys themselves:
+// Vim and Neovim, and the config file's keys.pass-through programs.
+func navigationMatch(command string) string {
+	if isEditorCommand(command) || currentSettings().passThrough[filepath.Base(command)] {
 		return "editor"
 	}
 	return ""
@@ -50,7 +52,7 @@ func (p *pane) foregroundEditor() (bool, error) {
 	if group <= 0 {
 		return false, fmt.Errorf("PTY has no foreground process group")
 	}
-	name, err := foregroundGroupCommand(group, editorMatch)
+	name, err := foregroundGroupCommand(group, navigationMatch)
 	return name != "", err
 }
 

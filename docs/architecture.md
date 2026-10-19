@@ -85,7 +85,8 @@ before key interpretation. There is no second key-reconstruction paste path.
 `handleRawPaste` handles session/prompt/filter intent and visible rejection.
 
 Keys bound to `navigate-*` (bare Ctrl-h/j/k/l by default) use `navigate-pane`,
-preserving the existing sequence/ack fence.
+preserving the existing sequence/ack fence. "Editor" below means Vim/Neovim or
+a program named in `keys.pass-through` (`navigationMatch`).
 The server samples the focused pane under `session.mu`, releases it to query the
 PTY foreground group and editor executable, then reacquires it to validate the
 same focus/pane before routing. OS inspection never runs per frame or under state

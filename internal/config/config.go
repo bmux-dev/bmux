@@ -336,6 +336,9 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
 # reload-config, send-prefix.
 
+[keys]
+# pass-through = []         # programs that get Ctrl-h/j/k/l like Vim, e.g. ["fzf"]
+
 [keys.root]                 # without the prefix; unbound keys reach the app
 # "C-h" = "navigate-left"   # "none" gives Ctrl-h to the app
 # "C-j" = "navigate-down"

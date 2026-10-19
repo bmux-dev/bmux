@@ -52,11 +52,11 @@ The config file (`~/.config/bmux/config.toml`) shipped with the prefix
 setting, reload (`Ctrl-a r`, `bmux reload`), `bmux default-config`, the
 sidebar, agent detection, alert, restore and state-color settings, and
 rebinding root and prefix keys (`[keys.root]`, `[keys.prefix]`, `"none"`
-unbinds, so Ctrl-l can clear the shell). Still to do:
+unbinds, so Ctrl-l can clear the shell), and `keys.pass-through`, which
+forwards Ctrl-h/j/k/l to listed programs like fzf. Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Pass-through list for Ctrl-h/j/k/l | S | Forward to fzf and other listed programs, like vim-tmux-navigator's `is_vim`. |
 | Key help overlay (`Ctrl-a ?`) | S | Lists current bindings. |
 
 ### First run and agent integrations
@@ -186,7 +186,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
-| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
+| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md), `keys.pass-through` for other programs (its `is_vim` pattern) |
 | tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client |
 | tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
