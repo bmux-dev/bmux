@@ -20,7 +20,7 @@ mouse, and keep your layout across restarts, without a plugin manager.
 | herdr-style agent overview | Sidebar of sessions and every coding agent, with working/waiting/blocked state and a sound when one needs you |
 | tmux-resurrect + continuum | Automatic save and restore of sessions, splits, directories and agent conversations |
 | tmux-yank-style copying | Drag to select, release to copy to your clipboard |
-| vim-tmux-navigator-style navigation | Vim/Neovim-aware Ctrl-h/j/k/l, with edge-crossing via a [small editor mapping](docs/editor-navigation.md) |
+| vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
 | Powerline themes | Built-in status bars, accent colors, and a light theme |
 
 The picker starts as a list: browse first, press **/** to search. See what's
