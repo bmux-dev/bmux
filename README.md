@@ -8,7 +8,7 @@ bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, copy text with the mouse, and navigate split panes without a
 plugin manager.
 
-**v0.1.0 pre-release for macOS and Linux.** Sessions survive detach and client
+**v0.1.1 pre-release for macOS and Linux.** Sessions survive detach and client
 exit, not server exit or reboot.
 
 <!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
