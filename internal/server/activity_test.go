@@ -80,7 +80,7 @@ func TestAgentReportsDriveStateAndAttention(t *testing.T) {
 
 	report := func(pane int, state, label string) {
 		t.Helper()
-		if err := s.reportAgent(pane, state, label); err != nil {
+		if err := s.reportAgent(pane, state, label, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -123,11 +123,16 @@ func TestAgentReportsDriveStateAndAttention(t *testing.T) {
 		t.Fatal("idle without a finished turn asked for attention")
 	}
 	for _, bad := range []struct{ state, label string }{{"done", ""}, {"", ""}, {protocol.AgentIdle, "bad\x1bname"}, {protocol.AgentIdle, string(make([]byte, 41))}} {
-		if err := s.reportAgent(1, bad.state, bad.label); err == nil {
+		if err := s.reportAgent(1, bad.state, bad.label, nil); err == nil {
 			t.Fatalf("accepted state %q label %q", bad.state, bad.label)
 		}
 	}
-	if err := s.reportAgent(99, protocol.AgentIdle, ""); err == nil {
+	for _, bad := range [][]string{{"/usr/bin/claude"}, {""}, {"claude", "a\nb"}, make([]string, 65)} {
+		if err := s.reportAgent(1, protocol.AgentIdle, "", bad); err == nil {
+			t.Fatalf("accepted resume command %q", bad)
+		}
+	}
+	if err := s.reportAgent(99, protocol.AgentIdle, "", nil); err == nil {
 		t.Fatal("report for a missing pane was accepted")
 	}
 }
@@ -323,7 +328,7 @@ func TestAgentOutputTimingSeparatesWorkingFromWaiting(t *testing.T) {
 	p.lastInput = time.Time{}
 
 	// Reports take precedence over output timing.
-	if err := p.reportAgent(protocol.AgentWorking, "reviewer"); err != nil {
+	if err := p.reportAgent(protocol.AgentWorking, "reviewer", nil); err != nil {
 		t.Fatal(err)
 	}
 	sample(true)
@@ -351,11 +356,13 @@ func TestSampledForegroundAgentAppearsAndLeaves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	agentDir := realDir(t, t.TempDir())
 	agent := filepath.Join(t.TempDir(), "opencode")
 	if err := os.WriteFile(agent, binary, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	command := "BMUX_TEST_EDITOR_HELPER=1 " + strconv.Quote(agent) + " -test.run '^TestEditorNavigationHelper$'\n"
+	// The agent runs in its own directory; the pane's shell stays where it is.
+	command := "(cd " + strconv.Quote(agentDir) + " && BMUX_TEST_EDITOR_HELPER=1 exec " + strconv.Quote(agent) + " -test.run '^TestEditorNavigationHelper$')\n"
 	if err := s.input(protocol.Request{Op: "paste", PaneID: 1, Text: command}); err != nil {
 		t.Fatal(err)
 	}
@@ -377,6 +384,11 @@ func TestSampledForegroundAgentAppearsAndLeaves(t *testing.T) {
 	await("agent detected", func(a protocol.PaneActivity, ok bool) bool { return ok && a.Agent == "opencode" })
 	if _, ok := activity(t, s)[2]; ok {
 		t.Fatal("detection leaked into another pane")
+	}
+	// A restart reopens the agent where it ran, not where the shell is.
+	snap, _ := s.persistentState()
+	if got := snap.Panes[0]; got.Dir != agentDir || got.Agent != "opencode" || !reflect.DeepEqual(got.Resume, []string{"opencode", "--continue"}) {
+		t.Fatalf("saved agent pane: %+v, want dir %s", got, agentDir)
 	}
 	if err := s.input(protocol.Request{Op: "key", PaneID: 1, Code: 'q'}); err != nil {
 		t.Fatal(err)

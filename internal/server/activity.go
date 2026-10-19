@@ -80,7 +80,7 @@ func (s *pane) observeAgentLocked(detected string) {
 	if detected != s.detected {
 		// The recognized agent left the foreground: its reports are stale.
 		if detected == "" && s.detected != "" {
-			s.agent, s.agentState = "", ""
+			s.agent, s.agentState, s.resume = "", "", nil
 		}
 		s.detected = detected
 		s.busy = false
@@ -184,19 +184,55 @@ func validateAgentLabel(label string) error {
 	return nil
 }
 
+// Resume commands follow herdr's rules: a plain command name on PATH first,
+// no control characters, at most 64 arguments and 8 KiB.
+const (
+	maxResumeArgs  = 64
+	maxResumeBytes = 8 << 10
+)
+
+func validateResume(argv []string) error {
+	if len(argv) == 0 {
+		return nil
+	}
+	if len(argv) > maxResumeArgs {
+		return fmt.Errorf("resume command must have at most %d arguments", maxResumeArgs)
+	}
+	if argv[0] == "" || strings.ContainsRune(argv[0], '/') {
+		return fmt.Errorf("resume command must start with a command name on PATH, not a path")
+	}
+	total := 0
+	for _, arg := range argv {
+		total += len(arg) + 1
+		for _, r := range arg {
+			if unicode.IsControl(r) {
+				return fmt.Errorf("resume command must not contain control characters")
+			}
+		}
+	}
+	if total > maxResumeBytes {
+		return fmt.Errorf("resume command must be at most %d bytes", maxResumeBytes)
+	}
+	return nil
+}
+
 // reportAgent applies a state report from the process running in this pane.
 // A turn that finishes (working -> idle) or blocks while nobody is viewing the
 // pane needs attention; starting new work means it no longer waits on anyone.
-func (s *pane) reportAgent(state, label string) error {
+// A resume command, when given, replaces the one saved for restarts.
+func (s *pane) reportAgent(state, label string, resume []string) error {
 	label = strings.TrimSpace(label)
 	if err := validateAgentLabel(label); err != nil {
+		return err
+	}
+	if err := validateResume(resume); err != nil {
 		return err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch state {
 	case "clear":
-		s.agent, s.agentState, s.attention = "", "", false
+		s.agent, s.agentState, s.attention, s.resume = "", "", false, nil
 		return nil
 	case protocol.AgentWorking, protocol.AgentBlocked, protocol.AgentIdle:
 	default:
@@ -206,6 +242,9 @@ func (s *pane) reportAgent(state, label string) error {
 		s.agent = label
 	} else if s.agent == "" {
 		s.agent = "agent"
+	}
+	if len(resume) > 0 {
+		s.resume = append([]string(nil), resume...)
 	}
 	finished := s.agentState == protocol.AgentWorking && state == protocol.AgentIdle
 	s.agentState = state
@@ -259,7 +298,7 @@ func (s *session) setViewing(viewing bool) {
 	s.updateViewedLocked()
 }
 
-func (s *session) reportAgent(paneID int, state, label string) error {
+func (s *session) reportAgent(paneID int, state, label string, resume []string) error {
 	s.mu.Lock()
 	if s.stopped || s.stopping.Load() {
 		s.mu.Unlock()
@@ -270,7 +309,7 @@ func (s *session) reportAgent(paneID int, state, label string) error {
 	if p == nil {
 		return fmt.Errorf("pane not found")
 	}
-	return p.reportAgent(state, label)
+	return p.reportAgent(state, label, resume)
 }
 
 // Caller holds session.mu. Panes are listed in layout order.

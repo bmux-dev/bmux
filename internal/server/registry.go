@@ -83,21 +83,8 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 			result.Error = "server is shutting down"
 			return result
 		}
-		s.sessions[r.Name] = created
-		s.wg.Add(1)
+		s.adoptLocked(r.Name, created)
 		s.mu.Unlock()
-		go func() {
-			defer s.wg.Done()
-			<-created.done
-			s.mu.Lock()
-			defer s.mu.Unlock()
-			for name, current := range s.sessions {
-				if current == created {
-					delete(s.sessions, name)
-					break
-				}
-			}
-		}()
 	case "rename":
 		if err := validateName(r.NewName); err != nil {
 			result.Error = err.Error()
@@ -132,4 +119,23 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 		result.Error = fmt.Sprintf("unknown mutation %q", r.Op)
 	}
 	return result
+}
+
+// adoptLocked registers a session and removes it once its last pane is gone.
+// Caller holds Server.mu.
+func (s *Server) adoptLocked(name string, created *session) {
+	s.sessions[name] = created
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		<-created.done
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		for name, current := range s.sessions {
+			if current == created {
+				delete(s.sessions, name)
+				break
+			}
+		}
+	}()
 }

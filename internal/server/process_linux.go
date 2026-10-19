@@ -28,6 +28,10 @@ func inspectProcess(pid int) (processIdentity, error) {
 	return processIdentity{pid: pid, sid: sid, birth: f[19], zombie: f[0] == "Z"}, err
 }
 
+func processCwd(pid int) (string, error) {
+	return os.Readlink("/proc/" + strconv.Itoa(pid) + "/cwd")
+}
+
 // foregroundGroupCommand mirrors the Darwin contract: comm, the executable
 // path, and for script interpreters only argv[1] are candidates.
 func foregroundGroupCommand(group int, match func(string) string) (string, error) {

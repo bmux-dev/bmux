@@ -78,6 +78,7 @@ type ui struct {
 	edgeKnown                       bool
 	alertsKnown                     bool
 	sound                           func(blocked bool)
+	reconnects                      chan string
 }
 
 func Run(socket, name, cwd string) error {
@@ -92,7 +93,7 @@ func Run(socket, name, cwd string) error {
 	screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
 	screen.EnablePaste()
 	screen.EnableFocus()
-	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), done: make(chan struct{})}
+	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), reconnects: make(chan string, 1), done: make(chan struct{})}
 	u.clipboard = newClipboardWorker()
 	u.sound = u.playAlert
 	defer u.clipboard.Close()
@@ -148,10 +149,12 @@ func Run(socket, name, cwd string) error {
 				continue
 			}
 			if next.err != nil {
+				name := u.name
 				_ = u.conn.Close()
 				u.conn = nil
-				u.notice("Disconnected: " + next.err.Error())
 				u.openPicker()
+				u.notice("Disconnected: " + next.err.Error())
+				u.reconnect(name)
 				continue
 			}
 			if next.response.Error != "" {
@@ -180,6 +183,15 @@ func Run(socket, name, cwd string) error {
 			u.finishClipboard(result)
 		case result := <-u.sidebarResults:
 			u.finishSidebarRefresh(result)
+		case name := <-u.reconnects:
+			// Only if nothing else was chosen while the server was away.
+			if u.conn == nil && u.picker && u.prompt == "" {
+				if err := u.switchTo(name); err != nil {
+					u.notice(err.Error())
+				} else {
+					u.notice("Reconnected to " + name)
+				}
+			}
 		case <-previewTicker.C:
 			if u.picker && u.prompt == "" {
 				u.requestPreview()
@@ -222,6 +234,39 @@ func (u *ui) endSession(name string) {
 	u.openPicker()
 	u.notice("Session " + name + " closed")
 }
+
+// reconnect waits for a restarted server (`bmux restart`) and reattaches to
+// the session this client was showing, if it was restored. Restored sessions
+// are listed as soon as the new server answers, so a missing one ends the wait.
+func (u *ui) reconnect(name string) {
+	if name == "" || u.reconnects == nil {
+		return
+	}
+	socket, out, done := u.socket, u.reconnects, u.done
+	u.notice("Server stopped; reconnecting to " + name + "…")
+	go func() {
+		deadline := time.Now().Add(reconnectTimeout)
+		for time.Now().Before(deadline) {
+			time.Sleep(250 * time.Millisecond)
+			r, err := Request(socket, protocol.Request{Op: "list"})
+			if err != nil {
+				continue
+			}
+			for _, s := range r.Sessions {
+				if s.Name == name {
+					select {
+					case out <- name:
+					case <-done:
+					}
+					return
+				}
+			}
+			return
+		}
+	}()
+}
+
+const reconnectTimeout = 20 * time.Second
 
 func (u *ui) notice(text string) { u.message, u.messageUntil = text, time.Now().Add(5*time.Second) }
 
