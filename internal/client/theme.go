@@ -15,8 +15,8 @@ type chromeTheme struct {
 	working, blocked, done, idle, unknown                                tcell.Color
 }
 
-func themeFor(settings config.Theme) chromeTheme {
-	light := settings.Name == "light"
+func themeFor(name string, settings config.UI) chromeTheme {
+	light := name == "light"
 	t := chromeTheme{tcell.NewHexColor(0xe7e7e7), tcell.NewHexColor(0x0b0b0b), tcell.NewHexColor(0x929292), tcell.NewHexColor(0x202020), tcell.NewHexColor(0x83c8dc), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xeeeeee),
 		tcell.NewHexColor(0xf9e2af), tcell.NewHexColor(0xf38ba8), tcell.NewHexColor(0x94e2d5), tcell.NewHexColor(0xa6e3a1), tcell.NewHexColor(0x6c7086)}
 	if light {
@@ -37,7 +37,7 @@ func themeFor(settings config.Theme) chromeTheme {
 	for _, o := range []struct {
 		value  string
 		target *tcell.Color
-	}{{settings.Agents.Working, &t.working}, {settings.Agents.Waiting, &t.done}, {settings.Agents.Blocked, &t.blocked}, {settings.Agents.Idle, &t.idle}} {
+	}{{settings.AgentColors.Working, &t.working}, {settings.AgentColors.Waiting, &t.done}, {settings.AgentColors.Blocked, &t.blocked}, {settings.AgentColors.Idle, &t.idle}} {
 		if c := tcell.GetColor(o.value); o.value != "" && c.Valid() {
 			*o.target = c
 		}
@@ -59,7 +59,7 @@ var (
 	sidebarWorkingStyle, sidebarIdleStyle    tcell.Style
 )
 
-func init() { applyTheme(themeFor(config.Default().Theme)) }
+func init() { d := config.Default(); applyTheme(themeFor(d.Theme, d.UI)) }
 
 func applyTheme(t chromeTheme) {
 	chrome = t

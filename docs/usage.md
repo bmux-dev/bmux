@@ -383,34 +383,47 @@ wait and retry. In the picker, paste only into a name, directory, or `/` filter.
 ## Configuration file
 
 bmux reads `~/.config/bmux/config.toml` (or `$XDG_CONFIG_HOME/bmux/config.toml`,
-or the path in `BMUX_CONFIG`). The file is optional and every setting in it is
-optional. `bmux default-config` prints all of them, commented out, with their
-defaults:
+or the path in `BMUX_CONFIG`). It's TOML laid out like Helix's `config.toml`: a
+theme and the prefix at the top, then one table per area with kebab-case keys.
+The file and every line in it are optional; write only what you change.
+`bmux default-config` prints every setting, commented out, with its default:
+
+```toml
+theme = "dark"
+prefix = "C-a"
+
+[ui]
+accent = "cyan"
+
+[sidebar]
+width = 24
+```
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `prefix` | `"ctrl-a"` | The command key: `ctrl-a` to `ctrl-z`, except `ctrl-h/j/k/l` (navigation) and `ctrl-i`/`ctrl-m` (Tab and Enter). Status-line help follows it. |
-| `theme.name` | `"dark"` | `"dark"` or `"light"` |
-| `theme.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
-| `theme.powerline_ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
-| `theme.terminal_padding` | `false` | Keep physical-terminal padding; read when a client starts |
-| `theme.agents.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
+| `theme` | `"dark"` | `"dark"` or `"light"` |
+| `prefix` | `"C-a"` | The command key, written like Helix keys: `C-a` to `C-z`, except `C-h/j/k/l` (navigation) and `C-i`/`C-m` (Tab and Enter). `ctrl-a` also works. Status-line help follows it. |
+| `ui.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
+| `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
+| `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
+| `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
 | `sidebar.width` | `24` | Columns including its border, 12 to 60 |
-| `sidebar.min_screen_width` | `80` | Hide the sidebar on narrower terminals |
+| `sidebar.min-screen-width` | `80` | Hide the sidebar on narrower terminals |
 | `sound.enabled` | `true` | Alert sounds for background agents |
 | `sound.ready` / `sound.blocked` | system sounds | Sound files (absolute or `~/` paths), played with `afplay` on macOS or `paplay`/`aplay` on Linux |
 | `agents.detect` | `true` | Recognize agents in panes; reported agents still show when off |
 | `agents.extra` | `[]` | More program names to recognize as agents |
-| `agents.working_after` / `agents.waiting_after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
+| `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
 
 **Ctrl-a r** reloads the file in your client and the server; `bmux reload` does
-the same from a shell, and every attached client follows. If a setting is
-invalid, the status line (or `bmux reload`) says which, and that setting keeps
-its default, so a typo never leaves you without keys. Unknown settings are
-reported too.
+the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
+(`pkill -USR1 -f 'bmux --serve'`). Every attached client follows. If a setting
+is invalid, the status line (or `bmux reload`) says which, and that setting
+keeps its default, so a typo never leaves you without keys. Unknown settings
+are reported too.
 
 ## Environment variables
 
@@ -420,7 +433,7 @@ export them in your shell startup file.
 | Variable | Values and default |
 | --- | --- |
 | `BMUX_CONFIG` | Path of the config file |
-| `BMUX_ACCENT` | Overrides `theme.accent` |
+| `BMUX_ACCENT` | Overrides `ui.accent` |
 | `BMUX_THEME` | `light` selects a light palette; any other value uses dark |
 | `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators |
 | `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding |

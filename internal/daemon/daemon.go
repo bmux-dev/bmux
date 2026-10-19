@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -218,11 +219,23 @@ func Serve(socket string, stop <-chan os.Signal) error {
 		fmt.Fprintln(os.Stderr, "bmux: sessions will not be saved:", err)
 	}
 	done := make(chan struct{})
+	// Like Helix, SIGUSR1 rereads the config file (pkill -USR1 -f 'bmux --serve').
+	reload := make(chan os.Signal, 1)
+	signal.Notify(reload, syscall.SIGUSR1)
+	defer signal.Stop(reload)
 	go func() {
-		select {
-		case <-stop:
-			s.Close()
-		case <-done:
+		for {
+			select {
+			case <-stop:
+				s.Close()
+				return
+			case <-reload:
+				if err := s.ReloadSettings(); err != nil {
+					fmt.Fprintln(os.Stderr, "bmux: config:", err)
+				}
+			case <-done:
+				return
+			}
 		}
 	}()
 	err = s.Serve(l)

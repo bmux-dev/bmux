@@ -73,9 +73,9 @@ func (s *Server) LoadSettings(path string) error {
 	return err
 }
 
-// reloadSettings rereads the config file and tells attached clients to
+// ReloadSettings rereads the config file and tells attached clients to
 // reload theirs, by bumping the revision their frames carry.
-func (s *Server) reloadSettings() error {
+func (s *Server) ReloadSettings() error {
 	s.persistMu.Lock()
 	path := s.configPath
 	s.persistMu.Unlock()

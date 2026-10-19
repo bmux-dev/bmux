@@ -30,7 +30,7 @@ func TestMissingFileGivesDefaults(t *testing.T) {
 
 // The documented file must match the real defaults once uncommented.
 func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
-	setting := regexp.MustCompile(`(?m)^# ([a-z_]+ = .*)$`)
+	setting := regexp.MustCompile(`(?m)^# ([a-z-]+ = .*)$`)
 	uncommented := setting.ReplaceAllString(DefaultFile, "$1")
 	if uncommented == DefaultFile {
 		t.Fatal("no settings found")
@@ -45,24 +45,31 @@ func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
 }
 
 func TestSettingsAndEnvironmentOverrides(t *testing.T) {
-	path := write(t, `prefix = "Ctrl-B"
-[theme]
-name = "light"
+	path := write(t, `theme = "light"
+prefix = "C-b"
+
+[ui]
 accent = "#AABBCC"
-[theme.agents]
+
+[ui.agent-colors]
 waiting = "#00ff00"
+
 [sidebar]
 show = false
 width = 30
-min_screen_width = 100
+min-screen-width = 100
+
 [sound]
 ready = "~/sounds/done.aiff"
+
 [agents]
 extra = ["myagent"]
-working_after = "3s"
-waiting_after = "1500ms"
+working-after = "3s"
+waiting-after = "1500ms"
+
 [restore]
 enabled = false
+
 [restore.resume]
 claude = ["claude", "--continue", "--model", "opus"]
 codex = []
@@ -72,7 +79,7 @@ codex = []
 		t.Fatal(err)
 	}
 	home, _ := os.UserHomeDir()
-	if cfg.Prefix != "Ctrl-B" || cfg.Theme.Name != "light" || cfg.Theme.Accent != "#aabbcc" || cfg.Theme.Agents.Waiting != "#00ff00" ||
+	if cfg.Prefix != "C-b" || cfg.Theme != "light" || cfg.UI.Accent != "#aabbcc" || cfg.UI.AgentColors.Waiting != "#00ff00" ||
 		cfg.Sidebar != (Sidebar{Show: false, Width: 30, MinScreenWidth: 100}) || cfg.Sound.Ready != filepath.Join(home, "sounds/done.aiff") ||
 		!reflect.DeepEqual(cfg.Agents.Extra, []string{"myagent"}) || cfg.Agents.WorkingAfter.Duration != 3*time.Second ||
 		cfg.Agents.WaitingAfter.Duration != 1500*time.Millisecond || cfg.Restore.Enabled ||
@@ -84,16 +91,16 @@ codex = []
 	}
 	env := map[string]string{"BMUX_THEME": "dark", "BMUX_ACCENT": "green", "BMUX_SOUND": "0", "BMUX_POWERLINE_ASCII": "1"}
 	cfg, err = Load(path, func(k string) string { return env[k] })
-	if err != nil || cfg.Theme.Name != "dark" || cfg.Theme.Accent != "green" || cfg.Sound.Enabled || !cfg.Theme.PowerlineASCII {
+	if err != nil || cfg.Theme != "dark" || cfg.UI.Accent != "green" || cfg.Sound.Enabled || !cfg.UI.PowerlineASCII {
 		t.Fatalf("environment overrides: %+v %v", cfg, err)
 	}
 }
 
 func TestInvalidSettingsKeepDefaultsAndAreAllReported(t *testing.T) {
-	cfg, err := Load(write(t, `prefix = "ctrl-h"
+	cfg, err := Load(write(t, `prefix = "C-h"
 colour = "red"
-[theme]
-name = "neon"
+theme = "neon"
+[ui]
 accent = "pink"
 [sidebar]
 width = 5
@@ -102,19 +109,20 @@ ready = "relative.aiff"
 [agents]
 extra = ["", "/usr/bin/agent", "ok"]
 waiting_after = "10ms"
+waiting-after = "10ms"
 [restore.resume]
 claude = ["/usr/local/bin/claude"]
 `), noEnv)
 	if err == nil {
 		t.Fatal("invalid settings accepted silently")
 	}
-	for _, want := range []string{"prefix", `unknown setting "colour"`, "theme.name", "theme.accent", "sidebar.width", "sound file", "agents.extra", "agents.waiting_after", "restore.resume.claude"} {
+	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error doesn't mention %s: %v", want, err)
 		}
 	}
 	d := Default()
-	if cfg.Prefix != d.Prefix || cfg.Theme.Name != d.Theme.Name || cfg.Theme.Accent != d.Theme.Accent || cfg.Sidebar.Width != d.Sidebar.Width ||
+	if cfg.Prefix != d.Prefix || cfg.Theme != d.Theme || cfg.UI.Accent != d.UI.Accent || cfg.Sidebar.Width != d.Sidebar.Width ||
 		cfg.Sound.Ready != "" || !reflect.DeepEqual(cfg.Agents.Extra, []string{"ok"}) || cfg.Agents.WaitingAfter != d.Agents.WaitingAfter ||
 		cfg.Restore.Resume["claude"] != nil {
 		t.Fatalf("invalid settings not reset: %+v", cfg)

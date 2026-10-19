@@ -27,7 +27,7 @@ const (
 )
 
 // Consecutive samples with and without output before the state changes come
-// from agents.working_after and agents.waiting_after (2 seconds each by
+// from agents.working-after and agents.waiting-after (2 seconds each by
 // default), so one stray redraw never looks like a finished turn.
 
 // Executable or script names of coding agents, mapped to their labels.

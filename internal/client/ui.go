@@ -94,7 +94,7 @@ func Run(socket, name, cwd string) error {
 	if pathErr != nil {
 		configErr = pathErr
 	}
-	screen, err := newNavigationScreen(settings.Theme.TerminalPadding)
+	screen, err := newNavigationScreen(settings.UI.TerminalPadding)
 	if err != nil {
 		return err
 	}
