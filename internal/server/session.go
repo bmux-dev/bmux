@@ -9,10 +9,14 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
+// Session IDs never change or get reused while the server runs, unlike names.
+var sessionIDs atomic.Uint64
+
 type session struct {
 	// mu owns layout, metadata and pane lookup. State order is session -> pane;
 	// neither lock is held by the PTY writer or acquired under Server.mu.
 	mu              sync.Mutex
+	id              uint64 // immutable
 	info            protocol.Session
 	panes           map[int]*pane
 	root            *layout
@@ -32,11 +36,13 @@ type session struct {
 
 func newSession(name, dir, shell string, width, height int) (*session, error) {
 	w, h := dimensions(width, height)
-	p, err := newPane(name, dir, shell, w, h, 1)
+	id := sessionIDs.Add(1)
+	p, err := newPane(id, name, dir, shell, w, h, 1)
 	if err != nil {
 		return nil, err
 	}
 	s := &session{
+		id:    id,
 		info:  protocol.Session{Name: name, Dir: dir, Created: time.Now(), Used: time.Now(), Panes: 1},
 		panes: map[int]*pane{1: p}, root: &layout{id: 1}, focused: 1, nextID: 2,
 		width: w, height: h, shell: shell, revision: 1, done: make(chan struct{}), owned: map[*pane]struct{}{p: {}},
@@ -217,7 +223,7 @@ func (s *session) input(r protocol.Request) error {
 		} else {
 			h = (h - 1) / 2
 		}
-		created, err := newPane(s.info.Name, s.info.Dir, s.shell, w, h, s.nextID)
+		created, err := newPane(s.id, s.info.Name, s.info.Dir, s.shell, w, h, s.nextID)
 		if err != nil {
 			return err
 		}

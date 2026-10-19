@@ -45,7 +45,7 @@ type pane struct {
 	epoch        uint64
 }
 
-func newPane(name, dir, shell string, width, height, paneID int) (*pane, error) {
+func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
 	width, height = dimensions(width, height)
 	s := &pane{
 		info: protocol.Session{Name: name, Dir: dir, Created: time.Now(), Used: time.Now()},
@@ -65,7 +65,7 @@ func newPane(name, dir, shell string, width, height, paneID int) (*pane, error) 
 	})
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir
-	s.cmd.Env = shellEnv(os.Environ(), name, paneID)
+	s.cmd.Env = shellEnv(os.Environ(), sessionID, name, paneID)
 	f, err := pty.StartWithSize(s.cmd, &pty.Winsize{Cols: uint16(width), Rows: uint16(height)})
 	if err != nil {
 		_ = s.term.InputPipe().(io.Closer).Close()
@@ -107,18 +107,19 @@ func newPane(name, dir, shell string, width, height, paneID int) (*pane, error) 
 // BMUX_PANE mirrors tmux's TMUX_PANE: editors inside a pane can identify
 // themselves back to the server, e.g. for edge-crossing navigation. Incoming
 // values of these variables are stripped, never trusted from the outer shell.
-func shellEnv(env []string, name string, paneID int) []string {
+// BMUX_SESSION is the name when the pane started; BMUX_SESSION_ID survives renames.
+func shellEnv(env []string, sessionID uint64, name string, paneID int) []string {
 	result := make([]string, 0, len(env)+4)
 	for _, entry := range env {
 		key, _, _ := strings.Cut(entry, "=")
 		switch key {
-		case "TERM", "COLORTERM", "BMUX_SESSION", "BMUX_PANE", "TMUX", "TMUX_PANE":
+		case "TERM", "COLORTERM", "BMUX_SESSION", "BMUX_SESSION_ID", "BMUX_PANE", "TMUX", "TMUX_PANE":
 			continue
 		}
 		result = append(result, entry)
 	}
 	return append(result, "TERM=xterm-256color", "COLORTERM=truecolor",
-		"BMUX_SESSION="+name, "BMUX_PANE="+strconv.Itoa(paneID))
+		"BMUX_SESSION="+name, "BMUX_SESSION_ID="+strconv.FormatUint(sessionID, 10), "BMUX_PANE="+strconv.Itoa(paneID))
 }
 
 func dimensions(w, h int) (int, int) {

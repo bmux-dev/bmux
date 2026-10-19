@@ -39,10 +39,11 @@ func TestFocusPaneHelper(t *testing.T) {
 	}
 	defer c.Close()
 	_ = c.SetDeadline(time.Now().Add(5 * time.Second))
+	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
 	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
 	if err := json.NewEncoder(c).Encode(protocol.Request{
 		Version: protocol.Version, Op: "focus-pane", Name: os.Getenv("BMUX_SESSION"),
-		PaneID: paneID, Direction: os.Getenv("BMUX_TEST_FOCUS_DIR"),
+		SessionID: sessionID, PaneID: paneID, Direction: os.Getenv("BMUX_TEST_FOCUS_DIR"),
 	}); err != nil {
 		fail(err)
 	}
@@ -286,6 +287,42 @@ func TestStandaloneFocusPaneRouting(t *testing.T) {
 	}
 	if r := srv.request(protocol.Request{Op: "paste", Name: "api", Text: "x"}); r.Error == "" {
 		t.Fatal("one-shot paste must not bypass attached-client routing")
+	}
+}
+
+// Panes keep the BMUX_SESSION they started with. The session ID keeps
+// bmux focus working after a rename, even if the old name is reused.
+func TestFocusPaneFollowsRenamedSession(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	srv := New("/bin/sh")
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	for _, r := range []protocol.Request{
+		{Op: "create", Name: "api", Dir: dir, Width: 160, Height: 40},
+		{Op: "rename", Name: "api", NewName: "web"},
+		{Op: "create", Name: "api", Dir: dir, Width: 160, Height: 40},
+	} {
+		if response := srv.request(r); response.Error != "" {
+			t.Fatalf("%s: %s", r.Op, response.Error)
+		}
+	}
+	renamed, reused := srv.sessions["web"], srv.sessions["api"]
+	for _, s := range []*session{renamed, reused} {
+		if err := s.input(protocol.Request{Op: "split", Direction: "horizontal"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if r := srv.request(protocol.Request{Op: "focus-pane", Name: "api", SessionID: renamed.id, PaneID: 2, Direction: "left"}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+	if got, other := focusedPaneID(renamed), focusedPaneID(reused); got != 1 || other != 2 {
+		t.Fatalf("focus after rename: renamed session %d, reused name %d; want 1 and 2", got, other)
+	}
+	if r := srv.request(protocol.Request{Op: "focus-pane", Name: "web", SessionID: reused.id + 100, PaneID: 2, Direction: "left"}); r.Error == "" {
+		t.Fatal("unknown session ID fell back to the session name")
+	}
+	if !strings.Contains(strings.Join(renamed.panes[1].cmd.Env, "\n"), "BMUX_SESSION_ID="+strconv.FormatUint(renamed.id, 10)) {
+		t.Fatal("pane environment is missing BMUX_SESSION_ID")
 	}
 }
 

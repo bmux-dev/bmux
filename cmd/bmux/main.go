@@ -134,8 +134,10 @@ func run(args []string) error {
 		if session == "" {
 			return fmt.Errorf("not inside a bmux pane")
 		}
+		// The ID survives renames. Servers older than v0.1.1 ignore it and use the name.
+		sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
 		paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
-		_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, PaneID: paneID, Direction: args[1]})
+		_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, SessionID: sessionID, PaneID: paneID, Direction: args[1]})
 		return err
 	}
 	return nil
