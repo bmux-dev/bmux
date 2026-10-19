@@ -106,6 +106,53 @@ older PTY-resizing servers from mutating state for a native-viewport request.
 Picker titles contain only identity and list position; normal refresh/scope
 metadata is not rendered as chrome.
 
+## Sidebar and pane activity
+
+Pane activity is never inferred from screen text or titles. Each pane holds a
+reported agent label and state (`bmux agent`, one-shot RPC keyed by
+`BMUX_SESSION_ID`/`BMUX_PANE`, the same trust model as `bmux focus`), a
+detected foreground agent, and an attention flag. BEL, OSC 9 (except 9;4
+progress) and OSC 777 `notify` set attention from emulator callbacks under
+`pane.mu`; so do `blocked` reports and reported `working` -> `idle`
+transitions. `working` clears it. Reports never change recent-use order.
+
+Each session runs one agent sampler (`watchAgents`, 1 Hz, exits with the
+session). It copies the pane list under `session.mu`, releases it, queries
+each PTY's foreground group through `foregroundGroupCommand` (shared with
+editor navigation) with no state lock held, then applies the sample under
+`pane.mu`. Candidates are comm, the executable path and, only for node, bun,
+deno and python, argv[1]; no other argument or environment data is read.
+Query errors keep the previous sample.
+
+Without a report, state comes from output timing. `apply` marks output unless
+it arrives within `inputEchoWindow` of any pane input (keys, paste, mouse,
+focus, resize). Two consecutive samples with output make a detected agent
+working; two without return it to idle and, if unseen, set attention. Reports
+override timing. A detected agent leaving the foreground drops its reports.
+
+`session.viewers` counts attachments whose last `focus` request was true; the
+attach loop owns each connection's contribution and releases it on exit.
+`updateViewedLocked` runs under `session.mu` after every layout/focus change and
+viewer change, stores `pane.viewed` (atomic, read by callbacks) and clears the
+viewed pane's attention. A viewed pane never gains attention. `list` returns
+`Session.Activity` in unzoomed layout order, only for panes with an agent or
+attention.
+
+A directional move without a neighbor (`select-pane` with a direction,
+`navigate-pane`, `focus-pane`) increments `session.edges` and records the
+direction; snapshots carry both. A client records the count from its first
+frame per attachment and moves focus into the sidebar only when the count later
+changes with direction `left`. Editor-forwarded keys are not edges.
+
+The client offsets pane layout by `sidebarWidth` columns when shown (screen
+width at least `sidebarMinScreenWidth`, not hidden with Ctrl-a b). Attach,
+create and resize requests send the remaining width, so the server layout
+never includes sidebar columns. `drawPane`, dividers, cursor and mouse
+translation all apply the same `paneOriginX`. Sidebar clicks are chrome; drags
+and app presses that began in a pane still deliver motion and release there.
+The sidebar polls `list` asynchronously at 1 Hz with at most one request in
+flight; the picker's synchronous refresh owns the list while open.
+
 ## User-visible behavior details
 
 - Attached-client snapshots are coalesced to at most 30 updates per second.

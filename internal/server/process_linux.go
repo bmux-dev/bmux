@@ -28,16 +28,19 @@ func inspectProcess(pid int) (processIdentity, error) {
 	return processIdentity{pid: pid, sid: sid, birth: f[19], zombie: f[0] == "Z"}, err
 }
 
-func foregroundEditorGroup(group int) (bool, error) {
+// foregroundGroupCommand mirrors the Darwin contract: comm, the executable
+// path, and for script interpreters only argv[1] are candidates.
+func foregroundGroupCommand(group int, match func(string) string) (string, error) {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	for _, entry := range entries {
 		if _, err := strconv.Atoi(entry.Name()); err != nil {
 			continue
 		}
-		data, err := os.ReadFile("/proc/" + entry.Name() + "/stat")
+		dir := "/proc/" + entry.Name()
+		data, err := os.ReadFile(dir + "/stat")
 		if err != nil {
 			continue
 		} // Processes may exit during enumeration.
@@ -49,12 +52,31 @@ func foregroundEditorGroup(group int) (bool, error) {
 		if len(fields) < 3 || fields[0] == "Z" || fields[0] == "T" || fields[0] == "t" {
 			continue
 		}
-		pgid, err := strconv.Atoi(fields[2])
-		if err == nil && pgid == group && isEditorCommand(string(data[start+1:end])) {
-			return true, nil
+		if pgid, err := strconv.Atoi(fields[2]); err != nil || pgid != group {
+			continue
+		}
+		if found := match(string(data[start+1 : end])); found != "" {
+			return found, nil
+		}
+		exe, err := os.Readlink(dir + "/exe")
+		if err != nil {
+			continue
+		}
+		if found := match(exe); found != "" {
+			return found, nil
+		}
+		if !isScriptInterpreter(exe) {
+			continue
+		}
+		if cmdline, err := os.ReadFile(dir + "/cmdline"); err == nil {
+			if args := strings.SplitN(string(cmdline), "\x00", 3); len(args) > 1 {
+				if found := match(args[1]); found != "" {
+					return found, nil
+				}
+			}
 		}
 	}
-	return false, nil
+	return "", nil
 }
 
 func listProcesses() ([]processIdentity, error) {

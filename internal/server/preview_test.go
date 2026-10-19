@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ func TestSessionPreviewIsReadOnlyBoundedAndCursorFramed(t *testing.T) {
 			t.Fatal("source cursor wasn't translated into its preview rectangle")
 		}
 	}
-	if after := s.status(); after != before {
+	if after := s.status(); !reflect.DeepEqual(after, before) {
 		t.Fatalf("preview changed attachment/recency metadata: %+v -> %+v", before, after)
 	}
 	for id, p := range s.panes {
@@ -64,7 +65,7 @@ func TestSessionPreviewIsReadOnlyBoundedAndCursorFramed(t *testing.T) {
 	if full.Frame == nil || full.Frame.PreviewMode != "overview" || full.Frame.Width != 81 || full.Frame.Height != 25 || full.Frame.Panes[0].Width != 40 || len(full.Frame.Panes[0].Terminal.Rows) != 25 {
 		t.Fatal("overview request returned already-cropped content instead of full terminal state")
 	}
-	if after := s.status(); after != before {
+	if after := s.status(); !reflect.DeepEqual(after, before) {
 		t.Fatal("full overview changed session metadata")
 	}
 	for _, size := range [][2]int{{360, 140}, {81, 25}, {53, 12}, {800, 240}} {

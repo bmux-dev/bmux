@@ -17,7 +17,8 @@ type paneDivider struct {
 // drawPaneDividers must run after every drawPane call. No chrome is permitted
 // inside a pane rectangle, even if that terminal has no rows or has exited.
 func (u *ui) drawPaneDividers(width, height int) {
-	u.drawDividers(u.workspace, pickerArea{0, paneOriginY, width, max(0, height-1-paneOriginY)})
+	x := u.paneOriginX(width)
+	u.drawDividers(u.workspace, pickerArea{x, paneOriginY, max(0, width-x), max(0, height-1-paneOriginY)})
 }
 
 func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {

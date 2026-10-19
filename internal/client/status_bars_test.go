@@ -18,6 +18,7 @@ func TestStatusBarsPersistInPickerAndAttachedView(t *testing.T) {
 		t.Fatal("picker lost its top powerline or bottom controls")
 	}
 	u.picker = false
+	u.sidebarHidden = true // the sidebar's own layout is covered in sidebar_test.go
 	rows := make([][]protocol.Cell, 24)
 	for y := range rows {
 		rows[y] = cells(strings.Repeat("X", 100))
