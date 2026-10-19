@@ -70,3 +70,16 @@ func TestAttachWithoutNameUsesFirstListedSession(t *testing.T) {
 		})
 	}
 }
+
+func TestHelpDescribesActualBehavior(t *testing.T) {
+	for _, want := range []string{"Ctrl-a p   Last session", "Terminate a session and all its panes"} {
+		if !strings.Contains(helpText, want) {
+			t.Errorf("help is missing %q", want)
+		}
+	}
+	for _, stale := range []string{"Previous session", "its shell"} {
+		if strings.Contains(helpText, stale) {
+			t.Errorf("help still says %q", stale)
+		}
+	}
+}

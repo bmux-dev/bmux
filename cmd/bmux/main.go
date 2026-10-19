@@ -118,7 +118,7 @@ func run(args []string) error {
 		return err
 	case "kill":
 		if len(args) != 2 {
-			return fmt.Errorf("usage: bmux kill NAME (terminates its shell)")
+			return fmt.Errorf("usage: bmux kill NAME (stops all its panes)")
 		}
 		_, err = client.Request(socket, protocol.Request{Op: "kill", Name: args[1]})
 		return err
@@ -161,21 +161,24 @@ func attachTarget(socket string, names []string) (string, error) {
 }
 
 func help() {
-	fmt.Println(`bmux — persistent workspaces, ordinary terminal interaction.
+	fmt.Println(helpText)
+}
+
+const helpText = `bmux — persistent workspaces, ordinary terminal interaction.
 
 Usage:
-  bmux                                  Create and attach a fresh session in this directory
-  bmux new [--dir PATH] [--detach] NAME   Create a shell session
-  bmux attach [NAME]                    Attach by name, or to the first listed session
-  bmux list                             List sessions
-  bmux rename OLD NEW                   Rename a session
-  bmux kill NAME                        Terminate a session and its shell
-  bmux focus left|right|up|down         Move pane focus (for editors at an edge)
-  bmux version                          Print the version
+  bmux                                   Create and attach a fresh session in this directory
+  bmux new [--dir PATH] [--detach] NAME  Create a shell session
+  bmux attach [NAME]                     Attach by name, or to the first listed session
+  bmux list                              List sessions
+  bmux rename OLD NEW                    Rename a session
+  bmux kill NAME                         Terminate a session and all its panes
+  bmux focus left|right|up|down          Move pane focus (for editors at an edge)
+  bmux version                           Print the version
 
 Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
-  Ctrl-a n   New session          Ctrl-a p   Previous session
+  Ctrl-a n   New session          Ctrl-a p   Last session
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
   Ctrl-a h/j/k/l   Resize divider by five cells
@@ -195,5 +198,4 @@ Drag to select and copy. Double-click words; triple-click lines.
 Mouse wheel scrolls history. Paste using your terminal's normal shortcut.
 Hold Alt to select instead of sending mouse events to a mouse-aware app.
 
-This is an early prototype. Sessions survive detach, not server exit or reboot.`)
-}
+This is an early prototype. Sessions survive detach, not server exit or reboot.`
