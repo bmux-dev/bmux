@@ -60,15 +60,15 @@ keep the timing guess. Integrations change an agent's own config files, so they
 are installed only when you choose to.
 
 Shipped: `bmux integration status|install|uninstall [AGENT]`, and versioned,
-managed Claude Code and Codex hooks and omp and pi extensions (working,
-blocked on permission prompts and approvals, idle, and the exact session to
-resume) that keep other settings. Still to do:
+managed integrations for Claude Code and Codex (hooks), omp and pi
+(extensions) and opencode (a plugin): working, blocked on permission prompts
+and approvals, idle, and the exact session to resume, keeping other settings.
+Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
 | Welcome screen | S | Shown once on first attach: what bmux is, Ctrl-a for commands, Ctrl-h into the sidebar, "next: install optional agent integrations for more reliable state". Enter, Right or l continues; the choice is remembered (`onboarding = false` in the config file, like herdr). |
 | Integrations panel | M | Opens after the welcome screen and from a key later. One row per supported agent: ✓ installed, ↻ update available, + available (its command is on `PATH`), – not found. Enter installs every available or outdated integration, Esc closes. |
-| Integration for opencode | S | A plugin using the same managed-file versioning. |
 
 ## Restore follow-ups
 
@@ -76,14 +76,14 @@ v0.2.0 replaced tmux-resurrect and tmux-continuum: a versioned snapshot
 (sessions, split tree, focus, zoom, per-pane cwd), saves every 5 seconds and on
 clean shutdown, restore on server start, agent resume (reported commands or
 each agent's "continue latest"), and `bmux restart`, which survives protocol
-changes and reconnects clients. Still to do:
+changes and reconnects clients. With an [agent integration](#first-run-and-agent-integrations),
+two agents in one directory each resume their own session. Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
 | Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
 | Mark restored sessions | S | In the picker and sidebar. |
-| Exact resume for two agents in one directory | S | Comes with [agent integrations](#first-run-and-agent-integrations), which report each session's ID. |
 
 ## v0.4: windows and layouts
 

@@ -52,6 +52,7 @@ var agents = []Agent{
 	claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", ""),
 	codex.agent("Codex", "codex", "CODEX_HOME", ".codex", "Codex runs new hooks only after you trust them: open /hooks in Codex once."),
 	omp.agent("omp", "omp", ompDir, "Restart omp to load it."),
+	opencode.agent("opencode", "opencode", opencodeDir, "Restart opencode to load it."),
 	pi.agent("pi", "pi", piDir, "Restart pi to load it."),
 }
 

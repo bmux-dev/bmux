@@ -258,6 +258,7 @@ bmux integration uninstall claude
 | Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
 | Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
 | omp (`omp`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals and the ask tool, idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
+| opencode (`opencode`) | `plugins/bmux-agent-state.js` in `$XDG_CONFIG_HOME/opencode` or `~/.config/opencode` | working while any session, subagents included, is busy, blocked on permission requests and questions, idle, and the top-level session for `opencode --session` |
 | pi (`pi`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts and the ask tool, idle, and the session for `pi --session` |
 
 Every file bmux writes starts with a `bmux-integration: NAME vN` line, which

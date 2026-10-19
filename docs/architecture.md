@@ -190,6 +190,10 @@ and the ask tool) and runs `bmux agent` itself, serialized and only when the
 report changes. Leaving the foreground already drops a recognized agent's
 reports, so extensions never report `clear`. omp refuses to install into a
 directory pi also loads, since each would run the other's extension.
+opencode gets a server plugin in the same style: the opencode process in a
+pane serves only that pane's TUI, so the plugin counts busy sessions
+(subagents included) and pending permission/question requests, and resumes
+the latest top-level session.
 
 JSON edits go through an ordered object type, so other keys keep their order
 and content; they remove every handler whose command names
