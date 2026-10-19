@@ -290,6 +290,8 @@ func (s *Server) handle(conn net.Conn) {
 	ack := 0
 	force := true
 	viewing := false
+	// Copies made before this attachment belong to whoever was attached then.
+	clipboardSeen := clipboardWrites.Load()
 	defer func() {
 		if viewing {
 			item.setViewing(false)
@@ -363,6 +365,7 @@ func (s *Server) handle(conn net.Conn) {
 				continue
 			}
 			revision, force = rev, false
+			frame.Clipboard = item.clipboardSince(&clipboardSeen)
 			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 			if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
 				return

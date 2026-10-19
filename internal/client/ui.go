@@ -182,6 +182,11 @@ func Run(socket, name, cwd string) error {
 				}
 			}
 			if f := next.response.Frame; f != nil {
+				// Before the ack check: a frame skipped for being stale still
+				// carries the only copy of an app's clipboard write.
+				if f.Clipboard != "" {
+					u.appCopy(f.Clipboard)
+				}
 				if len(f.Panes) == 0 {
 					u.endSession(f.Name)
 					u.draw()
@@ -659,6 +664,13 @@ func (u *ui) finishClipboard(result clipboardResult) {
 	if result.Err == nil && !result.Available {
 		u.screen.SetClipboard([]byte(result.Text))
 	}
+	if result.Seq == 0 {
+		// An app's OSC 52 write, like Neovim yanking: quiet unless it fails.
+		if result.Err != nil {
+			u.notice("Clipboard failed for an app's copy: " + result.Err.Error())
+		}
+		return
+	}
 	if result.Seq != u.clipboardSeq {
 		return
 	}
@@ -668,6 +680,18 @@ func (u *ui) finishClipboard(result clipboardResult) {
 		u.notice("Copied to system clipboard")
 	} else {
 		u.notice("Clipboard requested via OSC 52; your terminal must allow it")
+	}
+}
+
+// appCopy copies text an app in the session sent with OSC 52 through the
+// same helpers as a selection, as clipboard result sequence 0.
+func (u *ui) appCopy(text string) {
+	if u.clipboard == nil {
+		u.finishClipboard(clipboardResult{Text: text})
+		return
+	}
+	if err := u.clipboard.Submit(0, text); err != nil {
+		u.notice(err.Error())
 	}
 }
 

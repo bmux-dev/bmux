@@ -7,7 +7,7 @@ import (
 )
 
 type clipboardResult struct {
-	Seq       uint64
+	Seq       uint64 // the copy's sequence; 0 for an app's OSC 52 write
 	Text      string // captured text for OSC 52 fallback when Available is false
 	Available bool
 	Err       error

@@ -84,12 +84,6 @@ are installed only when you choose to.
 | `bmux integration install\|uninstall\|status [AGENT]` | S | The same from the command line, for scripts and dotfiles. |
 | Agent integrations | L | Claude Code hooks in `~/.claude/settings.json` (working, blocked on permission prompts, idle, exact `claude --resume` session), and plugins or extensions for opencode, omp, pi and Codex. Files are versioned and marked as managed by bmux so updates are detected; other settings in those files are preserved. |
 
-### Terminal behavior apps rely on
-
-| Item | Size | Notes |
-| --- | --- | --- |
-| Clipboard writes from apps (OSC 52) | M | e.g. Neovim yanking over SSH. Routed through the attached client. |
-
 ## Restore follow-ups
 
 v0.2.0 replaced tmux-resurrect and tmux-continuum: a versioned snapshot
@@ -198,7 +192,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
-| tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
+| tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client |
 | tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |

@@ -52,6 +52,32 @@ func TestRemoteClipboardDoesNotWriteRemoteDesktop(t *testing.T) {
 	}
 }
 
+func TestAppClipboardWritesCopyQuietlyWithoutTakingOverCopyNotices(t *testing.T) {
+	s := focusTestScreen(t, 40, 10)
+	u := &ui{screen: s}
+	u.notice("unrelated")
+	// No helper available: the attached terminal gets OSC 52, with no notice.
+	u.appCopy("yanked in nvim")
+	if got := string(s.GetClipboardData()); got != "yanked in nvim" || u.message != "unrelated" {
+		t.Fatalf("clipboard %q, notice %q", got, u.message)
+	}
+	// An app's copy finishing during a selection copy leaves that copy's notice.
+	u.clipboardSeq = 1
+	u.notice("Copying…")
+	u.finishClipboard(clipboardResult{Available: true})
+	if u.message != "Copying…" {
+		t.Fatalf("app copy replaced the selection's notice: %q", u.message)
+	}
+	u.finishClipboard(clipboardResult{Seq: 1, Available: true})
+	if u.message != "Copied to system clipboard" {
+		t.Fatalf("selection copy notice: %q", u.message)
+	}
+	u.finishClipboard(clipboardResult{Err: os.ErrPermission})
+	if !strings.Contains(u.message, "app's copy") {
+		t.Fatalf("failed app copy was silent: %q", u.message)
+	}
+}
+
 func TestPasteDoesNotInterpretbmuxBindings(t *testing.T) {
 	u, requests := navigationUI(t)
 	// Ctrl-a d inside pasted text must never detach the client.
