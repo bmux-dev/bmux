@@ -229,10 +229,14 @@ exits.
 
 When an agent you aren't looking at becomes ready (waiting) or blocked, the
 attached client plays a sound: on macOS the system Glass sound, or Funk when
-blocked; elsewhere the outer terminal's bell. Plain terminal bells from other
-programs mark their pane silently. `sound.enabled = false` in the
-[config file](#configuration-file) or `BMUX_SOUND=0` turns sounds off;
-`sound.ready` and `sound.blocked` choose your own sound files.
+blocked; on Linux the freedesktop sound theme's `complete`, or
+`dialog-warning` when blocked, with `pw-play` or `paplay`. Without those, and
+over SSH (so it isn't played on the remote machine), the outer terminal's bell
+rings instead; some terminals, such as Ghostty, keep the bell silent by
+default. Plain terminal bells from other programs mark their pane silently.
+`sound.enabled = false` in the [config file](#configuration-file) or
+`BMUX_SOUND=0` turns sounds off; `sound.ready` and `sound.blocked` choose your
+own sound files.
 
 | Action in the sidebar | Control |
 | --- | --- |
@@ -470,7 +474,7 @@ width = 24
 | `sidebar.width` | `24` | Columns including its border, 12 to 60 |
 | `sidebar.min-screen-width` | `80` | Hide the sidebar on narrower terminals |
 | `sound.enabled` | `true` | Alert sounds for background agents |
-| `sound.ready` / `sound.blocked` | system sounds | Sound files (absolute or `~/` paths), played with `afplay` on macOS or `paplay`/`aplay` on Linux |
+| `sound.ready` / `sound.blocked` | system sounds | Sound files (absolute or `~/` paths), played with `afplay` on macOS or `pw-play`/`paplay` on Linux (`aplay` for WAV files) |
 | `agents.detect` | `true` | Recognize agents in panes; reported agents still show when off |
 | `agents.extra` | `[]` | More program names to recognize as agents |
 | `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
