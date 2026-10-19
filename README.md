@@ -116,6 +116,10 @@ Outside an editor bmux keeps these keys, so **Ctrl-l doesn't clear the shell**.
 **Ctrl-a arrows**, **Ctrl-a o** and clicks always move between bmux panes
 directly, even with an editor in front.
 
+Focus events (`?1004`) work with no `focus-events on` setting: Neovim's
+`FocusGained`, `FocusLost` and `autoread` fire when you move between panes,
+switch terminal windows, open the picker or detach.
+
 ## Agents
 
 Run claude, codex, opencode, omp, pi, gemini or another coding agent in any

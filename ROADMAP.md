@@ -88,7 +88,6 @@ are installed only when you choose to.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Focus events (`?1004`) | S | Neovim's `autoread` and `FocusGained` need them. |
 | Clipboard writes from apps (OSC 52) | M | e.g. Neovim yanking over SSH. Routed through the attached client. |
 | Set the outer terminal's title | S | Like tmux's `set-titles`. |
 
@@ -197,6 +196,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
+| `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
 | tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
 | tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |

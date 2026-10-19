@@ -89,9 +89,6 @@ func (s *session) watchPane(id int, p *pane) {
 		if s.focused == id {
 			s.focused = neighbor
 			s.zoomed = false
-			if !s.stopped && !s.stopping.Load() {
-				_ = s.panes[s.focused].input(protocol.Request{Op: "focus", Focused: true})
-			}
 			s.updateViewedLocked()
 		}
 		if len(s.panes) == 1 {
@@ -204,12 +201,11 @@ func (s *session) input(r protocol.Request) error {
 	// PTY input can be backpressured by the application. Don't hold the
 	// workspace lock while writing it; other panes and shutdown remain usable.
 	switch r.Op {
-	case "key", "paste", "focus", "mouse":
+	case "key", "paste", "mouse":
 		s.mu.Unlock()
 		return p.input(r)
 	}
 	defer s.mu.Unlock()
-	previous := s.focused
 	switch r.Op {
 	case "resize":
 		s.width, s.height = dimensions(r.Width, r.Height)
@@ -289,17 +285,13 @@ func (s *session) input(r protocol.Request) error {
 	default:
 		return p.input(r)
 	}
-	return s.finishLayoutLocked(previous)
+	return s.finishLayoutLocked()
 }
 
 // Caller holds session.mu. Both explicit focus and editor-aware navigation use
 // the same geometry and focus-notification rules.
-func (s *session) finishLayoutLocked(previous int) error {
+func (s *session) finishLayoutLocked() error {
 	s.revision++
-	if previous != s.focused {
-		_ = s.panes[previous].input(protocol.Request{Op: "focus", Focused: false})
-		_ = s.panes[s.focused].input(protocol.Request{Op: "focus", Focused: true})
-	}
 	s.updateViewedLocked()
 	return s.resizePanes()
 }
