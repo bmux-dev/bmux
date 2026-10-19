@@ -6,29 +6,28 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // The sidebar runs along the left edge of the attached view, between the
 // powerline and status rows, like herdr's: a Sessions section, a divider, and
 // an Agents section listing every agent across sessions. Its last column is a
-// border. Narrow terminals hide it so panes keep usable widths.
-const (
-	sidebarWidth          = 24
-	sidebarMinScreenWidth = 80
-)
+// border. Narrow terminals hide it so panes keep usable widths. Width and the
+// hiding threshold come from the config file.
+func (u *ui) sidebarCols() int {
+	if u.settings.Sidebar.Width > 0 {
+		return u.settings.Sidebar.Width
+	}
+	return config.Default().Sidebar.Width
+}
 
-// The sidebar uses the bar background so it reads as chrome, apart from panes.
-var (
-	sidebarBaseStyle     = barStyle
-	sidebarMutedStyle    = barStyle.Foreground(chrome.muted)
-	sidebarAccentStyle   = barStyle.Foreground(chrome.accent).Bold(true)
-	sidebarBlockedStyle  = barStyle.Foreground(chrome.blocked)
-	sidebarDoneStyle     = barStyle.Foreground(chrome.done)
-	sidebarWorkingStyle  = barStyle.Foreground(chrome.working)
-	sidebarIdleStyle     = barStyle.Foreground(chrome.idle)
-	sidebarSelectedStyle = barStyle.Background(selectionBackground).Foreground(selectionForeground).Bold(true)
-)
+func (u *ui) sidebarMinScreen() int {
+	if u.settings.Sidebar.MinScreenWidth > 0 {
+		return u.settings.Sidebar.MinScreenWidth
+	}
+	return config.Default().Sidebar.MinScreenWidth
+}
 
 // sidebarRow is a session (pane == 0) or an agent/attention pane in it.
 type sidebarRow struct {
@@ -49,11 +48,11 @@ type sidebarResult struct {
 	err      error
 }
 
-func (u *ui) sidebarShown(w int) bool { return !u.sidebarHidden && w >= sidebarMinScreenWidth }
+func (u *ui) sidebarShown(w int) bool { return !u.sidebarHidden && w >= u.sidebarMinScreen() }
 
 func (u *ui) paneOriginX(w int) int {
 	if u.sidebarShown(w) {
-		return sidebarWidth
+		return u.sidebarCols()
 	}
 	return 0
 }
@@ -212,10 +211,12 @@ func (u *ui) sidebarKey(e *tcell.EventKey) {
 		}
 		return
 	}
-	switch e.Key() {
-	case tcell.KeyCtrlA:
+	if u.isPrefix(e) {
 		u.sidebarFocus = false
 		u.prefix = true
+		return
+	}
+	switch e.Key() {
 	case tcell.KeyEscape:
 		u.sidebarFocus = false
 	case tcell.KeyDown:
@@ -413,7 +414,7 @@ func (u *ui) drawSidebar(w, h int) {
 	if !u.sidebarShown(w) {
 		return
 	}
-	content := sidebarWidth - 1
+	content := u.sidebarCols() - 1
 	border := dividerStyle
 	if u.sidebarFocus {
 		border = border.Foreground(accentColor).Bold(true)

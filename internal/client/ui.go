@@ -13,6 +13,7 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
+	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/rivo/uniseg"
 )
@@ -81,10 +82,19 @@ type ui struct {
 	reconnects                      chan string
 	closeConfirm                    int // pane awaiting y to close, or 0
 	closeCommand                    string
+	settings                        config.Config
+	configPath                      string
+	configEdge                      uint64 // last seen Frame.Config for this attachment
+	configKnown                     bool
 }
 
 func Run(socket, name, cwd string) error {
-	screen, err := newNavigationScreen()
+	path, pathErr := config.Path()
+	settings, configErr := config.Load(path, os.Getenv)
+	if pathErr != nil {
+		configErr = pathErr
+	}
+	screen, err := newNavigationScreen(settings.Theme.TerminalPadding)
 	if err != nil {
 		return err
 	}
@@ -96,6 +106,8 @@ func Run(socket, name, cwd string) error {
 	screen.EnablePaste()
 	screen.EnableFocus()
 	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), reconnects: make(chan string, 1), done: make(chan struct{})}
+	u.configPath = path
+	u.applySettings(settings)
 	u.clipboard = newClipboardWorker()
 	u.sound = u.playAlert
 	defer u.clipboard.Close()
@@ -112,6 +124,9 @@ func Run(socket, name, cwd string) error {
 		}
 	} else {
 		u.openPicker()
+	}
+	if configErr != nil {
+		u.notice("Config: " + configErr.Error())
 	}
 	events := make(chan tcell.Event, 64)
 	quit := make(chan struct{})
@@ -222,7 +237,7 @@ func (u *ui) endSession(name string) {
 	u.pending = 0
 	u.workspace, u.frame = nil, nil
 	u.focused = 0
-	u.edgeKnown = false
+	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
 	u.selections = nil
@@ -273,8 +288,6 @@ const reconnectTimeout = 20 * time.Second
 
 func (u *ui) notice(text string) { u.message, u.messageUntil = text, time.Now().Add(5*time.Second) }
 
-const prefixHelp = "Ctrl-a: | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · s picker"
-
 func (u *ui) send(r protocol.Request) {
 	if r.PaneID == 0 && r.Op != "select-pane" && r.Op != "navigate-pane" && r.Op != "resize" && u.pending == 0 {
 		r.PaneID = u.focused
@@ -311,7 +324,7 @@ func (u *ui) switchTo(name string) error {
 	u.paneSizes = make(map[int][2]int)
 	u.pending = 0
 	u.resizeUntil = time.Time{}
-	u.edgeKnown = false
+	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
 	u.generation++
@@ -434,7 +447,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	if u.prefix {
 		u.prefix = false
 		switch {
-		case e.Key() == tcell.KeyCtrlA:
+		case u.isPrefix(e):
 			u.resumeLive()
 			u.send(keyRequest(e))
 		case e.Key() == tcell.KeyRune:
@@ -475,6 +488,8 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 				}
 			case 'b':
 				u.toggleSidebar()
+			case 'r':
+				u.requestReload()
 			case ')':
 				u.cycleSession(1)
 			case '(':
@@ -482,7 +497,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 			case 'x':
 				u.beginClosePane()
 			default:
-				u.notice(prefixHelp)
+				u.notice(u.prefixHelp())
 			}
 		default:
 			directions := map[tcell.Key]string{tcell.KeyLeft: "left", tcell.KeyRight: "right", tcell.KeyUp: "up", tcell.KeyDown: "down"}
@@ -497,7 +512,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 		u.send(protocol.Request{Op: "navigate-pane", Direction: direction})
 		return
 	}
-	if e.Key() == tcell.KeyCtrlA {
+	if u.isPrefix(e) {
 		u.prefix = true
 		return
 	}
@@ -836,19 +851,19 @@ func (u *ui) draw() {
 		}
 		u.drawPowerline(w, time.Now())
 	}
-	footer := "Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach"
+	footer := u.withPrefix("Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach")
 	if u.picker {
 		footer = u.pickerFooter(w)
 	}
 	if u.frame != nil && !u.picker {
 		if u.frame.Exited {
-			footer = "Shell exited · Ctrl-a s: sessions · Ctrl-a d: detach"
+			footer = u.withPrefix("Shell exited · Ctrl-a s: sessions · Ctrl-a d: detach")
 		} else if u.frame.Offset > 0 {
 			footer = fmt.Sprintf("Scrollback: %d lines up · typing returns to live output", u.frame.Offset)
 		}
 	}
 	if u.prefix {
-		footer = prefixHelp
+		footer = u.prefixHelp()
 	} else if u.closeConfirm != 0 {
 		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
 	} else if u.sidebarFocus {

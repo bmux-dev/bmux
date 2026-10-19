@@ -12,6 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/josephferrero/bmux/internal/client"
+	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/daemon"
 	"github.com/josephferrero/bmux/internal/protocol"
 )
@@ -34,6 +35,9 @@ func run(args []string) error {
 		case "version", "--version":
 			fmt.Println("bmux", version)
 			return nil
+		case "default-config":
+			fmt.Print(config.DefaultFile)
+			return nil
 		}
 	}
 	socket, err := daemon.Prepare()
@@ -46,7 +50,7 @@ func run(args []string) error {
 		defer signal.Stop(stop)
 		return daemon.Serve(socket, stop)
 	}
-	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" && args[0] != "agent" && args[0] != "restart" {
+	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" && args[0] != "agent" && args[0] != "restart" && args[0] != "reload" {
 		return fmt.Errorf("unknown command %q; try bmux --help", args[0])
 	}
 	if len(args) > 0 && args[0] == "agent" {
@@ -58,6 +62,18 @@ func run(args []string) error {
 			return fmt.Errorf("usage: bmux restart")
 		}
 		return restartServer(socket)
+	}
+	if len(args) > 0 && args[0] == "reload" {
+		// Rereads the config file in the server; attached clients follow.
+		if len(args) != 1 {
+			return fmt.Errorf("usage: bmux reload")
+		}
+		path, _ := config.Path()
+		if _, err := client.Request(socket, protocol.Request{Op: "reload-config"}); err != nil {
+			return err
+		}
+		fmt.Println("Reloaded", path)
+		return nil
 	}
 	if startsClient(args) {
 		if err := refuseNesting(); err != nil {
@@ -288,6 +304,8 @@ Usage:
   bmux focus left|right|up|down          Move pane focus (for editors at an edge)
   bmux agent STATE [NAME] [-- CMD...]    Report this pane's agent: working, blocked, idle, clear
   bmux restart                           Save sessions, restart the server, restore them
+  bmux reload                            Reread the config file (also Ctrl-a r)
+  bmux default-config                    Print every setting with its default
   bmux version                           Print the version
 
 Inside a session:
@@ -302,7 +320,9 @@ Inside a session:
   Ctrl-a arrows   Focus pane      Ctrl-a o   Cycle visible panes
   Ctrl-a m   Zoom / unzoom        Click a pane to focus it
   Ctrl-a x   Close pane (asks first if a program is running)
-  Ctrl-a b   Show / hide sidebar
+  Ctrl-a b   Show / hide sidebar  Ctrl-a r   Reload config
+
+Settings: ~/.config/bmux/config.toml (see bmux default-config).
 
 Sidebar (Ctrl-h from the leftmost pane):
   j/k   Select session or agent  Enter/l   Open it

@@ -55,19 +55,15 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 ### Keys and config
 
+The config file (`~/.config/bmux/config.toml`) shipped with the prefix
+setting, reload (`Ctrl-a r`, `bmux reload`), `bmux default-config`, and the
+sidebar, agent detection, alert, restore and state-color settings. Still to do:
+
 | Item | Size | Notes |
 | --- | --- | --- |
-| Config file `~/.config/bmux/config.toml` | M | Replaces the `BMUX_*` variables. The variables keep working as overrides. |
-| Choose the prefix key | S | Ctrl-a by default; tmux's Ctrl-b is a common request. |
 | Rebind keys, including turning off Ctrl-h/j/k/l | M | Fixes the Ctrl-l conflict. Rebinding everything can wait. |
 | Pass-through list for Ctrl-h/j/k/l | S | Forward to fzf and other listed programs, like vim-tmux-navigator's `is_vim`. |
-| Reload config (`Ctrl-a r`, `bmux reload`) | S | Like tmux's `source-file`. |
 | Key help overlay (`Ctrl-a ?`) | S | Lists current bindings. |
-| Sidebar settings | S | Width (24 columns today), start hidden, and the screen width below which it hides itself (80 today). |
-| Agent detection settings | S | Extra program names to recognize as agents, the working/waiting timing (about 2 seconds each today), and turning detection off. |
-| Alert settings | S | Sound on or off (replaces `BMUX_SOUND`) and custom sound files for "ready" and "blocked", like herdr's `[ui.sound]`. |
-| Restore settings | S | Turn save/restore off, and set or disable each agent's resume command (e.g. add `--model`). |
-| Agent state colors | S | Override the herdr palette used for working, waiting, blocked and idle. |
 
 ### First run and agent integrations
 

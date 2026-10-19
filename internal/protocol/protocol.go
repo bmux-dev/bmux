@@ -136,9 +136,12 @@ type Frame struct {
 	// Edge counts directional focus moves that found no neighbor pane;
 	// EdgeDirection is the latest one. Clients compare counts, never act on
 	// the first frame of an attachment.
-	Edge          uint64      `json:"edge,omitempty"`
-	EdgeDirection string      `json:"edge_direction,omitempty"`
-	Panes         []PaneFrame `json:"panes"`
+	Edge          uint64 `json:"edge,omitempty"`
+	EdgeDirection string `json:"edge_direction,omitempty"`
+	// Config counts server config reloads; clients reread their own
+	// settings when it changes.
+	Config uint64      `json:"config,omitempty"`
+	Panes  []PaneFrame `json:"panes"`
 }
 
 type Response struct {

@@ -55,7 +55,7 @@ func (u *ui) drawPowerline(width int, now time.Time) {
 		segments[0].text = " " + strings.TrimSpace(fit(powerlineIdentity, 28)) + " "
 	}
 	arrow, back := "", ""
-	if os.Getenv("BMUX_POWERLINE_ASCII") == "1" || !u.screen.CanDisplay('', false) {
+	if u.settings.Theme.PowerlineASCII || !u.screen.CanDisplay('', false) {
 		arrow, back = ">", "<"
 	}
 	x := 0

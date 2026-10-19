@@ -61,8 +61,9 @@ This attaches to the most recently used session. Use `bmux list` to see sessions
 or `bmux attach NAME` to choose one. `bmux kill NAME` terminates a session and
 all its panes.
 
-**Coming from tmux:** the prefix is **Ctrl-a**. Splits use **|** and **-**, as in
-many tmux configs. There is no config file or key rebinding yet; both are planned.
+**Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "ctrl-b"` in the
+[config file](#configuration) for tmux's. Splits use **|** and **-**, as in many
+tmux configs. Rebinding other keys is planned.
 
 ## Keys
 
@@ -80,6 +81,7 @@ many tmux configs. There is no config file or key rebinding yet; both are planne
 | Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
 | Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
+| Reload config | Ctrl-a r |
 | Resize divider | Ctrl-a h/j/k/l; repeat h/j/k/l within one second |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
@@ -179,23 +181,36 @@ sessions are saved.
 
 ## Configuration
 
-Settings are environment variables for now:
+Everything works without a config file. To change settings, create
+`~/.config/bmux/config.toml`; `bmux default-config` prints every setting with
+its default. For example:
 
-| Variable | Setting |
-| --- | --- |
-| `BMUX_ACCENT` | `cyan` (default), `amber`, `green`, or `#RRGGBB` |
-| `BMUX_THEME` | `light`; dark by default |
-| `BMUX_POWERLINE_ASCII` | `1` for plain-text separators |
-| `BMUX_TERMINAL_PADDING` | `1` for physical-terminal padding |
-| `BMUX_SOUND` | `0` turns off agent alert sounds |
-| `BMUX_RUNTIME_DIR` | Override the server's runtime directory |
+```toml
+prefix = "ctrl-b"          # tmux's prefix instead of Ctrl-a
 
-```sh
-BMUX_THEME=light BMUX_ACCENT=amber bmux
+[theme]
+name = "light"
+accent = "amber"
+
+[sidebar]
+width = 30
+
+[agents]
+extra = ["myagent"]        # more programs to show as agents
+waiting_after = "5s"       # quiet this long before an agent counts as waiting
+
+[restore.resume]
+claude = ["claude", "--continue", "--model", "opus"]
 ```
 
-See [configuration details](docs/usage.md#environment-variables) for defaults and
-runtime paths.
+Apply changes with **Ctrl-a r** or `bmux reload`; attached clients pick them up.
+Mistakes are shown in the status line and that setting keeps its default. The
+file also covers sounds, agent state colors, turning agent detection or
+restore off, and per-agent resume commands; see
+[configuration](docs/usage.md#configuration-file).
+
+The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
+and `BMUX_SOUND` environment variables still work and override the file.
 
 ## Status
 

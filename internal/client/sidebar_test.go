@@ -80,13 +80,13 @@ func TestSidebarLayoutOffsetsPanesAndListsAgents(t *testing.T) {
 	// as two-line entries: icon, agent and state, then the session name.
 	want := []struct{ text, right string }{
 		{" SESSIONS", ""}, {" ● api", ""}, {"   web", ""}, {" ● db", ""},
-		{strings.Repeat("─", sidebarWidth-1), ""}, {" AGENTS 3", ""},
+		{strings.Repeat("─", u.sidebarCols()-1), ""}, {" AGENTS 3", ""},
 		{" ● claude", "waiting"}, {"   api", ""},
 		{" ● codex", "working"}, {"   api", ""},
 		{" ● pi", "blocked"}, {"   db", ""},
 	}
 	for i, row := range want {
-		line := string([]rune(pickerScreenLine(u, paneOriginY+i))[:sidebarWidth-1])
+		line := string([]rune(pickerScreenLine(u, paneOriginY+i))[:u.sidebarCols()-1])
 		if !strings.HasPrefix(line, row.text) || strings.TrimSpace(strings.TrimPrefix(line, row.text)) != row.right {
 			t.Fatalf("sidebar row %d = %q, want %q … %q", i, line, row.text, row.right)
 		}
@@ -107,23 +107,23 @@ func TestSidebarLayoutOffsetsPanesAndListsAgents(t *testing.T) {
 	if _, style, _ := u.screen.Get(0, paneOriginY+12); style != sidebarBaseStyle {
 		t.Fatal("sidebar does not use its own background")
 	}
-	if text, _, _ := u.screen.Get(sidebarWidth-1, paneOriginY); text != "│" {
+	if text, _, _ := u.screen.Get(u.sidebarCols()-1, paneOriginY); text != "│" {
 		t.Fatalf("sidebar border = %q", text)
 	}
-	if text, _, _ := u.screen.Get(sidebarWidth, paneOriginY); text != "l" {
+	if text, _, _ := u.screen.Get(u.sidebarCols(), paneOriginY); text != "l" {
 		t.Fatalf("pane not drawn right of the sidebar: %q", text)
 	}
-	if x, y, visible := u.screen.(tcell.SimulationScreen).GetCursor(); !visible || x != sidebarWidth+1 || y != paneOriginY {
+	if x, y, visible := u.screen.(tcell.SimulationScreen).GetCursor(); !visible || x != u.sidebarCols()+1 || y != paneOriginY {
 		t.Fatalf("cursor = %d,%d visible=%v", x, y, visible)
 	}
 
 	// Mouse coordinates are pane-relative, not screen columns.
 	u.frame.Mouse = true
-	u.mouse(tcell.NewEventMouse(sidebarWidth+3, paneOriginY, tcell.Button1, tcell.ModNone))
+	u.mouse(tcell.NewEventMouse(u.sidebarCols()+3, paneOriginY, tcell.Button1, tcell.ModNone))
 	if r := nextRequest(t, requests); r.Op != "mouse" || r.X != 3 || r.Y != 0 {
 		t.Fatalf("pane click: %+v", r)
 	}
-	u.mouse(tcell.NewEventMouse(sidebarWidth+3, paneOriginY, tcell.ButtonNone, tcell.ModNone))
+	u.mouse(tcell.NewEventMouse(u.sidebarCols()+3, paneOriginY, tcell.ButtonNone, tcell.ModNone))
 	_ = nextRequest(t, requests)
 
 	// Hiding the sidebar gives its columns back to the panes.
@@ -134,11 +134,11 @@ func TestSidebarLayoutOffsetsPanesAndListsAgents(t *testing.T) {
 	}
 	u.prefix = true
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModNone))
-	if r := nextRequest(t, requests); r.Op != "resize" || r.Width != 100-sidebarWidth {
+	if r := nextRequest(t, requests); r.Op != "resize" || r.Width != 100-u.sidebarCols() {
 		t.Fatalf("show resize: %+v", r)
 	}
-	u.screen.(tcell.SimulationScreen).SetSize(sidebarMinScreenWidth-1, 20)
-	if u.paneOriginX(sidebarMinScreenWidth-1) != 0 {
+	u.screen.(tcell.SimulationScreen).SetSize(u.sidebarMinScreen()-1, 20)
+	if u.paneOriginX(u.sidebarMinScreen()-1) != 0 {
 		t.Fatal("narrow terminal kept the sidebar")
 	}
 }

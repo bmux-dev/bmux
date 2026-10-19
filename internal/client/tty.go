@@ -134,7 +134,7 @@ func (t *navigationTty) Drain() error {
 	return err
 }
 
-func newNavigationScreen() (tcell.Screen, error) {
+func newNavigationScreen(preservePadding bool) (tcell.Screen, error) {
 	info, err := tcell.LookupTerminfo(os.Getenv("TERM"))
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func newNavigationScreen() (tcell.Screen, error) {
 	}
 	pastes := make(chan *rawPasteEvent, 1)
 	wrapped := &navigationTty{Tty: tty, input: navigationReader{reader: tty, pastes: pastes}}
-	screen, err := tcell.NewTerminfoScreenFromTtyTerminfo(wrapped, screenTerminfo(info, os.Getenv("BMUX_TERMINAL_PADDING") == "1"))
+	screen, err := tcell.NewTerminfoScreenFromTtyTerminfo(wrapped, screenTerminfo(info, preservePadding))
 	if err != nil {
 		_ = tty.Close()
 	}

@@ -29,6 +29,7 @@ type Server struct {
 	persistStop  chan struct{}
 	persistLast  []byte
 	persistFinal bool
+	configPath   string // guarded by persistMu
 }
 
 func New(shell string) *Server {
@@ -178,6 +179,10 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			break
 		}
 		if err := item.reportAgent(r.PaneID, r.Kind, r.Text, r.Args); err != nil {
+			result.Error = err.Error()
+		}
+	case "reload-config":
+		if err := s.reloadSettings(); err != nil {
 			result.Error = err.Error()
 		}
 	case "pane-command":

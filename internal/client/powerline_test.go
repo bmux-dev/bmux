@@ -38,8 +38,8 @@ func TestPickerPowerlineTmuxRowsAndFramedTerminal(t *testing.T) {
 }
 
 func TestPowerlineASCIIFallbackAndTinyWindows(t *testing.T) {
-	t.Setenv("BMUX_POWERLINE_ASCII", "1")
 	u := pickerUI(t)
+	u.settings.Theme.PowerlineASCII = true
 	for _, w := range []int{1, 10, 40, 80, 120} {
 		u.screen.(tcell.SimulationScreen).SetSize(w, 24)
 		u.drawPowerline(w, time.Unix(0, 0))

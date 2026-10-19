@@ -24,11 +24,11 @@ const (
 	// Output this soon after input (typing, focus, resize) is a response to
 	// that input, such as echo or a redraw, not the agent working on its own.
 	inputEchoWindow = 750 * time.Millisecond
-	// Consecutive samples with and without output before the state changes,
-	// so one stray redraw never looks like a finished turn.
-	agentBusySamples  = 2
-	agentQuietSamples = 2
 )
+
+// Consecutive samples with and without output before the state changes come
+// from agents.working_after and agents.waiting_after (2 seconds each by
+// default), so one stray redraw never looks like a finished turn.
 
 // Executable or script names of coding agents, mapped to their labels.
 var agentCommands = map[string]string{
@@ -39,7 +39,7 @@ var agentCommands = map[string]string{
 }
 
 func agentMatch(command string) string {
-	if name, ok := agentCommands[filepath.Base(command)]; ok {
+	if name, ok := currentSettings().agents[filepath.Base(command)]; ok {
 		return name
 	}
 	// Claude Code's native installer runs .../claude/versions/<version>.
@@ -96,13 +96,14 @@ func (s *pane) observeAgentLocked(detected string) {
 	} else {
 		s.activeSamples, s.quietSamples = 0, s.quietSamples+1
 	}
+	settings := currentSettings()
 	switch {
-	case !s.busy && s.activeSamples >= agentBusySamples:
+	case !s.busy && s.activeSamples >= settings.busySamples:
 		s.busy = true
 		if s.agentState == "" {
 			s.attention = false
 		}
-	case s.busy && s.quietSamples >= agentQuietSamples:
+	case s.busy && s.quietSamples >= settings.quietSamples:
 		s.busy = false
 		if s.agentState == "" {
 			s.noteAttentionLocked()
@@ -128,6 +129,9 @@ func (s *session) watchAgents() {
 }
 
 func (s *session) sampleAgents() {
+	if !currentSettings().detect {
+		return
+	}
 	s.mu.Lock()
 	panes := make([]*pane, 0, len(s.panes))
 	for _, p := range s.panes {

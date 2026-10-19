@@ -1,8 +1,6 @@
 package client
 
 import (
-	"github.com/gdamore/tcell/v2"
-
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
@@ -188,8 +186,6 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 		u.screen.Put(area.x+at.x, area.y+at.y, text, style)
 	}
 }
-
-var dividerStyle = tcell.StyleDefault.Foreground(chrome.muted)
 
 var heavyGlyph = map[string]string{
 	"│": "┃", "─": "━", "┼": "╋", "┤": "┫", "├": "┣", "┬": "┳", "┴": "┻",
