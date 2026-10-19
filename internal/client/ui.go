@@ -89,6 +89,8 @@ type ui struct {
 	configKnown                     bool
 	title                           string            // window title last sent to the outer terminal
 	rootKeys, prefixKeys            map[string]string // key bindings; see keyTables
+	help                            bool              // key list overlay open
+	helpOffset                      int               // first key list line shown
 }
 
 func Run(socket, name, cwd string) error {
@@ -248,6 +250,7 @@ func (u *ui) endSession(name string) {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
+	u.help = false
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -336,6 +339,7 @@ func (u *ui) switchTo(name string) error {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
+	u.help = false
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -433,6 +437,10 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	if u.closeConfirm != 0 {
 		u.resizeUntil = time.Time{}
 		u.answerClosePane(e)
+		return
+	}
+	if u.help {
+		u.helpKey(e)
 		return
 	}
 	if u.sidebarFocus {
@@ -646,6 +654,13 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		u.pickerMouse(e, x, y)
 		return
 	}
+	if u.help {
+		// The key list is modal: a click closes it and reaches nothing else.
+		if e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
+			u.help = false
+		}
+		return
+	}
 	if u.frame == nil {
 		return
 	}
@@ -831,6 +846,9 @@ func (u *ui) draw() {
 		if u.sidebarFocus {
 			u.screen.HideCursor()
 		}
+		if u.help {
+			u.drawHelp(w, h)
+		}
 		u.drawPowerline(w, time.Now())
 	}
 	root, _ := u.keyTables()
@@ -851,8 +869,11 @@ func (u *ui) draw() {
 		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
 	} else if u.sidebarFocus {
 		footer = "Sidebar: j/k select · Enter/l open · Esc back · n new session"
+	} else if u.help {
+		footer = "Keys: j/k or arrows scroll · any other key closes"
 	} else if time.Now().Before(u.resizeUntil) {
-		footer = "Resizing: hjkl to continue · stops after 1s pause or another key"
+		_, prefix := u.keyTables()
+		footer = "Resizing: " + directionKeys(prefix, "resize") + " to continue · stops after 1s pause or another key"
 	}
 	if time.Now().Before(u.messageUntil) {
 		footer = u.message

@@ -54,6 +54,7 @@ var Actions = []struct{ Name, Help string }{
 	{"scroll-down", "scroll history down"},
 	{"toggle-sidebar", "show or hide the sidebar"},
 	{"reload-config", "reload the config file"},
+	{"help", "list these key bindings"},
 	{"send-prefix", "send the prefix key to the application"},
 }
 
@@ -78,7 +79,7 @@ var DefaultPrefixKeys = map[string]string{
 	"left": "focus-left", "down": "focus-down", "up": "focus-up", "right": "focus-right",
 	"h": "resize-left", "j": "resize-down", "k": "resize-up", "l": "resize-right",
 	"s": "sessions", "n": "new-session", "p": "last-session", "(": "previous-session", ")": "next-session",
-	"d": "detach", "y": "copy", "b": "toggle-sidebar", "r": "reload-config",
+	"d": "detach", "y": "copy", "b": "toggle-sidebar", "r": "reload-config", "?": "help",
 }
 
 var namedKeys = map[string]string{

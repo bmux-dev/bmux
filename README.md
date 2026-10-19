@@ -83,6 +83,7 @@ including giving Ctrl-l back to the shell.
 | Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
 | Reload config | Ctrl-a r |
+| List key bindings | Ctrl-a ? |
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |

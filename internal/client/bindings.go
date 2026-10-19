@@ -171,6 +171,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.toggleSidebar()
 	case "reload-config":
 		u.requestReload()
+	case "help":
+		u.help, u.helpOffset = true, 0
 	}
 }
 
@@ -286,6 +288,7 @@ func (u *ui) prefixHelp() string {
 		}
 		return strings.Join(keys, " / ")
 	}
+	add(join("help"), "keys")
 	add(join("split-right", "split-down"), "split")
 	add(join("close-pane"), "close")
 	add(directionKeys(prefix, "focus"), "focus")

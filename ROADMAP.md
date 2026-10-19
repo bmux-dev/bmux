@@ -46,19 +46,6 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 **Goal:** a tmux user can switch to bmux for a full day without missing anything basic.
 **Done when:** the owner uses bmux instead of tmux for a week of real work.
 
-### Keys and config
-
-The config file (`~/.config/bmux/config.toml`) shipped with the prefix
-setting, reload (`Ctrl-a r`, `bmux reload`), `bmux default-config`, the
-sidebar, agent detection, alert, restore and state-color settings, and
-rebinding root and prefix keys (`[keys.root]`, `[keys.prefix]`, `"none"`
-unbinds, so Ctrl-l can clear the shell), and `keys.pass-through`, which
-forwards Ctrl-h/j/k/l to listed programs like fzf. Still to do:
-
-| Item | Size | Notes |
-| --- | --- | --- |
-| Key help overlay (`Ctrl-a ?`) | S | Lists current bindings. |
-
 ### First run and agent integrations
 
 Copies herdr's first run. The first time a client attaches, a welcome screen
@@ -191,7 +178,8 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
-| `bind-key`, `unbind-key` | `[keys.root]` and `[keys.prefix]` in the config file |
+| `.tmux.conf`, `source-file` | `~/.config/bmux/config.toml` (Helix layout), reload with Ctrl-a r, `bmux reload` or SIGUSR1; `bmux default-config` |
+| `bind-key`, `unbind-key`, `list-keys` (`C-b ?`) | `[keys.root]` and `[keys.prefix]` in the config file; Ctrl-a ? lists the bindings in effect |
 | Status themes | Powerline status bars, accent colors, light theme |
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a
