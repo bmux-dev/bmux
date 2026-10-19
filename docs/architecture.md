@@ -183,6 +183,14 @@ AGENT`, where `HookReport` maps events to states in Go, so the script stays
 trivial and needs no jq. The hook path never prints, never starts a server and
 always exits 0.
 
+omp and pi get one managed extension file each, generated from one template:
+it keeps working/blocked/idle from their extension events (pi's
+`agent_settled`, omp's `agent_end` without `willContinue`, prompts, approvals
+and the ask tool) and runs `bmux agent` itself, serialized and only when the
+report changes. Leaving the foreground already drops a recognized agent's
+reports, so extensions never report `clear`. omp refuses to install into a
+directory pi also loads, since each would run the other's extension.
+
 JSON edits go through an ordered object type, so other keys keep their order
 and content; they remove every handler whose command names
 `bmux-agent-state.sh`, drop groups and events left empty, then add one group

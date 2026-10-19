@@ -315,7 +315,7 @@ Usage:
   bmux focus left|right|up|down          Move pane focus (for editors at an edge)
   bmux agent STATE [NAME] [-- CMD...]    Report this pane's agent: working, blocked, idle, clear
   bmux integration status|install|uninstall [AGENT]
-                                         Hooks that make agents report exact state (claude, codex)
+                                         Hooks that make agents report exact state (claude, codex, omp, pi)
   bmux restart                           Save sessions, restart the server, restore them
   bmux reload                            Reread the config file (also Ctrl-a r)
   bmux default-config                    Print every setting with its default
