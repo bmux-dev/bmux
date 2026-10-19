@@ -49,6 +49,7 @@ func init() {
 		{"capture", "[--json] TARGET", "Print a pane's visible text; TARGET is SESSION or SESSION:PANE", startServer, runCapture},
 		{"send", "TARGET [--if-seq N] (--key KEY | --text TEXT)...", "Type into a pane: keys like enter, down or C-c, and text", startServer, runSend},
 		{"wait-agent", "[--state S,...] [--since SEQ] [--timeout D | --notify SESSION:PANE] [TARGET...]", "Wait until an agent pane is blocked or idle; print it, or with --notify type it into a supervising agent", startServer, runWaitAgent},
+		{"agent", "STATE [NAME] [-- CMD...]", "Report this pane's agent: working, blocked, idle, clear", noServer, reportAgent},
 		{"integration", "status|install|uninstall [AGENT]", "Make claude, codex, omp, opencode and pi report exact state", noServer, func(socket string, args []string) error {
 			// Writes agents' config files and reports from their hooks.
 			return runIntegration(socket, args, os.Stdin, os.Stdout)

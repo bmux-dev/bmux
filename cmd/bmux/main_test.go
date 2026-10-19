@@ -94,3 +94,21 @@ func TestClientsRefuseToStartInsideAPane(t *testing.T) {
 		}
 	}
 }
+
+// Agent hooks and extensions report through these commands; losing one from
+// the command table silently stops every integration.
+func TestIntegrationCommandsDispatch(t *testing.T) {
+	dir, err := os.MkdirTemp("", "bmux-dispatch-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	t.Setenv("BMUX_RUNTIME_DIR", dir)
+	t.Setenv("BMUX_SESSION", "")
+	if err := run([]string{"agent", "working", "omp"}); err == nil || !strings.Contains(err.Error(), "not inside a bmux pane") {
+		t.Fatalf("bmux agent outside a pane: %v", err)
+	}
+	if err := run([]string{"integration", "hook", "claude"}); err != nil && strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("bmux integration hook: %v", err)
+	}
+}
