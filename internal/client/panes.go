@@ -18,6 +18,9 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	for _, p := range f.Panes {
 		alive[p.ID] = true
 	}
+	if d := u.divider; d != nil && (!alive[d.first] || !alive[d.second]) {
+		u.divider = nil
+	}
 	if !f.Zoomed {
 		for id := range u.selections {
 			if !alive[id] {

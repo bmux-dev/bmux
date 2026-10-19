@@ -68,6 +68,7 @@ type ui struct {
 	clickCount                      int
 	appMouseDown                    bool
 	appMouseButton                  int
+	divider                         *dividerDrag // divider being dragged, or nil
 	quitting                        bool
 	clipboard                       *clipboardWorker
 	clipboardSeq                    uint64
@@ -250,6 +251,7 @@ func (u *ui) endSession(name string) {
 	u.paneSizes = nil
 	u.selection = selection{}
 	u.appMouseDown = false
+	u.divider = nil
 	u.clickCount = 0
 	u.name = ""
 	if u.previous == name {
@@ -341,6 +343,7 @@ func (u *ui) switchTo(name string) error {
 	u.preview = nil
 	u.previewRevision = 0
 	u.selection = selection{}
+	u.divider = nil
 	go func() {
 		for {
 			var response protocol.Response
@@ -709,20 +712,36 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		return
 	}
 	screenWidth, screenHeight := u.screen.Size()
-	if y == screenHeight-1 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown {
+	if y == screenHeight-1 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
 		u.openPicker()
 		return
 	}
 	// Sidebar columns are chrome. A drag or app press that started in a pane
 	// still receives its motion and release there.
 	if ox := u.paneOriginX(screenWidth); ox > 0 {
-		if x < ox && !u.selection.dragging && !u.appMouseDown {
+		if x < ox && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
 			if e.Buttons()&tcell.Button1 != 0 && screenY >= paneOriginY && screenY < screenHeight-1 {
 				u.sidebarClick(y, screenHeight)
 			}
 			return
 		}
 		x -= ox
+	}
+	// Dividers are chrome too: pressing one and dragging moves it, like
+	// tmux with mouse on. Focus and selection stay as they are.
+	if u.divider != nil {
+		if e.Buttons()&tcell.Button1 == 0 {
+			u.divider = nil
+		} else {
+			u.dragDivider(x, y-paneOriginY)
+		}
+		return
+	}
+	if e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown && screenY >= paneOriginY && screenY < screenHeight-1 {
+		if d, ok := u.dividerAt(x, y-paneOriginY); ok {
+			u.divider = &d
+			return
+		}
 	}
 	if u.workspace != nil && !u.selection.dragging && !u.appMouseDown && e.Buttons() != tcell.ButtonNone {
 		for _, p := range u.workspace.Panes {

@@ -343,6 +343,11 @@ and the server starts without restoring.
 | Select a line and copy | Triple-click |
 | Scroll history | Wheel up/down, three lines per event |
 | Select or scroll history in a mouse-aware application | Hold Alt |
+| Resize panes | Drag a divider between them |
+
+Dragging a divider moves it as you go, down to each pane's minimum size,
+without changing which pane is focused. Where dividers meet, the one running
+through the junction moves. A zoomed pane has no dividers to drag.
 
 Mouse-aware applications receive mouse events by default. **Alt** gives the
 gesture to bmux instead. If your terminal reserves Shift-drag, it performs

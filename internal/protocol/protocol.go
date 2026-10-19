@@ -49,6 +49,8 @@ type Request struct {
 	Kind       string `json:"kind,omitempty"`
 	Focused    bool   `json:"focused,omitempty"`
 	PaneID     int    `json:"pane_id,omitempty"`
+	// NeighborID is the pane across a dragged divider from PaneID.
+	NeighborID int    `json:"neighbor_id,omitempty"`
 	SessionID  uint64 `json:"session_id,omitempty"`
 	Direction  string `json:"direction,omitempty"`
 	// Args is the command an agent reports for resuming its conversation.
