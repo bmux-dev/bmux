@@ -7,9 +7,8 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.2.0 | [Agent sidebar](#already-built) and [restore across restarts and reboots](#restore-follow-ups) |
-| **Now** | [v0.3](#v03-daily-driver) | Daily driver: replace tmux for a full working day |
-| **Next** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
+| **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
+| **Now** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
 | | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
 | | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
@@ -41,23 +40,14 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 ---
 
-## v0.3: daily driver
-
-**Goal:** a tmux user can switch to bmux for a full day without missing anything basic.
-**Done when:** the owner uses bmux instead of tmux for a week of real work.
-
-Everything planned for v0.3 is built; see [Already built](#already-built).
-It ships once the owner has used bmux instead of tmux for a week of real work.
-Fixes that week turns up go here.
-
 ## Restore follow-ups
 
 v0.2.0 replaced tmux-resurrect and tmux-continuum: a versioned snapshot
 (sessions, split tree, focus, zoom, per-pane cwd), saves every 5 seconds and on
 clean shutdown, restore on server start, agent resume (reported commands or
 each agent's "continue latest"), and `bmux restart`, which survives protocol
-changes and reconnects clients. With an [agent integration](#first-run-and-agent-integrations),
-two agents in one directory each resume their own session. Still to do:
+changes and reconnects clients. With an [agent integration](#already-built)
+(v0.3.0), two agents in one directory each resume their own session. Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
@@ -175,7 +165,10 @@ v0.2.0 added the agent sidebar, restore across restarts and reboots with
 `bmux restart`, flicker-free synchronized output, and app backgrounds set with
 OSC 11.
 
-Since v0.2.0, unreleased (v0.3): splits in the focused pane's directory,
-dragging dividers, rebindable keys with a key list, Ctrl-h/j/k/l pass-through,
-focus events, outer window titles, apps' OSC 52 copies, the welcome screen and
-agent integrations.
+v0.3.0 added the config file with rebindable keys and a key list (Ctrl-a ?),
+agent integrations for Claude Code, Codex, omp, opencode and pi with an
+integrations panel (Ctrl-a i) and a welcome screen, agents supervising other
+agents (`bmux agents`, `capture`, `send`, `wait-agent`), splits in the focused
+pane's directory, dragging dividers, Ctrl-a x, Ctrl-a ( / ), refusing to nest,
+Ctrl-h/j/k/l pass-through, focus events, window titles, apps' OSC 52 copies and
+alert sounds on Linux.
