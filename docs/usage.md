@@ -18,6 +18,13 @@ The server starts automatically. Sessions survive detach and client exit. When
 the server stops or the machine reboots, the next server restores them: see
 [Restarts and reboots](#restarts-and-reboots).
 
+The first time a client attaches, a welcome screen over the session covers the
+prefix, Ctrl-h/j/k/l and the sidebar. **Enter**, **Right** or **l** continues
+to the [agent integrations](#agent-integrations) panel; **Esc** skips it.
+Either way bmux adds `onboarding = false` to the top of the
+[config file](#configuration-file), creating it if needed, so it isn't shown
+again; set it to `true` to see it on the next attach.
+
 ## Commands
 
 | Command | Behavior |
@@ -453,6 +460,7 @@ width = 24
 | --- | --- | --- |
 | `theme` | `"dark"` | `"dark"` or `"light"` |
 | `prefix` | `"C-a"` | The command key, written like Helix keys: `C-a` to `C-z`, except `C-h/j/k/l` (navigation) and `C-i`/`C-m` (Tab and Enter). `ctrl-a` also works. Status-line help follows it. |
+| `onboarding` | `true` | Show the welcome screen on the next attach; bmux sets `false` once it has been seen |
 | `ui.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |

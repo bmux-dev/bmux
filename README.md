@@ -50,6 +50,8 @@ bmux
 
 `bmux` creates a fresh session in the current directory, named after that
 directory. The server starts automatically. Existing sessions keep running.
+The first time, a welcome screen covers the basic keys and leads into the
+optional [agent integrations](#agents); it isn't shown again.
 
 Press **Ctrl-a d** to detach. Return with:
 

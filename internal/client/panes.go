@@ -63,6 +63,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	u.activatePane(f.Focused)
 	u.noteEdge(f)
 	u.noteConfig(f)
+	u.noteFirstAttach()
 	if !alive[u.focused] {
 		u.frame = nil
 		if len(f.Panes) > 0 {

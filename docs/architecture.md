@@ -210,6 +210,12 @@ the ones the pane's agents load. Status reads and installs are a few small
 local file operations, so they run inline on the UI goroutine. Like the key
 list, the panel is a modal `drawModal` overlay that takes every key and click.
 
+The welcome screen opens from `applyFrame` on the first frame of the client's
+first attachment while `onboarding` is true, so the session is drawn behind
+it. Dismissing it calls `config.MarkOnboarded`, which replaces a top-level
+`onboarding` line or prepends one (always top-level in TOML), keeps every
+other byte, and writes only if the result still parses.
+
 ## Persistence
 
 `EnablePersistence` restores the state file before `Serve` accepts clients and

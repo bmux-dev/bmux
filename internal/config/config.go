@@ -20,14 +20,17 @@ import (
 // The layout follows Helix's config.toml: a theme name and the prefix at the
 // top, then one table per area, kebab-case keys, and only what you change.
 type Config struct {
-	Theme   string  `toml:"theme"`
-	Prefix  string  `toml:"prefix"`
-	UI      UI      `toml:"ui"`
-	Sidebar Sidebar `toml:"sidebar"`
-	Sound   Sound   `toml:"sound"`
-	Agents  Agents  `toml:"agents"`
-	Restore Restore `toml:"restore"`
-	Keys    Keys    `toml:"keys"`
+	Theme  string `toml:"theme"`
+	Prefix string `toml:"prefix"`
+	// Onboarding shows the welcome screen on the next attach; bmux sets it
+	// to false once the screen has been seen.
+	Onboarding bool    `toml:"onboarding"`
+	UI         UI      `toml:"ui"`
+	Sidebar    Sidebar `toml:"sidebar"`
+	Sound      Sound   `toml:"sound"`
+	Agents     Agents  `toml:"agents"`
+	Restore    Restore `toml:"restore"`
+	Keys       Keys    `toml:"keys"`
 }
 
 type UI struct {
@@ -85,13 +88,14 @@ func (d Duration) MarshalText() ([]byte, error) { return []byte(d.String()), nil
 
 func Default() Config {
 	return Config{
-		Theme:   "dark",
-		Prefix:  "C-a",
-		UI:      UI{Accent: "cyan", SetTitle: true},
-		Sidebar: Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
-		Sound:   Sound{Enabled: true},
-		Agents:  Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
-		Restore: Restore{Enabled: true},
+		Theme:      "dark",
+		Prefix:     "C-a",
+		Onboarding: true,
+		UI:         UI{Accent: "cyan", SetTitle: true},
+		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
+		Sound:      Sound{Enabled: true},
+		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
+		Restore:    Restore{Enabled: true},
 	}
 }
 
@@ -292,6 +296,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 # theme = "dark"            # "dark" or "light"
 # prefix = "C-a"            # any C-letter except C-h/j/k/l, C-i, C-m
+# onboarding = true         # welcome screen on the next attach; bmux sets false
 
 [ui]
 # accent = "cyan"           # cyan, amber, green or "#RRGGBB"
