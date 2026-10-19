@@ -4,6 +4,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -16,10 +17,14 @@ func darwinIdentity(p unix.KinfoProc) (processIdentity, error) {
 	return processIdentity{pid: pid, sid: sid, birth: fmt.Sprintf("%d:%d", p.Proc.P_starttime.Sec, p.Proc.P_starttime.Usec), zombie: p.Proc.P_stat == 5}, err
 }
 
-func foregroundEditorGroup(group int) (bool, error) {
+// foregroundGroupCommand returns the first non-empty match for a live member
+// of the foreground group. Candidates are the short comm name, the full
+// executable path, and for script interpreters only the script path (argv[1]).
+// Nothing else from the argument or environment area is read or retained.
+func foregroundGroupCommand(group int, match func(string) string) (string, error) {
 	processes, err := unix.SysctlKinfoProcSlice("kern.proc.pgrp", group)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	var lookupErr error
 	for _, p := range processes {
@@ -28,32 +33,58 @@ func foregroundEditorGroup(group int) (bool, error) {
 			continue
 		}
 		name := strings.TrimRight(string(p.Proc.P_comm[:]), "\x00")
-		if isEditorCommand(name) {
-			return true, nil
+		if found := match(name); found != "" {
+			return found, nil
 		}
 		// Darwin's short comm field can contain a truncated absolute path.
-		// PROCARGS2 starts with argc followed by the full executable path; do
-		// not inspect or log the later arguments/environment fields.
-		args, err := unix.SysctlRaw("kern.procargs2", int(p.Proc.P_pid))
+		exe, script, err := darwinCommandPaths(int(p.Proc.P_pid))
 		if err != nil {
 			lookupErr = err
 			continue
 		}
-		if len(args) < 5 {
-			lookupErr = fmt.Errorf("missing foreground executable path")
-			continue
+		if found := match(exe); found != "" {
+			return found, nil
 		}
-		path := args[4:]
-		end := bytes.IndexByte(path, 0)
-		if end <= 0 {
-			lookupErr = fmt.Errorf("missing foreground executable path")
-			continue
-		}
-		if isEditorCommand(string(path[:end])) {
-			return true, nil
+		if script != "" {
+			if found := match(script); found != "" {
+				return found, nil
+			}
 		}
 	}
-	return false, lookupErr
+	return "", lookupErr
+}
+
+// PROCARGS2 is argc, the executable path, NUL padding, then argv.
+func darwinCommandPaths(pid int) (exe, script string, err error) {
+	args, err := unix.SysctlRaw("kern.procargs2", pid)
+	if err != nil {
+		return "", "", err
+	}
+	if len(args) < 5 {
+		return "", "", fmt.Errorf("missing foreground executable path")
+	}
+	argc := int(binary.LittleEndian.Uint32(args[:4]))
+	rest := args[4:]
+	end := bytes.IndexByte(rest, 0)
+	if end <= 0 {
+		return "", "", fmt.Errorf("missing foreground executable path")
+	}
+	exe, rest = string(rest[:end]), rest[end:]
+	if argc < 2 || !isScriptInterpreter(exe) {
+		return exe, "", nil
+	}
+	rest = bytes.TrimLeft(rest, "\x00")
+	for i := range 2 {
+		end = bytes.IndexByte(rest, 0)
+		if end < 0 {
+			return exe, "", nil
+		}
+		if i == 1 {
+			script = string(rest[:end])
+		}
+		rest = rest[end+1:]
+	}
+	return exe, script, nil
 }
 
 func inspectProcess(pid int) (processIdentity, error) {

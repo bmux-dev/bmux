@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestConditionalLivePreviewSendsOnlyChangedFrames(t *testing.T) {
 	if r.Revision <= oldRevision || r.NotModified {
 		t.Fatal("new output didn't advance revision")
 	}
-	if after := s.request(protocol.Request{Op: "list"}).Sessions[0]; after != before {
+	if after := s.request(protocol.Request{Op: "list"}).Sessions[0]; !reflect.DeepEqual(after, before) {
 		t.Fatal("live preview changed client count/recency")
 	}
 	// A different session generation must force a full frame even if the

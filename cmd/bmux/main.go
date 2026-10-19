@@ -45,8 +45,12 @@ func run(args []string) error {
 		defer signal.Stop(stop)
 		return daemon.Serve(socket, stop)
 	}
-	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" {
+	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" && args[0] != "agent" {
 		return fmt.Errorf("unknown command %q; try bmux --help", args[0])
+	}
+	if len(args) > 0 && args[0] == "agent" {
+		// Reports come from hooks inside a pane; never start a server for them.
+		return reportAgent(socket, args[1:])
 	}
 	if err = daemon.Ensure(socket); err != nil {
 		return err
@@ -143,6 +147,24 @@ func run(args []string) error {
 	return nil
 }
 
+func reportAgent(socket string, args []string) error {
+	if len(args) < 1 || len(args) > 2 {
+		return fmt.Errorf("usage: bmux agent working|blocked|idle|clear [NAME]")
+	}
+	session := os.Getenv("BMUX_SESSION")
+	if session == "" {
+		return fmt.Errorf("not inside a bmux pane")
+	}
+	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
+	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
+	label := ""
+	if len(args) == 2 {
+		label = args[1]
+	}
+	_, err := client.Request(socket, protocol.Request{Op: "agent-report", Name: session, SessionID: sessionID, PaneID: paneID, Kind: args[0], Text: label})
+	return err
+}
+
 func attachTarget(socket string, names []string) (string, error) {
 	if len(names) > 1 {
 		return "", fmt.Errorf("usage: bmux attach [NAME]")
@@ -174,6 +196,7 @@ Usage:
   bmux rename OLD NEW                    Rename a session
   bmux kill NAME                         Terminate a session and all its panes
   bmux focus left|right|up|down          Move pane focus (for editors at an edge)
+  bmux agent STATE [NAME]                Report this pane's agent: working, blocked, idle, clear
   bmux version                           Print the version
 
 Inside a session:
@@ -186,6 +209,13 @@ Inside a session:
   Ctrl-h/j/k/l    Navigate bmux panes, or forward to foreground Neovim/Vim
   Ctrl-a arrows   Focus pane      Ctrl-a o   Cycle visible panes
   Ctrl-a m   Zoom / unzoom        Click a pane to focus it
+  Ctrl-a b   Show / hide sidebar
+
+Sidebar (Ctrl-h from the leftmost pane):
+  j/k   Select session or agent  Enter/l   Open it
+  Esc   Back to panes            n         New session
+  ● working (yellow) · ● waiting or rang while unseen (teal) · ● blocked (red) · ○ idle (green)
+  A sound plays when a background agent becomes ready or blocked (BMUX_SOUND=0 mutes)
 
 Session picker:
   j/k or arrows   Select          Enter   Attach

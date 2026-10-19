@@ -25,6 +25,9 @@ type session struct {
 	zoomed          bool
 	shell           string
 	revision        uint64
+	viewers         int    // attached clients whose terminal has focus
+	edges           uint64 // directional moves that found no neighbor pane
+	edgeDirection   string
 	stopped         bool
 	done            chan struct{} // last pane has exited, stopped, and left layout
 	watchers        sync.WaitGroup
@@ -48,6 +51,7 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 		width: w, height: h, shell: shell, revision: 1, done: make(chan struct{}), owned: map[*pane]struct{}{p: {}},
 	}
 	s.watchPane(1, p)
+	go s.watchAgents()
 	return s, nil
 }
 
@@ -88,6 +92,7 @@ func (s *session) watchPane(id int, p *pane) {
 			if !s.stopped && !s.stopping.Load() {
 				_ = s.panes[s.focused].input(protocol.Request{Op: "focus", Focused: true})
 			}
+			s.updateViewedLocked()
 		}
 		if len(s.panes) == 1 {
 			s.zoomed = false
@@ -131,6 +136,7 @@ func (s *session) status() protocol.Session {
 	defer s.mu.Unlock()
 	result := s.info
 	result.Panes = len(s.panes)
+	result.Activity = s.activityLocked()
 	result.Exited = true
 	for _, p := range s.panes {
 		p.mu.Lock()
@@ -282,6 +288,7 @@ func (s *session) finishLayoutLocked(previous int) error {
 		_ = s.panes[previous].input(protocol.Request{Op: "focus", Focused: false})
 		_ = s.panes[s.focused].input(protocol.Request{Op: "focus", Focused: true})
 	}
+	s.updateViewedLocked()
 	return s.resizePanes()
 }
 
@@ -338,6 +345,10 @@ func (s *session) selectPaneDirectionLocked(direction string, from int) error {
 	if best != 0 {
 		s.focused = best
 		s.zoomed = false
+	} else if len(positions) > 0 {
+		// Clients use edges to move focus into their own chrome (the sidebar).
+		s.edges++
+		s.edgeDirection = direction
 	}
 	return nil
 }
@@ -351,7 +362,8 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 	if revision == last && !force {
 		return nil, revision
 	}
-	f := &protocol.Frame{Name: s.info.Name, Focused: s.focused, Zoomed: s.zoomed, Width: s.width, Height: s.height, Generation: protocol.SessionGeneration(s.info.Created)}
+	f := &protocol.Frame{Name: s.info.Name, Focused: s.focused, Zoomed: s.zoomed, Width: s.width, Height: s.height, Generation: protocol.SessionGeneration(s.info.Created),
+		Edge: s.edges, EdgeDirection: s.edgeDirection}
 	for id := range offsets {
 		if s.panes[id] == nil {
 			delete(offsets, id)

@@ -9,12 +9,19 @@ import (
 )
 
 // Chrome has its own palette; application cells keep their supplied colors.
-type chromeTheme struct{ foreground, background, muted, bar, accent, selection, selectionText tcell.Color }
+// Agent state colors follow herdr's Catppuccin defaults (Mocha, or Latte for
+// the light theme): working yellow, blocked red, done teal, idle green.
+type chromeTheme struct {
+	foreground, background, muted, bar, accent, selection, selectionText tcell.Color
+	working, blocked, done, idle, unknown                                tcell.Color
+}
 
 func themeFromEnv(env func(string) string) chromeTheme {
-	t := chromeTheme{tcell.NewHexColor(0xe7e7e7), tcell.NewHexColor(0x0b0b0b), tcell.NewHexColor(0x929292), tcell.NewHexColor(0x202020), tcell.NewHexColor(0x83c8dc), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xeeeeee)}
+	t := chromeTheme{tcell.NewHexColor(0xe7e7e7), tcell.NewHexColor(0x0b0b0b), tcell.NewHexColor(0x929292), tcell.NewHexColor(0x202020), tcell.NewHexColor(0x83c8dc), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xeeeeee),
+		tcell.NewHexColor(0xf9e2af), tcell.NewHexColor(0xf38ba8), tcell.NewHexColor(0x94e2d5), tcell.NewHexColor(0xa6e3a1), tcell.NewHexColor(0x6c7086)}
 	if strings.EqualFold(env("BMUX_THEME"), "light") {
-		t = chromeTheme{tcell.NewHexColor(0x202020), tcell.NewHexColor(0xf5f5f5), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xe4e4e4), tcell.NewHexColor(0x00657c), tcell.NewHexColor(0xc7c7c7), tcell.NewHexColor(0x202020)}
+		t = chromeTheme{tcell.NewHexColor(0x202020), tcell.NewHexColor(0xf5f5f5), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xe4e4e4), tcell.NewHexColor(0x00657c), tcell.NewHexColor(0xc7c7c7), tcell.NewHexColor(0x202020),
+			tcell.NewHexColor(0xdf8e1d), tcell.NewHexColor(0xd20f39), tcell.NewHexColor(0x179299), tcell.NewHexColor(0x40a02b), tcell.NewHexColor(0x9ca0b0)}
 	}
 	switch strings.ToLower(env("BMUX_ACCENT")) {
 	case "amber":

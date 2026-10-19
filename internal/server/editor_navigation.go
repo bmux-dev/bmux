@@ -16,6 +16,13 @@ func isEditorCommand(command string) bool {
 	return false
 }
 
+func editorMatch(command string) string {
+	if isEditorCommand(command) {
+		return "editor"
+	}
+	return ""
+}
+
 func editorNavigationKey(direction string) (protocol.Request, error) {
 	var key rune
 	switch direction {
@@ -43,7 +50,8 @@ func (p *pane) foregroundEditor() (bool, error) {
 	if group <= 0 {
 		return false, fmt.Errorf("PTY has no foreground process group")
 	}
-	return foregroundEditorGroup(group)
+	name, err := foregroundGroupCommand(group, editorMatch)
+	return name != "", err
 }
 
 func (s *session) navigatePane(direction string) error {

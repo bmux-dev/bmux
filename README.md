@@ -18,6 +18,7 @@ exit, not server exit or reboot.
 | Familiar tmux workflow | In bmux |
 | --- | --- |
 | tmux-sessionx-style picking | List-first session picker, fuzzy filtering, live previews |
+| Agent sidebar | Every session and its coding agents on the left; Ctrl-h into it when one needs you |
 | tmux-yank-style copying | Drag to select, release to copy to your clipboard |
 | vim-tmux-navigator-style navigation | Vim/Neovim-aware Ctrl-h/j/k/l, with edge-crossing via a [small editor mapping](docs/editor-navigation.md) |
 | Powerline themes | Built-in status bars, accent colors, and a light theme |
@@ -66,9 +67,10 @@ many tmux configs. There is no config file or key rebinding yet; both are planne
 | Create session | Ctrl-a n |
 | Last session | Ctrl-a p |
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
-| Focus pane | Ctrl-a arrows, click, or Ctrl-a o to cycle |
+| Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
+| Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
+| Show / hide sidebar | Ctrl-a b |
 | Resize divider | Ctrl-a h/j/k/l; repeat h/j/k/l within one second |
-| Zoom / unzoom | Ctrl-a m |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
 | Paste | Your terminal's paste shortcut |
@@ -77,6 +79,15 @@ many tmux configs. There is no config file or key rebinding yet; both are planne
 **Last session** toggles back to the session you came from. **Ctrl-h/j/k/l**
 navigate panes outside Vim/Neovim; inside those editors, the keys are forwarded.
 Other programs don't receive these shortcuts, including Ctrl-l to clear a shell.
+
+The sidebar shows your sessions on top and, below a divider, every agent
+across them. bmux spots claude, codex, opencode, omp, pi, gemini and other
+coding agents running in a pane and marks them with herdr's icons: yellow **●**
+working, teal **●** went quiet while you weren't looking (finished, or asking
+you something), red **●** [reported](docs/usage.md#reporting-agent-state)
+blocked, green **○** idle. A sound plays when a background agent becomes ready
+or blocked. Any program's bell or desktop notification marks its pane too. The
+sidebar hides below 80 columns.
 
 In the picker, **j/k** or arrows browse, **Enter** attaches, **n** creates,
 **r** renames, and **d** asks to terminate. **/** starts filtering; **Enter**
@@ -95,6 +106,7 @@ Settings are environment variables for now:
 | `BMUX_THEME` | `light`; dark by default |
 | `BMUX_POWERLINE_ASCII` | `1` for plain-text separators |
 | `BMUX_TERMINAL_PADDING` | `1` for physical-terminal padding |
+| `BMUX_SOUND` | `0` turns off agent alert sounds |
 | `BMUX_RUNTIME_DIR` | Override the server's runtime directory |
 
 ```sh

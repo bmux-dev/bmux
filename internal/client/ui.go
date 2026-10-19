@@ -70,6 +70,14 @@ type ui struct {
 	quitting                        bool
 	clipboard                       *clipboardWorker
 	clipboardSeq                    uint64
+	sidebarHidden, sidebarFocus     bool
+	sidebarSelected                 sidebarTarget
+	sidebarBusy                     bool
+	sidebarResults                  chan sidebarResult
+	edge                            uint64 // last seen Frame.Edge for this attachment
+	edgeKnown                       bool
+	alertsKnown                     bool
+	sound                           func(blocked bool)
 }
 
 func Run(socket, name, cwd string) error {
@@ -84,8 +92,9 @@ func Run(socket, name, cwd string) error {
 	screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
 	screen.EnablePaste()
 	screen.EnableFocus()
-	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), done: make(chan struct{})}
+	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), done: make(chan struct{})}
 	u.clipboard = newClipboardWorker()
+	u.sound = u.playAlert
 	defer u.clipboard.Close()
 	defer close(u.done)
 	defer u.stopPreview()
@@ -125,7 +134,7 @@ func Run(socket, name, cwd string) error {
 				u.mouse(e)
 			case *tcell.EventResize:
 				w, h := screen.Size()
-				u.send(protocol.Request{Op: "resize", Width: w, Height: paneViewportHeight(h)})
+				u.send(protocol.Request{Op: "resize", Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
 				u.requestPreview()
 				screen.Sync()
 			case *tcell.EventFocus:
@@ -169,6 +178,8 @@ func Run(socket, name, cwd string) error {
 			u.finishDelete(result)
 		case result := <-u.clipboard.Results:
 			u.finishClipboard(result)
+		case result := <-u.sidebarResults:
+			u.finishSidebarRefresh(result)
 		case <-previewTicker.C:
 			if u.picker && u.prompt == "" {
 				u.requestPreview()
@@ -176,6 +187,9 @@ func Run(socket, name, cwd string) error {
 		case <-ticker.C:
 			if u.picker && (u.prompt == "" || u.prompt == "delete") {
 				u.refresh()
+			} else if !u.picker && u.conn != nil {
+				// Also while the sidebar is hidden: alert sounds need fresh state.
+				u.refreshSidebar()
 			}
 		}
 		u.draw()
@@ -194,6 +208,8 @@ func (u *ui) endSession(name string) {
 	u.pending = 0
 	u.workspace, u.frame = nil, nil
 	u.focused = 0
+	u.edgeKnown = false
+	u.sidebarFocus = false
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -208,6 +224,9 @@ func (u *ui) endSession(name string) {
 }
 
 func (u *ui) notice(text string) { u.message, u.messageUntil = text, time.Now().Add(5*time.Second) }
+
+const prefixHelp = "Ctrl-a: | / - split · arrows focus · hjkl resize · m zoom · b sidebar · s sessions"
+
 func (u *ui) send(r protocol.Request) {
 	if r.PaneID == 0 && r.Op != "select-pane" && r.Op != "navigate-pane" && r.Op != "resize" && u.pending == 0 {
 		r.PaneID = u.focused
@@ -229,7 +248,7 @@ func (u *ui) send(r protocol.Request) {
 func (u *ui) switchTo(name string) error {
 	u.stopPreview()
 	w, h := u.screen.Size()
-	conn, err := attach(u.socket, name, w, paneViewportHeight(h))
+	conn, err := attach(u.socket, name, u.paneViewportWidth(w), paneViewportHeight(h))
 	if err != nil {
 		return err
 	}
@@ -244,6 +263,8 @@ func (u *ui) switchTo(name string) error {
 	u.paneSizes = make(map[int][2]int)
 	u.pending = 0
 	u.resizeUntil = time.Time{}
+	u.edgeKnown = false
+	u.sidebarFocus = false
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -267,6 +288,7 @@ func (u *ui) switchTo(name string) error {
 		}
 	}()
 	u.send(protocol.Request{Op: "focus", Focused: true})
+	u.refreshSidebar()
 	return nil
 }
 
@@ -280,7 +302,7 @@ func (u *ui) refresh() {
 		u.notice(err.Error())
 		return
 	}
-	u.sessions = r.Sessions
+	u.updateSessions(r.Sessions)
 	for i, s := range u.filtered() {
 		if s.Name == selected {
 			u.chosen = i
@@ -334,6 +356,11 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	if u.picker {
 		u.resizeUntil = time.Time{}
 		u.pickerKey(e)
+		return
+	}
+	if u.sidebarFocus {
+		u.resizeUntil = time.Time{}
+		u.sidebarKey(e)
 		return
 	}
 	if !u.prefix && e.Key() == tcell.KeyRune && e.Modifiers() == tcell.ModNone && now.Before(u.resizeUntil) {
@@ -392,8 +419,10 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 						u.notice(err.Error())
 					}
 				}
+			case 'b':
+				u.toggleSidebar()
 			default:
-				u.notice("Ctrl-a: | / - split · arrows focus · hjkl resize · m zoom · s sessions")
+				u.notice(prefixHelp)
 			}
 		default:
 			directions := map[tcell.Key]string{tcell.KeyLeft: "left", tcell.KeyRight: "right", tcell.KeyUp: "up", tcell.KeyDown: "down"}
@@ -508,7 +537,7 @@ func (u *ui) pickerKey(e *tcell.EventKey) {
 				dir = filepath.Join(u.cwd, dir)
 			}
 			w, h := u.screen.Size()
-			_, err := Request(u.socket, protocol.Request{Op: "create", Name: u.newName, Dir: dir, Width: w, Height: paneViewportHeight(h)})
+			_, err := Request(u.socket, protocol.Request{Op: "create", Name: u.newName, Dir: dir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
 			if err != nil {
 				u.promptError = err.Error()
 				return
@@ -579,14 +608,26 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	if u.frame == nil {
 		return
 	}
-	_, screenHeight := u.screen.Size()
+	screenWidth, screenHeight := u.screen.Size()
 	if y == screenHeight-1 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown {
 		u.openPicker()
 		return
 	}
+	// Sidebar columns are chrome. A drag or app press that started in a pane
+	// still receives its motion and release there.
+	if ox := u.paneOriginX(screenWidth); ox > 0 {
+		if x < ox && !u.selection.dragging && !u.appMouseDown {
+			if e.Buttons()&tcell.Button1 != 0 && screenY >= paneOriginY && screenY < screenHeight-1 {
+				u.sidebarClick(y, screenHeight)
+			}
+			return
+		}
+		x -= ox
+	}
 	if u.workspace != nil && !u.selection.dragging && !u.appMouseDown && e.Buttons() != tcell.ButtonNone {
 		for _, p := range u.workspace.Panes {
 			if x >= p.X && x < p.X+p.Width && y-paneOriginY >= p.Y && y-paneOriginY < p.Y+p.Height {
+				u.sidebarFocus = false
 				if p.ID != u.focused {
 					u.activatePane(p.ID)
 					u.send(protocol.Request{Op: "select-pane", PaneID: p.ID})
@@ -729,6 +770,10 @@ func (u *ui) draw() {
 			u.drawPane(u.focusedPlacement(), w, h)
 		}
 		u.drawPaneDividers(w, h)
+		u.drawSidebar(w, h)
+		if u.sidebarFocus {
+			u.screen.HideCursor()
+		}
 		u.drawPowerline(w, time.Now())
 	}
 	footer := "Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach"
@@ -743,7 +788,9 @@ func (u *ui) draw() {
 		}
 	}
 	if u.prefix {
-		footer = "Ctrl-a: | / - split · arrows focus · hjkl resize · m zoom · s sessions"
+		footer = prefixHelp
+	} else if u.sidebarFocus {
+		footer = "Sidebar: j/k select · Enter/l open · Esc back · n new session"
 	} else if time.Now().Before(u.resizeUntil) {
 		footer = "Resizing: hjkl to continue · stops after 1s pause or another key"
 	}

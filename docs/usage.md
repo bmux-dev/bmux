@@ -29,6 +29,7 @@ restore yet.
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
+| `bmux agent STATE [NAME]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`; used by agent hooks |
 | `bmux version`, `bmux --version` | Print the version |
 | `bmux help`, `bmux --help`, `bmux -h` | Show help |
 
@@ -136,6 +137,8 @@ The prefix is **Ctrl-a**. Release it before pressing the next key.
 | Split side by side | Ctrl-a \| |
 | Split stacked | Ctrl-a - |
 | Focus left/down/up/right | Ctrl-h/j/k/l outside Vim/Neovim |
+| Focus the sidebar | Ctrl-h from the leftmost pane |
+| Show / hide the sidebar | Ctrl-a b |
 | Focus a neighboring pane directly | Ctrl-a arrow keys |
 | Cycle visible panes | Ctrl-a o |
 | Focus a pane | Click it |
@@ -163,6 +166,87 @@ Each press renews a **one-second** window. A one-second pause, another key,
 a mouse click or wheel event, paste, opening the picker, or losing terminal
 focus ends repetition. The footer shows when resizing is active. Unzoom
 before resizing dividers.
+
+## Agents and the sidebar
+
+The sidebar runs down the left side of the attached view, on the bar
+background. Its top section lists every session in creation order, marked
+with the most urgent state inside it. Below a divider, the **Agents** section
+lists every agent in every session, each with its state and session name, plus
+any other pane waiting on you. Terminals narrower than 80 columns hide it;
+Ctrl-a b hides or shows it at any width that fits.
+
+bmux recognizes an agent when it is the foreground program of a pane:
+aider, amp, claude, codex, copilot, crush, cursor-agent, droid, gemini, goose,
+grok, kimi, kiro-cli, omp, opencode, pi and qwen, including script-based ones
+started through node, bun, deno or python. Without any setup, an agent that
+keeps drawing (spinners, streamed output) for about two seconds is **working**,
+and one that then stays quiet for about two seconds is **waiting**. Output right
+after your typing, a focus change or a resize doesn't count. bmux never reads
+the screen's text.
+
+| Mark | Meaning |
+| --- | --- |
+| ● red / `blocked` | An agent reported it needs a decision |
+| ● teal / `waiting` | An agent stopped working while you weren't looking at its pane: it finished, or it is asking you something |
+| ● teal / `bell` | A program rang the bell or sent a desktop notification (OSC 9 or OSC 777) while you weren't looking |
+| ● yellow / `working` | An agent is working |
+| ○ green / `idle` | An agent is ready for input and you have seen it |
+
+Icons and colors match herdr's defaults. A session row shows its most urgent
+agent: blocked, then waiting, then working, then idle.
+
+A pane counts as seen while it is the focused pane of a session attached in
+a terminal window that has focus. Focusing it clears **waiting**. **blocked**
+stays until the agent reports another state. Rows disappear when the agent
+exits.
+
+When an agent you aren't looking at becomes ready (waiting) or blocked, the
+attached client plays a sound: on macOS the system Glass sound, or Funk when
+blocked; elsewhere the outer terminal's bell. Plain terminal bells from other
+programs mark their pane silently. `BMUX_SOUND=0` turns sounds off.
+
+| Action in the sidebar | Control |
+| --- | --- |
+| Enter the sidebar | Ctrl-h from the leftmost pane, including from Vim/Neovim via the [editor mapping](editor-navigation.md) |
+| Move down / up | j/k, Ctrl-j/Ctrl-k, or Down/Up; moving past the last session continues into Agents |
+| Open the selected row | Enter, l, Ctrl-l, Right, or click a row |
+| Back to the panes without switching | Esc, or click a pane |
+| Create a session | n |
+| Prefix command | Ctrl-a, as usual |
+
+Opening an agent row attaches its session if needed and focuses that pane.
+Opening a session row focuses its first pane that is blocked or waiting on
+you, if any. Keys typed in the sidebar never reach applications.
+
+### Reporting agent state
+
+Output timing can't tell a finished turn from a permission prompt. Agents, or
+hooks they run, can report exact state by calling `bmux agent` from inside
+their pane; `BMUX_SESSION_ID` and `BMUX_PANE` identify the pane. Reports replace
+output timing for that pane. Report `working` when a turn starts, `idle` when
+it ends, `blocked` when the agent needs a decision, and `clear` when it exits.
+The optional name (at most 40 bytes) labels the sidebar row and persists
+across reports. A report never starts a server and fails outside a bmux pane.
+Reports from a recognized agent are dropped when it leaves the foreground.
+Agents bmux doesn't recognize can still report themselves.
+
+For Claude Code, add hooks to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bmux agent working claude 2>/dev/null || true" }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "bmux agent blocked claude 2>/dev/null || true" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "bmux agent idle claude 2>/dev/null || true" }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "bmux agent clear 2>/dev/null || true" }] }]
+  }
+}
+```
+
+Agents without hooks also mark their pane when they ring the bell or send a
+terminal notification. An unrecognized agent that exits without reporting
+`clear` keeps its last state until something in that pane reports again.
 
 ## Panes and session lifetime
 
@@ -255,6 +339,7 @@ the client, or export them in your shell startup file.
 | `BMUX_THEME` | `light` selects a light palette; unset or any other value uses dark |
 | `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators; otherwise powerline glyphs with automatic fallback when unavailable |
 | `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding; disabled by default |
+| `BMUX_SOUND` | `0` turns off agent alert sounds; on by default |
 | `BMUX_RUNTIME_DIR` | Custom runtime directory; default follows the rules below |
 
 Theme and accent names are case-insensitive. Unknown accents use cyan. Appearance
@@ -268,7 +353,8 @@ BMUX_POWERLINE_ASCII=1 bmux
 ```
 
 Inside panes, bmux sets `BMUX_SESSION`, `BMUX_SESSION_ID` and `BMUX_PANE` for
-[editor mappings](editor-navigation.md). These are pane information, not settings.
+[editor mappings](editor-navigation.md) and [agent reports](#reporting-agent-state).
+These are pane information, not settings.
 
 ## Runtime files
 

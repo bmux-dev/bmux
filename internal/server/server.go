@@ -116,7 +116,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
-	if r.Op == "focus-pane" && r.SessionID != 0 {
+	if (r.Op == "focus-pane" || r.Op == "agent-report") && r.SessionID != 0 {
 		// Never fall back to the name: after a rename it may belong to another session.
 		item = nil
 		for _, candidate := range s.sessions {
@@ -162,6 +162,16 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			}
 		}
 		sort.Slice(result.Sessions, func(i, j int) bool { return result.Sessions[i].Used.After(result.Sessions[j].Used) })
+	case "agent-report":
+		// Same pane-environment trust model as focus-pane: a process inside
+		// the pane reports itself. Reports never change recent-use order.
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		if err := item.reportAgent(r.PaneID, r.Kind, r.Text); err != nil {
+			result.Error = err.Error()
+		}
 	default:
 		if r.Op == "focus-pane" {
 			// Standalone CLI focus changes (bmux focus), e.g. Neovim
@@ -248,6 +258,12 @@ func (s *Server) handle(conn net.Conn) {
 	var revision uint64
 	ack := 0
 	force := true
+	viewing := false
+	defer func() {
+		if viewing {
+			item.setViewing(false)
+		}
+	}()
 	var paste protocol.PasteAssembly
 	for {
 		select {
@@ -279,6 +295,10 @@ func (s *Server) handle(conn net.Conn) {
 				continue
 			}
 			next = complete
+			if next.Op == "focus" && next.Focused != viewing {
+				viewing = next.Focused
+				item.setViewing(viewing)
+			}
 			if next.Op == "scroll" {
 				item.mu.Lock()
 				id := next.PaneID

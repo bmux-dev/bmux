@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -91,7 +92,7 @@ func TestViewportFirstFrameIsImmediateAndDoesNotResizePTY(t *testing.T) {
 		t.Fatal("copied viewport doesn't fit panel")
 	}
 	assertSessionSize(t, s, 100, 30)
-	if after := s.status(); after != before {
+	if after := s.status(); !reflect.DeepEqual(after, before) {
 		t.Fatal("preview changed attachments, recency, or session metadata")
 	}
 	if err := s.input(protocol.Request{Op: "resize", Width: 120, Height: 40}); err != nil {

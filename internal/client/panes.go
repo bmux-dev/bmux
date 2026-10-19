@@ -58,6 +58,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	}
 	u.workspace, u.name = f, f.Name
 	u.activatePane(f.Focused)
+	u.noteEdge(f)
 	if !alive[u.focused] {
 		u.frame = nil
 		if len(f.Panes) > 0 {
@@ -99,6 +100,26 @@ func (u *ui) activatePane(id int) {
 	}
 }
 
+// noteEdge moves keyboard focus into the sidebar when directional navigation
+// runs off the left edge of the layout. The first frame of an attachment only
+// records the count, so an older edge never steals focus on attach.
+func (u *ui) noteEdge(f *protocol.Frame) {
+	if !u.edgeKnown {
+		u.edge, u.edgeKnown = f.Edge, true
+		return
+	}
+	if f.Edge == u.edge {
+		return
+	}
+	u.edge = f.Edge
+	if f.EdgeDirection != "left" || u.picker || u.screen == nil {
+		return
+	}
+	if w, _ := u.screen.Size(); u.sidebarShown(w) {
+		u.focusSidebar()
+	}
+}
+
 func (u *ui) focusedPlacement() protocol.PaneFrame {
 	if u.workspace != nil {
 		for _, p := range u.workspace.Panes {
@@ -108,11 +129,13 @@ func (u *ui) focusedPlacement() protocol.PaneFrame {
 		}
 	}
 	w, h := u.screen.Size()
-	return protocol.PaneFrame{ID: u.focused, Width: w, Height: paneViewportHeight(h), Terminal: u.frame}
+	return protocol.PaneFrame{ID: u.focused, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h), Terminal: u.frame}
 }
 
 func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 	f := p.Terminal
+	// Layout coordinates start right of the sidebar; draw in screen columns.
+	p.X += u.paneOriginX(w)
 	if f == nil || p.Width < 1 || p.Height < 1 {
 		return
 	}

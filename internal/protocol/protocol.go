@@ -54,13 +54,30 @@ type Request struct {
 }
 
 type Session struct {
-	Name    string    `json:"name"`
-	Dir     string    `json:"dir"`
-	Created time.Time `json:"created"`
-	Used    time.Time `json:"used"`
-	Clients int       `json:"clients"`
-	Exited  bool      `json:"exited"`
-	Panes   int       `json:"panes"`
+	Name     string         `json:"name"`
+	Dir      string         `json:"dir"`
+	Created  time.Time      `json:"created"`
+	Used     time.Time      `json:"used"`
+	Clients  int            `json:"clients"`
+	Exited   bool           `json:"exited"`
+	Panes    int            `json:"panes"`
+	Activity []PaneActivity `json:"activity,omitempty"`
+}
+
+// Agent states reported from inside a pane with `bmux agent`.
+const (
+	AgentWorking = "working"
+	AgentBlocked = "blocked"
+	AgentIdle    = "idle"
+)
+
+// PaneActivity lists a pane only when it has a reported agent or unseen
+// attention (bell, OSC 9/777 notification, blocked agent or finished turn).
+type PaneActivity struct {
+	Pane      int    `json:"pane"`
+	Agent     string `json:"agent,omitempty"`
+	State     string `json:"state,omitempty"`
+	Attention bool   `json:"attention,omitempty"`
 }
 
 // Cell colors are "" for the terminal default, "#rrggbb" for an exact color, or
@@ -107,14 +124,19 @@ type PaneFrame struct {
 }
 
 type Frame struct {
-	Generation  string      `json:"generation,omitempty"`
-	PreviewMode string      `json:"preview_mode,omitempty"`
-	Width       int         `json:"width,omitempty"`
-	Height      int         `json:"height,omitempty"`
-	Name        string      `json:"name"`
-	Focused     int         `json:"focused"`
-	Zoomed      bool        `json:"zoomed"`
-	Panes       []PaneFrame `json:"panes"`
+	Generation  string `json:"generation,omitempty"`
+	PreviewMode string `json:"preview_mode,omitempty"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+	Name        string `json:"name"`
+	Focused     int    `json:"focused"`
+	Zoomed      bool   `json:"zoomed"`
+	// Edge counts directional focus moves that found no neighbor pane;
+	// EdgeDirection is the latest one. Clients compare counts, never act on
+	// the first frame of an attachment.
+	Edge          uint64      `json:"edge,omitempty"`
+	EdgeDirection string      `json:"edge_direction,omitempty"`
+	Panes         []PaneFrame `json:"panes"`
 }
 
 type Response struct {

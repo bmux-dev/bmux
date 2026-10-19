@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	uv "github.com/charmbracelet/ultraviolet"
@@ -45,6 +46,15 @@ type pane struct {
 	stopDone     chan struct{}
 	historyTotal int
 	epoch        uint64
+	agent        string      // self-reported label; "" when no agent reported
+	agentState   string      // protocol.Agent* or ""
+	attention    bool        // unseen bell, notification, block or finished turn
+	viewed       atomic.Bool // set under session.mu; read by emulator callbacks
+	// Agent sampler state; see activity.go.
+	detected                    string // foreground agent, "" when none
+	busy, outputSeen            bool
+	activeSamples, quietSamples int
+	lastInput                   time.Time
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
@@ -66,8 +76,10 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		EnableMode:  func(m ansi.Mode) { s.modes[m.Mode()] = true },
 		DisableMode: func(m ansi.Mode) { delete(s.modes, m.Mode()) },
 		AltScreen:   func(bool) { s.epoch++ },
+		Bell:        s.noteAttentionLocked,
 	})
 	s.trackBackground()
+	s.trackNotifications()
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir
 	s.cmd.Env = shellEnv(os.Environ(), sessionID, name, paneID)
@@ -169,6 +181,7 @@ func (s *pane) apply(output []byte) {
 	// can classify its input as user data.
 	_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
 	s.revision++
+	s.noteOutputLocked(time.Now())
 }
 
 func (s *pane) closeIO() {
@@ -191,6 +204,7 @@ func (s *pane) input(r protocol.Request) error {
 	if s.info.Exited && r.Op != "resize" {
 		return fmt.Errorf("pane shell has exited")
 	}
+	s.lastInput = time.Now()
 	// Conservative bounds audited against the pinned x/vt encoders.
 	reserve := 0
 	switch r.Op {
