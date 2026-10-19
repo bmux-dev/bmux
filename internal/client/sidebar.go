@@ -60,17 +60,23 @@ func (u *ui) paneOriginX(w int) int {
 
 func (u *ui) paneViewportWidth(w int) int { return max(1, w-u.paneOriginX(w)) }
 
-// sidebarRows lists sessions, then every agent row in the same session order;
-// j/k walk this order across the divider. Sessions keep creation order, unlike
-// the recency-ordered picker, so rows don't move while you switch.
-func (u *ui) sidebarRows() (rows []sidebarRow, sessions int) {
-	list := append([]protocol.Session(nil), u.sessions...)
+// creationOrder sorts sessions the way the sidebar shows them. Unlike the
+// recency-ordered picker, this order doesn't move while you switch.
+func creationOrder(sessions []protocol.Session) []protocol.Session {
+	list := append([]protocol.Session(nil), sessions...)
 	sort.SliceStable(list, func(i, j int) bool {
 		if !list[i].Created.Equal(list[j].Created) {
 			return list[i].Created.Before(list[j].Created)
 		}
 		return list[i].Name < list[j].Name
 	})
+	return list
+}
+
+// sidebarRows lists sessions, then every agent row in the same session order;
+// j/k walk this order across the divider.
+func (u *ui) sidebarRows() (rows []sidebarRow, sessions int) {
+	list := creationOrder(u.sessions)
 	for _, s := range list {
 		rows = append(rows, sidebarRow{session: s})
 	}
@@ -80,6 +86,34 @@ func (u *ui) sidebarRows() (rows []sidebarRow, sessions int) {
 		}
 	}
 	return rows, len(list)
+}
+
+// cycleSession switches to the next (delta 1) or previous (-1) session in
+// sidebar order, wrapping around, like tmux's switch-client -n/-p.
+func (u *ui) cycleSession(delta int) {
+	if r, err := Request(u.socket, protocol.Request{Op: "list"}); err == nil {
+		u.updateSessions(r.Sessions)
+	}
+	next := adjacentSession(u.sessions, u.name, delta)
+	if next == "" {
+		u.notice("No other session")
+		return
+	}
+	if err := u.switchTo(next); err != nil {
+		u.notice(err.Error())
+	}
+}
+
+// adjacentSession is the session delta steps from current in sidebar order,
+// or "" when there is no other session.
+func adjacentSession(sessions []protocol.Session, current string, delta int) string {
+	list := creationOrder(sessions)
+	for i, s := range list {
+		if s.Name == current && len(list) > 1 {
+			return list[((i+delta)%len(list)+len(list))%len(list)].Name
+		}
+	}
+	return ""
 }
 
 // sidebarSections places the Sessions heading at paneOriginY, its rows from

@@ -149,4 +149,7 @@ type Response struct {
 	Error       string    `json:"error,omitempty"`
 	Sessions    []Session `json:"sessions,omitempty"`
 	Frame       *Frame    `json:"frame,omitempty"`
+	// Command names the program in front of a pane's shell (pane-command);
+	// "" when the shell itself is in front.
+	Command string `json:"command,omitempty"`
 }
