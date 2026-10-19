@@ -87,6 +87,23 @@ finishes the filter, then **Enter** attaches.
 The [user guide](docs/usage.md) covers all controls, clipboard setup,
 [server shutdown](docs/usage.md#stop-the-server), and [uninstalling](docs/usage.md#uninstall).
 
+## Vim and Neovim navigation
+
+bmux has vim-tmux-navigator built in: **Ctrl-h/j/k/l** move between panes,
+and from the leftmost pane **Ctrl-h** continues into the sidebar. bmux checks
+the pane's foreground process; when it is Vim or Neovim, the keys go to the
+editor instead, so they still move between editor splits.
+
+To cross from an editor's edge split into the next bmux pane with the same
+keys, add one small mapping to `init.lua` or `.vimrc`, with no plugin and no plugin
+manager. It tries an editor split first, then calls `bmux focus DIRECTION`.
+The same mapping works in tmux. Copy it from
+[Vim and Neovim navigation](docs/editor-navigation.md).
+
+Outside an editor bmux keeps these keys, so **Ctrl-l doesn't clear the shell**.
+**Ctrl-a arrows**, **Ctrl-a o** and clicks always move between bmux panes
+directly, even with an editor in front.
+
 ## Agents
 
 Run claude, codex, opencode, omp, pi, gemini or another coding agent in any

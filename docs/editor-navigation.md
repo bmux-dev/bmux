@@ -94,8 +94,9 @@ bmux sets these variables in each pane:
 
 `bmux focus left`, `right`, `up`, or `down` reads these variables to move from
 the editor's pane. Run it inside a bmux pane. With no neighbor in that direction,
-focus stays put. These variables identify the pane; they are not configuration
-options to set yourself.
+focus stays put, except that `left` from the leftmost pane moves into the
+sidebar when it is shown. These variables identify the pane; they are not
+configuration options to set yourself.
 
 ## Backspace and troubleshooting
 
