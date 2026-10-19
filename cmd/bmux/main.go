@@ -50,6 +50,11 @@ func run(args []string) error {
 		defer signal.Stop(stop)
 		return daemon.Serve(socket, stop)
 	}
+	if len(args) > 0 && args[0] == "integration" {
+		// Writes agents' config files and reports from their hooks; never
+		// starts a server.
+		return runIntegration(socket, args[1:], os.Stdin, os.Stdout)
+	}
 	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" && args[0] != "agent" && args[0] != "restart" && args[0] != "reload" {
 		return fmt.Errorf("unknown command %q; try bmux --help", args[0])
 	}
@@ -215,17 +220,23 @@ func reportAgent(socket string, args []string) error {
 	if len(args) < 1 || len(args) > 2 {
 		return fmt.Errorf("usage: bmux agent working|blocked|idle|clear [NAME] [-- RESUME COMMAND...]")
 	}
+	label := ""
+	if len(args) == 2 {
+		label = args[1]
+	}
+	return sendAgentReport(socket, args[0], label, resume)
+}
+
+// sendAgentReport reports for the pane this process runs in, identified by
+// the environment bmux gives every pane.
+func sendAgentReport(socket, state, label string, resume []string) error {
 	session := os.Getenv("BMUX_SESSION")
 	if session == "" {
 		return fmt.Errorf("not inside a bmux pane")
 	}
 	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
 	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
-	label := ""
-	if len(args) == 2 {
-		label = args[1]
-	}
-	_, err := client.Request(socket, protocol.Request{Op: "agent-report", Name: session, SessionID: sessionID, PaneID: paneID, Kind: args[0], Text: label, Args: resume})
+	_, err := client.Request(socket, protocol.Request{Op: "agent-report", Name: session, SessionID: sessionID, PaneID: paneID, Kind: state, Text: label, Args: resume})
 	return err
 }
 
@@ -303,6 +314,8 @@ Usage:
   bmux kill NAME                         Terminate a session and all its panes
   bmux focus left|right|up|down          Move pane focus (for editors at an edge)
   bmux agent STATE [NAME] [-- CMD...]    Report this pane's agent: working, blocked, idle, clear
+  bmux integration status|install|uninstall [AGENT]
+                                         Hooks that make agents report exact state (claude, codex)
   bmux restart                           Save sessions, restart the server, restore them
   bmux reload                            Reread the config file (also Ctrl-a r)
   bmux default-config                    Print every setting with its default

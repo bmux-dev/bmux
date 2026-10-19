@@ -59,12 +59,16 @@ integrations. bmux still never reads the screen; agents without an integration
 keep the timing guess. Integrations change an agent's own config files, so they
 are installed only when you choose to.
 
+Shipped: `bmux integration status|install|uninstall [AGENT]`, and versioned,
+managed Claude Code and Codex hooks (working, blocked on permission prompts,
+idle, exact `claude --resume` / `codex resume` session) that keep other
+settings. Still to do:
+
 | Item | Size | Notes |
 | --- | --- | --- |
 | Welcome screen | S | Shown once on first attach: what bmux is, Ctrl-a for commands, Ctrl-h into the sidebar, "next: install optional agent integrations for more reliable state". Enter, Right or l continues; the choice is remembered (`onboarding = false` in the config file, like herdr). |
 | Integrations panel | M | Opens after the welcome screen and from a key later. One row per supported agent: ✓ installed, ↻ update available, + available (its command is on `PATH`), – not found. Enter installs every available or outdated integration, Esc closes. |
-| `bmux integration install\|uninstall\|status [AGENT]` | S | The same from the command line, for scripts and dotfiles. |
-| Agent integrations | L | Claude Code hooks in `~/.claude/settings.json` (working, blocked on permission prompts, idle, exact `claude --resume` session), and plugins or extensions for opencode, omp, pi and Codex. Files are versioned and marked as managed by bmux so updates are detected; other settings in those files are preserved. |
+| Integrations for opencode, omp and pi | M | Plugins or extensions using the same managed-file versioning. |
 
 ## Restore follow-ups
 

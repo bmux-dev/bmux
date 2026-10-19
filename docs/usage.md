@@ -30,6 +30,9 @@ the server stops or the machine reboots, the next server restores them: see
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
 | `bmux agent STATE [NAME] [-- COMMAND...]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`, optionally with the command that resumes its conversation; used by agent hooks |
+| `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |
+| `bmux integration install [AGENT...]` | Install or update integrations; with no names, every one that is available or out of date |
+| `bmux integration uninstall AGENT...` | Remove what bmux installed for these agents |
 | `bmux restart` | Save sessions, stop the server and start this binary's server, which restores them; attached clients reconnect |
 | `bmux version`, `bmux --version` | Print the version |
 | `bmux help`, `bmux --help`, `bmux -h` | Show help |
@@ -236,36 +239,50 @@ Opening an agent row attaches its session if needed and focuses that pane.
 Opening a session row focuses its first pane that is blocked or waiting on
 you, if any. Keys typed in the sidebar never reach applications.
 
+### Agent integrations
+
+Output timing can't tell a finished turn from a permission prompt. An
+integration makes the agent report its own state and exact session instead.
+Integrations change the agent's own config files, so they're installed only
+when you ask:
+
+```sh
+bmux integration status            # installed, update available, available or not found
+bmux integration install           # every agent on PATH, and updates
+bmux integration install claude    # or name them
+bmux integration uninstall claude
+```
+
+| Agent | What it installs | Reports |
+| --- | --- | --- |
+| Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
+| Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
+
+Every file bmux writes starts with a `bmux-integration: NAME vN` line, which
+is how `status` spots an outdated version; reinstalling updates it. Edited JSON
+files keep every other setting, hook and key order; uninstalling removes only
+bmux's entries and files. The hooks run `bmux integration hook NAME`, so
+`bmux` must be on the agent's `PATH`, and do nothing outside a bmux pane.
+Restarting the agent picks up a new integration. Two agents in one directory
+each resume their own session after a restart.
+
 ### Reporting agent state
 
-Output timing can't tell a finished turn from a permission prompt. Agents, or
-hooks they run, can report exact state by calling `bmux agent` from inside
-their pane; `BMUX_SESSION_ID` and `BMUX_PANE` identify the pane. Reports replace
-output timing for that pane. Report `working` when a turn starts, `idle` when
-it ends, `blocked` when the agent needs a decision, and `clear` when it exits.
-The optional name (at most 40 bytes) labels the sidebar row and persists
-across reports. A report never starts a server and fails outside a bmux pane.
-Reports from a recognized agent are dropped when it leaves the foreground.
-Agents bmux doesn't recognize can still report themselves.
+Agents without an integration, or your own scripts, can report exact state by
+calling `bmux agent` from inside their pane; `BMUX_SESSION_ID` and `BMUX_PANE`
+identify the pane. Reports replace output timing for that pane. Report
+`working` when a turn starts, `idle` when it ends, `blocked` when the agent
+needs a decision, and `clear` when it exits. The optional name (at most 40
+bytes) labels the sidebar row and persists across reports. A report never
+starts a server and fails outside a bmux pane. Reports from a recognized agent
+are dropped when it leaves the foreground. Agents bmux doesn't recognize can
+still report themselves.
 
 After `--`, a report can include the command that reopens this conversation,
 such as `bmux agent idle claude -- claude --resume "$SESSION_ID"`. It replaces
 the built-in resume command when the server restarts. The first word must be
 a command name on `PATH`; at most 64 arguments and 8 KiB, no control
 characters.
-
-For Claude Code, add hooks to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bmux agent working claude 2>/dev/null || true" }] }],
-    "Notification": [{ "hooks": [{ "type": "command", "command": "bmux agent blocked claude 2>/dev/null || true" }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "bmux agent idle claude 2>/dev/null || true" }] }],
-    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "bmux agent clear 2>/dev/null || true" }] }]
-  }
-}
-```
 
 Agents without hooks also mark their pane when they ring the bell or send a
 terminal notification. An unrecognized agent that exits without reporting
