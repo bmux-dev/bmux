@@ -82,7 +82,7 @@ func TestReboundKeys(t *testing.T) {
 	nextNavigationRequest(t, requests, "split", "horizontal")
 	press(tcell.KeyCtrlA, 0, tcell.ModCtrl)
 	press(tcell.KeyRune, '|', tcell.ModNone)
-	if !strings.HasPrefix(u.message, "Ctrl-a: v / - split") || strings.Contains(u.message, "|") {
+	if !strings.HasPrefix(u.message, "Ctrl-a: ? keys · v / - split") || strings.Contains(u.message, "|") {
 		t.Fatalf("unbound key didn't show the current bindings: %q", u.message)
 	}
 	// A rebound resize key repeats without the prefix; the old one is free.
@@ -111,7 +111,7 @@ func TestStatusLineHelpFollowsBindings(t *testing.T) {
 	if footer := pickerScreenLine(u, 19); !strings.Contains(footer, "Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach") {
 		t.Fatalf("default footer: %q", footer)
 	}
-	if got := u.prefixHelp(); got != "Ctrl-a: | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · r reload · s picker" {
+	if got := u.prefixHelp(); got != "Ctrl-a: ? keys · | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · r reload · s picker" {
 		t.Fatalf("default prefix help: %q", got)
 	}
 	u.applySettings(rebound(t, `[keys.root]

@@ -149,6 +149,7 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Focus the sidebar | Ctrl-h from the leftmost pane |
 | Show / hide the sidebar | Ctrl-a b |
 | Reload the config file | Ctrl-a r |
+| List key bindings | Ctrl-a ?; j/k or arrows scroll, any other key closes |
 | Focus a neighboring pane directly | Ctrl-a arrow keys |
 | Cycle visible panes | Ctrl-a o |
 | Focus a pane | Click it |
@@ -489,7 +490,7 @@ letters are the same as Ctrl letters in most terminals.
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy` | prefix `d`, `y` | |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
-| `toggle-sidebar`, `reload-config` | prefix `b`, `r` | |
+| `toggle-sidebar`, `reload-config`, `help` | prefix `b`, `r`, `?` | `help` lists the bindings in effect |
 | `send-prefix` | the prefix again | Send the prefix key to the application |
 
 The prefix can't be a root key. The status line's hints and the prefix help

@@ -334,7 +334,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # next-pane, resize-left/down/up/right, split-right, split-down, zoom,
 # close-pane, sessions, new-session, last-session, previous-session,
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
-# reload-config, send-prefix.
+# reload-config, help, send-prefix.
 
 [keys]
 # pass-through = []         # programs that get Ctrl-h/j/k/l like Vim, e.g. ["fzf"]
@@ -364,4 +364,5 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "y" = "copy"
 # "b" = "toggle-sidebar"
 # "r" = "reload-config"
+# "?" = "help"
 `
