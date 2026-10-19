@@ -199,8 +199,9 @@ func (u *ui) moveSidebar(delta int) {
 }
 
 // sidebarKey handles every key while the sidebar has focus; none reach panes.
+// Keys bound to navigate move through it; right opens the selected row.
 func (u *ui) sidebarKey(e *tcell.EventKey) {
-	if direction := navigationDirection(e); direction != "" {
+	if kind, direction := actionDirection(u.rootAction(e)); kind == "navigate" {
 		switch direction {
 		case "down":
 			u.moveSidebar(1)

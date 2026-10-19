@@ -87,7 +87,8 @@ type ui struct {
 	configPath                      string
 	configEdge                      uint64 // last seen Frame.Config for this attachment
 	configKnown                     bool
-	title                           string // window title last sent to the outer terminal
+	title                           string            // window title last sent to the outer terminal
+	rootKeys, prefixKeys            map[string]string // key bindings; see keyTables
 }
 
 func Run(socket, name, cwd string) error {
@@ -439,13 +440,13 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 		u.sidebarKey(e)
 		return
 	}
-	if !u.prefix && e.Key() == tcell.KeyRune && e.Modifiers() == tcell.ModNone && now.Before(u.resizeUntil) {
-		if direction := paneDirection(e.Rune()); direction != "" {
-			u.resizePane(direction, now)
+	if !u.prefix && now.Before(u.resizeUntil) {
+		if action := u.prefixAction(e); strings.HasPrefix(action, "resize-") {
+			u.run(action, now)
 			return
 		}
 	}
-	// Anything other than a repeated plain hjkl ends the repeat window, but
+	// Anything other than a repeated resize key ends the repeat window, but
 	// still follows its ordinary binding (or goes to the application).
 	u.resizeUntil = time.Time{}
 	copyKey := e.Key() == tcell.KeyCtrlC || (e.Key() == tcell.KeyRune && (e.Rune() == 'c' || e.Rune() == 'C') && e.Modifiers()&tcell.ModCtrl != 0)
@@ -455,82 +456,19 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	}
 	if u.prefix {
 		u.prefix = false
-		switch {
-		case u.isPrefix(e):
-			u.resumeLive()
-			u.send(keyRequest(e))
-		case e.Key() == tcell.KeyRune:
-			if direction := paneDirection(e.Rune()); direction != "" && e.Modifiers() == tcell.ModNone {
-				u.resizePane(direction, now)
-				return
-			}
-			switch e.Rune() {
-			case '|':
-				u.send(protocol.Request{Op: "split", Direction: "horizontal"})
-			case '-':
-				u.send(protocol.Request{Op: "split", Direction: "vertical"})
-			case 'm':
-				u.send(protocol.Request{Op: "zoom"})
-			case 'o':
-				if u.workspace != nil {
-					for i, p := range u.workspace.Panes {
-						if p.ID == u.focused {
-							u.send(protocol.Request{Op: "select-pane", PaneID: u.workspace.Panes[(i+1)%len(u.workspace.Panes)].ID})
-							break
-						}
-					}
-				}
-			case 's':
-				u.openPicker()
-			case 'd':
-				u.quitting = true
-			case 'y':
-				u.copy()
-			case 'n':
-				u.openPicker()
-				u.beginCreate()
-			case 'p':
-				if u.previous != "" {
-					if err := u.switchTo(u.previous); err != nil {
-						u.notice(err.Error())
-					}
-				}
-			case 'b':
-				u.toggleSidebar()
-			case 'r':
-				u.requestReload()
-			case ')':
-				u.cycleSession(1)
-			case '(':
-				u.cycleSession(-1)
-			case 'x':
-				u.beginClosePane()
-			default:
-				u.notice(u.prefixHelp())
-			}
-		default:
-			directions := map[tcell.Key]string{tcell.KeyLeft: "left", tcell.KeyRight: "right", tcell.KeyUp: "up", tcell.KeyDown: "down"}
-			if direction := directions[e.Key()]; direction != "" {
-				u.send(protocol.Request{Op: "select-pane", Direction: direction})
-			}
+		if action := u.prefixAction(e); action != "" {
+			u.run(action, now)
+		} else {
+			u.notice(u.prefixHelp())
 		}
 		return
 	}
-	if direction := navigationDirection(e); direction != "" {
-		u.resumeLive()
-		u.send(protocol.Request{Op: "navigate-pane", Direction: direction})
+	if action := u.rootAction(e); action != "" {
+		u.run(action, now)
 		return
 	}
 	if u.isPrefix(e) {
 		u.prefix = true
-		return
-	}
-	if e.Key() == tcell.KeyPgUp && e.Modifiers()&tcell.ModShift != 0 {
-		u.scroll(10)
-		return
-	}
-	if e.Key() == tcell.KeyPgDn && e.Modifiers()&tcell.ModShift != 0 {
-		u.scroll(-10)
 		return
 	}
 	if e.Key() == tcell.KeyEscape && u.selection.active {
@@ -895,13 +833,14 @@ func (u *ui) draw() {
 		}
 		u.drawPowerline(w, time.Now())
 	}
-	footer := u.withPrefix("Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach")
+	root, _ := u.keyTables()
+	footer := keyHints([2]string{u.prefixKey("sessions"), " sessions"}, [2]string{directionKeys(root, "navigate"), " navigate"}, [2]string{u.prefixKey("detach"), " detach"})
 	if u.picker {
 		footer = u.pickerFooter(w)
 	}
 	if u.frame != nil && !u.picker {
 		if u.frame.Exited {
-			footer = u.withPrefix("Shell exited · Ctrl-a s: sessions · Ctrl-a d: detach")
+			footer = "Shell exited · " + keyHints([2]string{u.prefixKey("sessions"), ": sessions"}, [2]string{u.prefixKey("detach"), ": detach"})
 		} else if u.frame.Offset > 0 {
 			footer = fmt.Sprintf("Scrollback: %d lines up · typing returns to live output", u.frame.Offset)
 		}
