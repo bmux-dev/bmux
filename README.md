@@ -84,6 +84,7 @@ including giving Ctrl-l back to the shell.
 | Show / hide sidebar | Ctrl-a b |
 | Reload config | Ctrl-a r |
 | List key bindings | Ctrl-a ? |
+| Agent integrations | Ctrl-a i; Enter installs every agent found |
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
@@ -158,7 +159,8 @@ columns. Icons and colors follow herdr's defaults.
 
 bmux never reads agent state from the screen's text. For exact state, such as
 telling a permission prompt from a finished turn, install an agent's
-integration: it makes the agent report its own state and session.
+integration: it makes the agent report its own state and session. Press
+**Ctrl-a i** for the integrations panel, or use the command line:
 
 ```sh
 bmux integration status          # what's installed, and what's on your PATH

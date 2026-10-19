@@ -204,6 +204,12 @@ status compares that with the agent's current version, and a script whose
 hook entries are gone counts as not installed. Files are written atomically
 and keep their mode.
 
+The client's integrations panel (Ctrl-a i) calls the same package. The client
+and server share a machine (the socket is local), so the files it writes are
+the ones the pane's agents load. Status reads and installs are a few small
+local file operations, so they run inline on the UI goroutine. Like the key
+list, the panel is a modal `drawModal` overlay that takes every key and click.
+
 ## Persistence
 
 `EnablePersistence` restores the state file before `Serve` accepts clients and

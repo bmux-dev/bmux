@@ -55,6 +55,7 @@ var Actions = []struct{ Name, Help string }{
 	{"toggle-sidebar", "show or hide the sidebar"},
 	{"reload-config", "reload the config file"},
 	{"help", "list these key bindings"},
+	{"integrations", "set up agent integrations"},
 	{"send-prefix", "send the prefix key to the application"},
 }
 
@@ -79,7 +80,7 @@ var DefaultPrefixKeys = map[string]string{
 	"left": "focus-left", "down": "focus-down", "up": "focus-up", "right": "focus-right",
 	"h": "resize-left", "j": "resize-down", "k": "resize-up", "l": "resize-right",
 	"s": "sessions", "n": "new-session", "p": "last-session", "(": "previous-session", ")": "next-session",
-	"d": "detach", "y": "copy", "b": "toggle-sidebar", "r": "reload-config", "?": "help",
+	"d": "detach", "y": "copy", "b": "toggle-sidebar", "r": "reload-config", "?": "help", "i": "integrations",
 }
 
 var namedKeys = map[string]string{
