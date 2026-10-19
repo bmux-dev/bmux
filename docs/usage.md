@@ -180,7 +180,7 @@ survive detach and reattach.
 - A session supports up to 32 panes. Splitting requires enough space; dividers
   stop at minimum pane sizes.
 - Shrinking the terminal can hide panes. Zoom the focused pane to work in a
-  smaller window. Unzoom to navigate to other panes.
+  smaller window. Moving focus in a direction unzooms, like tmux.
 
 Several clients can attach to one session. Pane focus is shared. The latest
 attachment or attached-client resize sets the shared application size.

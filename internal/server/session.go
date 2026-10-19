@@ -247,11 +247,7 @@ func (s *session) input(r protocol.Request) error {
 	case "focus-pane":
 		// Editor-side edge crossing (bmux focus left|right|up|down). The
 		// request identifies the pane the editor lives in, not the client's
-		// focused pane. While zoomed, layout does not follow the cursor, so
-		// navigation is ignored the way tmux's disable_when_zoomed does.
-		if s.zoomed {
-			return nil
-		}
+		// focused pane.
 		if err := s.selectPaneDirectionLocked(r.Direction, id); err != nil {
 			return err
 		}
@@ -284,12 +280,17 @@ func (s *session) finishLayoutLocked(previous int) error {
 }
 
 // Caller holds session.mu. Moves focus to the nearest pane in direction from
-// the pane identified by from; no neighbor is a silent no-op.
+// the pane identified by from; no neighbor is a silent no-op. Like tmux, a
+// zoomed session searches the unzoomed layout and unzooms only when focus moves.
 func (s *session) selectPaneDirectionLocked(direction string, from int) error {
 	if _, err := editorNavigationKey(direction); err != nil {
 		return err
 	}
-	positions := s.placements()
+	if s.root == nil {
+		return nil
+	}
+	var positions []placement
+	s.root.place(rect{0, 0, s.width, s.height}, &positions)
 	var current rect
 	for _, pos := range positions {
 		if pos.id == from {
@@ -330,6 +331,7 @@ func (s *session) selectPaneDirectionLocked(direction string, from int) error {
 	}
 	if best != 0 {
 		s.focused = best
+		s.zoomed = false
 	}
 	return nil
 }
