@@ -46,12 +46,6 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 **Goal:** a tmux user can switch to bmux for a full day without missing anything basic.
 **Done when:** the owner uses bmux instead of tmux for a week of real work.
 
-### Panes and sessions
-
-| Item | Size | Notes |
-| --- | --- | --- |
-| Drag dividers with the mouse to resize | M | Most `mouse on` tmux users expect this. |
-
 ### Keys and config
 
 The config file (`~/.config/bmux/config.toml`) shipped with the prefix
@@ -193,7 +187,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
 | tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client |
-| tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
+| tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
 | Status themes | Powerline status bars, accent colors, light theme |

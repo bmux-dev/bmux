@@ -73,6 +73,13 @@ pane dividers and mouse translation share `paneOriginY`. Chrome rejects app mous
 presses/motion/wheel events even while a stale pre-resize frame is visible, but
 releases there still end selections and release application mouse buttons.
 
+A press on a divider cell starts a `dividerDrag` holding the panes on either
+side; until release, every event belongs to it, including over the sidebar and
+status line. Motion to a new column/row sends `drag-divider` with that pane
+pair. The server moves the split where the two panes' subtrees meet (their
+lowest common ancestor), so the request names the divider even as the layout
+changes under the drag, and stale pairs fail instead of moving another one.
+
 Production screens deliver one `rawPasteEvent` after capturing bracketed bytes
 before key interpretation. There is no second key-reconstruction paste path.
 `handleRawPaste` handles session/prompt/filter intent and visible rejection.

@@ -164,3 +164,47 @@ func (n *layout) resize(id int, direction string, delta int, r rect) bool {
 	n.ratio = (size*10000 + available - 1) / available
 	return true
 }
+
+// setDivider moves the divider that separates panes first and second, which
+// sit on its left/top and right/bottom, to column (horizontal split) or row
+// (vertical split) at, within the minimum pane sizes. That divider is the
+// split where the two panes' subtrees meet, so it keeps its identity while
+// other parts of the layout change. It reports false when the panes don't
+// meet across a split in that direction or there's no room to move it.
+func (n *layout) setDivider(first, second int, direction string, at int, r rect) bool {
+	if n.id != 0 {
+		return false
+	}
+	aw, ah := n.first.minimum()
+	bw, bh := n.second.minimum()
+	a, b := r, r
+	available, origin, lo, other := max(0, r.h-1), r.y, ah, bh
+	if n.direction == "horizontal" {
+		available, origin, lo, other = max(0, r.w-1), r.x, aw, bw
+	}
+	// The same geometry as place(), so child rectangles match what's shown.
+	size := available * n.ratio / 10000
+	if available >= lo+other {
+		size = max(lo, min(size, available-other))
+	} else {
+		size = max(0, min(size, available))
+	}
+	if n.direction == "horizontal" {
+		a.w, b.x, b.w = size, r.x+size+1, available-size
+	} else {
+		a.h, b.y, b.h = size, r.y+size+1, available-size
+	}
+	inFirst, inSecond := n.first.contains(first), n.second.contains(second)
+	switch {
+	case inFirst && n.first.contains(second):
+		return n.first.setDivider(first, second, direction, at, a)
+	case inSecond && n.second.contains(first):
+		return n.second.setDivider(first, second, direction, at, b)
+	case !inFirst || !inSecond || n.direction != direction || available < lo+other:
+		return false
+	}
+	size = max(lo, min(at-origin, available-other))
+	// Round up so place() reproduces the exact requested number of cells.
+	n.ratio = (size*10000 + available - 1) / available
+	return true
+}

@@ -25,7 +25,7 @@ works out of the box, with no plugin manager.
 | vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
 | tmux-pain-control | Ctrl-a \| and - splits in the focused pane's directory, Ctrl-a x close (asks first if a program is running), Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
 | tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH. Apps' own OSC 52 copies (Neovim yanks) go to the same clipboard |
-| tmux-better-mouse-mode | Click to focus, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
+| tmux-better-mouse-mode | Click to focus, drag dividers to resize, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
 | tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
@@ -82,7 +82,7 @@ tmux configs. Rebinding other keys is planned.
 | Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
 | Reload config | Ctrl-a r |
-| Resize divider | Ctrl-a h/j/k/l; repeat h/j/k/l within one second |
+| Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
 | Paste | Your terminal's paste shortcut |

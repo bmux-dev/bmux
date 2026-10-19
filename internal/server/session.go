@@ -279,6 +279,20 @@ func (s *session) input(r protocol.Request) error {
 			return fmt.Errorf("unknown resize direction")
 		}
 		s.root.resize(id, r.Direction, 5, rect{0, 0, s.width, s.height})
+	case "drag-divider":
+		// A mouse drag puts the divider between PaneID (left/top) and
+		// NeighborID at column X of a side-by-side split, or row Y of a
+		// stacked one. Focus doesn't move.
+		if s.zoomed {
+			return fmt.Errorf("unzoom before resizing panes")
+		}
+		at := r.X
+		if r.Direction == "vertical" {
+			at = r.Y
+		}
+		if !s.root.setDivider(id, r.NeighborID, r.Direction, at, rect{0, 0, s.width, s.height}) {
+			return fmt.Errorf("those panes no longer share a divider")
+		}
 	case "zoom":
 		s.focused = id
 		s.zoomed = !s.zoomed

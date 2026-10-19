@@ -63,6 +63,64 @@ func TestNestedLayoutAndResize(t *testing.T) {
 	}
 }
 
+func TestSetDividerMovesTheSplitBetweenTwoPanes(t *testing.T) {
+	// 1 | (2 / (3 | 4)) in 81x25: the root divider is column 40.
+	root := &layout{direction: "horizontal", ratio: 5000, first: &layout{id: 1}, second: &layout{direction: "vertical", ratio: 5000,
+		first: &layout{id: 2}, second: &layout{direction: "horizontal", ratio: 5000, first: &layout{id: 3}, second: &layout{id: 4}}}}
+	area := rect{0, 0, 81, 25}
+	place := func() map[int]rect {
+		var positions []placement
+		root.place(area, &positions)
+		result := make(map[int]rect)
+		for _, p := range positions {
+			result[p.id] = p.rect
+		}
+		return result
+	}
+	// Panes 1 and 3 meet only across the root divider.
+	if !root.setDivider(1, 3, "horizontal", 30, area) {
+		t.Fatal("root divider not found from panes 1 and 3")
+	}
+	if p := place(); p[1].w != 30 || p[2].x != 31 || p[3].x != 31 {
+		t.Fatalf("root divider not at column 30: %+v", p)
+	}
+	// The nested stacked divider is row 12; moving it keeps the root's.
+	if !root.setDivider(2, 4, "vertical", 5, area) {
+		t.Fatal("stacked divider not found")
+	}
+	if p := place(); p[2].h != 5 || p[3].y != 6 || p[1].w != 30 {
+		t.Fatalf("stacked divider: %+v", p)
+	}
+	// The innermost divider is placed relative to its own split's origin.
+	if !root.setDivider(3, 4, "horizontal", 70, area) {
+		t.Fatal("inner divider not found")
+	}
+	if p := place(); p[3].w != 70-31 || p[4].x != 71 {
+		t.Fatalf("inner divider: %+v", p)
+	}
+	// Dragging past the edge stops at the minimum pane size.
+	root.setDivider(1, 2, "horizontal", 500, area)
+	if p := place(); p[3].w < 2 || p[4].w < 2 || p[1].w+1+p[3].w+1+p[4].w != 81 {
+		t.Fatalf("divider pushed a pane below its minimum: %+v", p)
+	}
+	root.setDivider(1, 2, "horizontal", -10, area)
+	if p := place(); p[1].w != 2 {
+		t.Fatalf("divider dragged past the left edge: %+v", p)
+	}
+	for _, bad := range []struct {
+		first, second int
+		direction     string
+	}{{3, 1, "horizontal"}, {1, 3, "vertical"}, {1, 9, "horizontal"}, {2, 2, "vertical"}} {
+		before := place()
+		if root.setDivider(bad.first, bad.second, bad.direction, 20, area) {
+			t.Fatalf("%+v moved a divider", bad)
+		}
+		if after := place(); after[1] != before[1] || after[3] != before[3] {
+			t.Fatalf("%+v changed the layout", bad)
+		}
+	}
+}
+
 func TestLayoutOnTinyTerminal(t *testing.T) {
 	root := &layout{direction: "horizontal", ratio: 5000, first: &layout{id: 1}, second: &layout{direction: "vertical", ratio: 5000, first: &layout{id: 2}, second: &layout{id: 3}}}
 	for w := 2; w < 30; w++ {
