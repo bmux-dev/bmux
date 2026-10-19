@@ -50,7 +50,6 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| New panes open in the focused pane's directory | M | Like tmux's `-c "#{pane_current_path}"`. Per-pane cwd already exists for restore on macOS and Linux. |
 | Drag dividers with the mouse to resize | M | Most `mouse on` tmux users expect this. |
 
 ### Keys and config
@@ -197,7 +196,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session, Ctrl-a ( / ) previous/next; bare `bmux` names sessions after the directory |
 | tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
-| tmux-pain-control, `split-window`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-`, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
+| tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
 | tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
 | tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |

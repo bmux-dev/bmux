@@ -181,6 +181,12 @@ func (s *session) input(r protocol.Request) error {
 	if r.Op == "close-pane" {
 		return s.closePane(r.PaneID)
 	}
+	// The new pane's directory is read from the OS before taking session.mu;
+	// the split then targets the pane that was sampled.
+	dir := ""
+	if r.Op == "split" {
+		r.PaneID, dir = s.splitSource(r.PaneID)
+	}
 	s.mu.Lock()
 	if s.stopped || s.stopping.Load() {
 		s.mu.Unlock()
@@ -232,7 +238,10 @@ func (s *session) input(r protocol.Request) error {
 		} else {
 			h = (h - 1) / 2
 		}
-		created, err := newPane(s.id, s.info.Name, s.info.Dir, s.shell, w, h, s.nextID)
+		if dir == "" {
+			dir = s.info.Dir
+		}
+		created, err := newPane(s.id, s.info.Name, dir, s.shell, w, h, s.nextID)
 		if err != nil {
 			return err
 		}
@@ -293,6 +302,22 @@ func (s *session) finishLayoutLocked(previous int) error {
 	}
 	s.updateViewedLocked()
 	return s.resizePanes()
+}
+
+// splitSource resolves the pane a split starts from (id, or the focused pane
+// when 0) under session.mu, then reads its current directory with no state
+// lock held. "" means the session's directory.
+func (s *session) splitSource(id int) (int, string) {
+	s.mu.Lock()
+	if id == 0 {
+		id = s.focused
+	}
+	p := s.panes[id]
+	s.mu.Unlock()
+	if p == nil {
+		return id, ""
+	}
+	return id, p.currentDir()
 }
 
 // Caller holds session.mu. Moves focus to the nearest pane in direction from

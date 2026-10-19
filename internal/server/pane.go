@@ -199,6 +199,28 @@ func (s *pane) stop() {
 	s.stopUntil(time.Now().Add(paneShutdownBudget))
 }
 
+// currentDir is where a pane split from this one starts, like tmux's
+// #{pane_current_path}: the foreground job's directory, else the shell's.
+// It queries the OS, so callers hold no state lock. "" when neither is
+// readable or the directory no longer exists.
+func (s *pane) currentDir() string {
+	pids := make([]int, 0, 2)
+	if group, err := foregroundPTYGroup(s.pty); err == nil && group > 0 {
+		pids = append(pids, group)
+	}
+	pids = append(pids, s.cmd.Process.Pid)
+	for _, pid := range pids {
+		dir, err := processCwd(pid)
+		if err != nil || dir == "" {
+			continue
+		}
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			return dir
+		}
+	}
+	return ""
+}
+
 func (s *pane) input(r protocol.Request) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
