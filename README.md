@@ -157,9 +157,19 @@ marks its pane too. **Ctrl-a b** hides the sidebar; it hides itself below 80
 columns. Icons and colors follow herdr's defaults.
 
 bmux never reads agent state from the screen's text. For exact state, such as
-telling a permission prompt from a finished turn, an agent's hooks can report
-it with `bmux agent working|blocked|idle`; the
-[user guide](docs/usage.md#agents-and-the-sidebar) has a Claude Code setup.
+telling a permission prompt from a finished turn, install an agent's
+integration: it makes the agent report its own state and session.
+
+```sh
+bmux integration status          # what's installed, and what's on your PATH
+bmux integration install         # every agent found, or name some: install claude
+bmux integration uninstall codex
+```
+
+Integrations exist for Claude Code and Codex; they add hooks to the agent's
+own config, keep your other settings and only run inside bmux panes. Any
+other agent can report with `bmux agent working|blocked|idle`; see
+[reporting agent state](docs/usage.md#reporting-agent-state).
 
 ## Restarts and upgrades
 

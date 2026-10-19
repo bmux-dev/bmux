@@ -6,6 +6,7 @@
 - `internal/daemon`: local server discovery/startup; only depends on protocol RPC.
 - `internal/protocol`: wire framing, shared payload/name/identity contracts, one-shot RPC.
 - `internal/config`: the optional config file, defaults, environment overrides and validation.
+- `internal/integration`: agent hook/plugin files, their versions, and mapping hook events to `bmux agent` reports.
 - `internal/server`: session layout, emulator state, owned OS jobs and cancellation.
 - `internal/client`: input, modeless selection, clipboard intent and preview display.
 
@@ -171,6 +172,25 @@ translation all apply the same `paneOriginX`. Sidebar clicks are chrome; drags
 and app presses that began in a pane still deliver motion and release there.
 The sidebar polls `list` asynchronously at 1 Hz with at most one request in
 flight; the picker's synchronous refresh owns the list while open.
+
+## Agent integrations
+
+`internal/integration` owns agents' config files; nothing else writes them.
+Integrations only add ways to call `bmux agent`; the server has no idea they
+exist. Claude Code and Codex get one managed script plus entries in their JSON
+hook tables; the script hands the event on stdin to `bmux integration hook
+AGENT`, where `HookReport` maps events to states in Go, so the script stays
+trivial and needs no jq. The hook path never prints, never starts a server and
+always exits 0.
+
+JSON edits go through an ordered object type, so other keys keep their order
+and content; they remove every handler whose command names
+`bmux-agent-state.sh`, drop groups and events left empty, then add one group
+per event. Install is therefore idempotent and uninstall restores a file bmux
+didn't otherwise touch. Every managed file carries `bmux-integration: NAME vN`;
+status compares that with the agent's current version, and a script whose
+hook entries are gone counts as not installed. Files are written atomically
+and keep their mode.
 
 ## Persistence
 
