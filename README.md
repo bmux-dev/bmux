@@ -211,8 +211,9 @@ claude = ["claude", "--continue", "--model", "opus"]
 Apply changes with **Ctrl-a r**, `bmux reload`, or `SIGUSR1` to the server, as
 in Helix; attached clients pick them up. Mistakes are shown in the status line
 and that setting keeps its default. The file also covers sounds, agent state
-colors, turning agent detection or restore off, and per-agent resume commands;
-see [configuration](docs/usage.md#configuration-file).
+colors, the terminal window title (session and pane title, on by default),
+turning agent detection or restore off, and per-agent resume commands; see
+[configuration](docs/usage.md#configuration-file).
 
 The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
 and `BMUX_SOUND` environment variables still work and override the file.

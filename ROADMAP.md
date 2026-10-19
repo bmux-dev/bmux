@@ -89,7 +89,6 @@ are installed only when you choose to.
 | Item | Size | Notes |
 | --- | --- | --- |
 | Clipboard writes from apps (OSC 52) | M | e.g. Neovim yanking over SSH. Routed through the attached client. |
-| Set the outer terminal's title | S | Like tmux's `set-titles`. |
 
 ## Restore follow-ups
 
@@ -197,6 +196,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
+| `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
 | tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
 | tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |

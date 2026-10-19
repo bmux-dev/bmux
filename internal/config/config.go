@@ -33,6 +33,7 @@ type UI struct {
 	Accent          string      `toml:"accent"`
 	PowerlineASCII  bool        `toml:"powerline-ascii"`
 	TerminalPadding bool        `toml:"terminal-padding"`
+	SetTitle        bool        `toml:"set-title"`
 	AgentColors     AgentColors `toml:"agent-colors"`
 }
 
@@ -85,7 +86,7 @@ func Default() Config {
 	return Config{
 		Theme:   "dark",
 		Prefix:  "C-a",
-		UI:      UI{Accent: "cyan"},
+		UI:      UI{Accent: "cyan", SetTitle: true},
 		Sidebar: Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:   Sound{Enabled: true},
 		Agents:  Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -294,6 +295,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # accent = "cyan"           # cyan, amber, green or "#RRGGBB"
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
+# set-title = true          # name the terminal window after the session and pane
 
 [ui.agent-colors]           # "#RRGGBB"; empty keeps herdr's palette
 # working = ""

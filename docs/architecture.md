@@ -218,3 +218,8 @@ Helix's config layout: kebab-case names and a top-level `theme`.
 - Picker rename and delete requests carry the selected session's creation-time
   generation. The server rejects an action if that name now identifies another
   session. Explicit CLI rename/kill commands instead target the current name.
+- The client owns the outer window title. `draw` computes it from the session
+  name and the focused pane's `TerminalFrame.Title` and calls `SetTitle` only
+  when it changes. App titles lose control characters and are capped, so an
+  app can never send escape sequences to the outer terminal through its title;
+  tcell saves the outer title on start and restores it on exit.

@@ -86,6 +86,7 @@ type ui struct {
 	configPath                      string
 	configEdge                      uint64 // last seen Frame.Config for this attachment
 	configKnown                     bool
+	title                           string // window title last sent to the outer terminal
 }
 
 func Run(socket, name, cwd string) error {
@@ -883,6 +884,7 @@ func (u *ui) draw() {
 	if h > 1 {
 		u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
 	}
+	u.updateTitle()
 	u.screen.Show()
 }
 
