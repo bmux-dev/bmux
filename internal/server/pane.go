@@ -32,6 +32,7 @@ type pane struct {
 	cmd          *exec.Cmd
 	revision     uint64
 	title        string
+	background   string // OSC 11 pane background; "" uses the attached terminal's
 	visible      bool
 	style        vt.CursorStyle
 	blink        bool
@@ -66,6 +67,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		DisableMode: func(m ansi.Mode) { delete(s.modes, m.Mode()) },
 		AltScreen:   func(bool) { s.epoch++ },
 	})
+	s.trackBackground()
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir
 	s.cmd.Env = shellEnv(os.Environ(), sessionID, name, paneID)
@@ -281,8 +283,44 @@ func (s *pane) cellColor(c color.Color) string {
 	return rgb(palette)
 }
 
-func (s *pane) cell(c *uv.Cell) protocol.Cell {
-	return protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: s.cellColor(c.Style.Bg),
+// trackBackground records the background an application sets with OSC 11 and
+// clears it on OSC 111. The emulator's own BackgroundColor cannot tell "never
+// set" from black, and the attached terminal never sees the OSC itself, so
+// without this an app's background (opencode, pi themes) is silently dropped.
+// Handlers return false so the emulator still updates its state and answers
+// OSC 11 queries.
+func (s *pane) trackBackground() {
+	s.term.RegisterOscHandler(11, func(data []byte) bool {
+		_, arg, _ := strings.Cut(string(data), ";")
+		switch {
+		case arg == "":
+			s.background = ""
+		case arg != "?":
+			if c := ansi.XParseColor(arg); c != nil {
+				s.background = rgb(c)
+			}
+		}
+		return false
+	})
+	s.term.RegisterOscHandler(111, func([]byte) bool {
+		s.background = ""
+		return false
+	})
+}
+
+// defaultBG is the pane background an application set with OSC 11, or "" so
+// the attached terminal's own background shows through.
+func (s *pane) defaultBG() string {
+	return s.background
+}
+
+// cell converts an emulator cell; bg replaces the default background.
+func (s *pane) cell(c *uv.Cell, bg string) protocol.Cell {
+	cellBG := s.cellColor(c.Style.Bg)
+	if cellBG == "" {
+		cellBG = bg
+	}
+	return protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
 		Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
 }
 
@@ -329,6 +367,7 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 		Alt: s.term.IsAltScreen(), Exited: s.info.Exited,
 		Mouse: s.modes[9] || s.modes[1000] || s.modes[1002] || s.modes[1003],
 	}
+	bg := s.defaultBG()
 	f.Rows = make([][]protocol.Cell, s.term.Height())
 	for y := range f.Rows {
 		f.Rows[y] = make([]protocol.Cell, s.term.Width())
@@ -341,7 +380,9 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 				c = s.term.CellAt(x, row-history)
 			}
 			if c != nil {
-				f.Rows[y][x] = s.cell(c)
+				f.Rows[y][x] = s.cell(c, bg)
+			} else {
+				f.Rows[y][x].BG = bg
 			}
 		}
 	}
@@ -365,11 +406,14 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 	f.CursorX, f.CursorY = cursor.X-startX, cursor.Y-startY
 	f.CursorVisible = visible && f.CursorX >= 0 && f.CursorX < width && f.CursorY >= 0 && f.CursorY < height
 	f.Base = max(s.historyTotal, s.term.ScrollbackLen()) + startY
+	bg := s.defaultBG()
 	for y := 0; y < height; y++ {
 		row := make([]protocol.Cell, width)
 		for x := range row {
 			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = s.cell(c)
+				row[x] = s.cell(c, bg)
+			} else {
+				row[x].BG = bg
 			}
 		}
 		f.Rows = append(f.Rows, row)

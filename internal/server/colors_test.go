@@ -30,3 +30,30 @@ func TestCellColorsKeepPaletteIndexes(t *testing.T) {
 		}
 	}
 }
+
+func TestOSC11BackgroundFillsDefaultCells(t *testing.T) {
+	p := &pane{term: vt.NewEmulator(6, 2), visible: true}
+	p.trackBackground()
+	// Default cell, explicit red background, then an untouched blank cell.
+	_, _ = p.term.WriteString("\x1b]11;#0a0a0a\x07A\x1b[41mB\x1b[0m")
+
+	f, _ := p.frame(0)
+	if got := f.Rows[0][0].BG; got != "#0a0a0a" {
+		t.Errorf("default cell bg = %q, want #0a0a0a", got)
+	}
+	if got := f.Rows[0][1].BG; got != "1" {
+		t.Errorf("explicit bg = %q, want palette 1", got)
+	}
+	if got := f.Rows[1][5].BG; got != "#0a0a0a" {
+		t.Errorf("blank cell bg = %q, want #0a0a0a", got)
+	}
+	if got := p.preview(6, 2).Rows[1][5].BG; got != "#0a0a0a" {
+		t.Errorf("preview blank cell bg = %q, want #0a0a0a", got)
+	}
+
+	// OSC 111 hands the background back to the attached terminal.
+	_, _ = p.term.WriteString("\x1b]111\x07")
+	if f, _ = p.frame(0); f.Rows[0][0].BG != "" {
+		t.Errorf("after reset bg = %q, want terminal default", f.Rows[0][0].BG)
+	}
+}
