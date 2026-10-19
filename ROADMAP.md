@@ -7,9 +7,9 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Now** | [v0.2](#v02-daily-driver) | Daily driver: replace tmux for a full working day |
-| **Next** | [v0.3](#v03-survive-reboots-and-upgrades) | Survive reboots and upgrades (resurrect + continuum) |
-| | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
+| **Shipped** | v0.2.0 | [Agent sidebar](#already-built) and [restore across restarts and reboots](#restore-follow-ups) |
+| **Now** | [v0.3](#v03-daily-driver) | Daily driver: replace tmux for a full working day |
+| **Next** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
 | | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
 | | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
@@ -41,7 +41,7 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 ---
 
-## v0.2: daily driver
+## v0.3: daily driver
 
 **Goal:** a tmux user can switch to bmux for a full day without missing anything basic.
 **Done when:** the owner uses bmux instead of tmux for a week of real work.
@@ -51,7 +51,7 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 | Item | Size | Notes |
 | --- | --- | --- |
 | Close pane (`Ctrl-a x`) | S | Confirm when something other than the shell is running. |
-| New panes open in the focused pane's directory | M | Like tmux's `-c "#{pane_current_path}"`. Needs per-pane cwd on macOS and Linux. v0.3 depends on this. |
+| New panes open in the focused pane's directory | M | Like tmux's `-c "#{pane_current_path}"`. Per-pane cwd already exists for restore on macOS and Linux. |
 | Drag dividers with the mouse to resize | M | Most `mouse on` tmux users expect this. |
 | Next/previous session (`Ctrl-a )` / `(`) | S | Same keys as tmux. Ctrl-a p stays "last session". |
 | Refuse to nest | S | Running `bmux` inside a bmux pane warns instead of starting a client in a pane, like tmux checks `$TMUX`. |
@@ -75,18 +75,13 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 | Clipboard writes from apps (OSC 52) | M | e.g. Neovim yanking over SSH. Routed through the attached client. |
 | Set the outer terminal's title | S | Like tmux's `set-titles`. |
 
-## v0.3: survive reboots and upgrades
+## Restore follow-ups
 
-**Goal:** a reboot or a bmux upgrade costs you seconds, not your layout.
-**Done when:** after rebooting, `bmux` brings back every session with its splits,
-directories and allowlisted programs.
-
-Replaces tmux-resurrect and tmux-continuum.
-
-Built: versioned snapshot (sessions, split tree, focus, zoom, per-pane cwd),
-saves every 5 seconds and on clean shutdown, restore on server start, agent
-resume (reported commands or each agent's "continue latest"), and
-`bmux restart`, which survives protocol changes and reconnects clients.
+v0.2.0 replaced tmux-resurrect and tmux-continuum: a versioned snapshot
+(sessions, split tree, focus, zoom, per-pane cwd), saves every 5 seconds and on
+clean shutdown, restore on server start, agent resume (reported commands or
+each agent's "continue latest"), and `bmux restart`, which survives protocol
+changes and reconnects clients. Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
@@ -109,7 +104,7 @@ layout, and they survive save/restore.
 | Preset layouts | M | Even-horizontal, even-vertical, main-horizontal, main-vertical, tiled. A key to cycle them and one to equalize. |
 | Last pane toggle | S | |
 | Project picker | M | Choose a project folder (zoxide or configured roots) and land in its session, creating it if needed. Replaces sesh and tmux-sessionizer. |
-| Layout files | M | Declare a project's windows, panes and commands once. Replaces tmuxinator and tmuxp. Shares the v0.3 snapshot format. |
+| Layout files | M | Declare a project's windows, panes and commands once. Replaces tmuxinator and tmuxp. Shares the session snapshot format. |
 
 ## v0.5: keyboard scrollback
 
@@ -151,8 +146,8 @@ existing sessions without warning.
 
 | Area | Items |
 | --- | --- |
-| Compatibility promise | Stable CLI, config format and snapshot format. Protocol changes never silently cost sessions (builds on v0.3 safe upgrades). |
-| Terminal support | Extended keys (CSI u / kitty keyboard), hyperlinks (OSC 8), synchronized output (`?2026`), bell and activity alerts, opt-in graphics passthrough. |
+| Compatibility promise | Stable CLI, config format and snapshot format. Protocol changes never silently cost sessions (builds on `bmux restart`). |
+| Terminal support | Extended keys (CSI u / kitty keyboard), hyperlinks (OSC 8), activity alerts, opt-in graphics passthrough. |
 | Quality | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux. |
 | Linux | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked. |
 | Distribution | Prebuilt macOS/Linux binaries (GoReleaser), Homebrew tap, checksums. |
@@ -194,3 +189,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a
 rename, directional navigation while zoomed, and `bmux --help` wording.
+
+v0.2.0 added the agent sidebar, restore across restarts and reboots with
+`bmux restart`, flicker-free synchronized output, and app backgrounds set with
+OSC 11.

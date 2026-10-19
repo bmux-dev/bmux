@@ -8,7 +8,7 @@ bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, watch your coding agents from a sidebar, copy text with the
 mouse, and keep your layout across restarts, without a plugin manager.
 
-**v0.1.1 pre-release for macOS and Linux.**
+**v0.2.0 pre-release for macOS and Linux.**
 
 <!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
 
