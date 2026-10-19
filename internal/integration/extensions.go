@@ -159,3 +159,80 @@ var omp = fileAgent{
 		return nil
 	},
 }
+
+// opencodePlugin is a server plugin: one opencode process serves the TUI in
+// this pane. It counts busy sessions (subagents included) and pending
+// permission and question requests, and resumes the latest top-level session.
+func opencodePlugin(header string) string {
+	return header + `import { execFile } from "node:child_process";
+
+const enabled = !!process.env.BMUX_SESSION;
+let queue = Promise.resolve();
+let last = "";
+
+function report(state, session) {
+  const args = ["agent", state, "opencode"];
+  if (session) args.push("--", "opencode", "--session", session);
+  const key = args.join("\0");
+  if (key === last) return;
+  last = key;
+  // One at a time, in order; failures (no server, no bmux) are ignored.
+  queue = queue.then(() => new Promise((resolve) => {
+    execFile("bmux", args, { timeout: 3000, windowsHide: true }, () => resolve());
+  }));
+}
+
+export const BmuxAgentState = async () => {
+  if (!enabled) return {};
+  const children = new Set();
+  const busy = new Set();
+  const waiting = new Map(); // request id -> session id
+  let current;
+  return {
+    event: async ({ event }) => {
+      const p = event?.properties ?? {};
+      switch (event?.type) {
+        case "session.created":
+        case "session.updated":
+          if (p.info?.id && p.info.parentID) children.add(p.info.id);
+          return;
+        case "session.status":
+          if (p.status?.type === "idle") busy.delete(p.sessionID);
+          else busy.add(p.sessionID);
+          if (p.sessionID && !children.has(p.sessionID)) current = p.sessionID;
+          break;
+        case "session.idle":
+          busy.delete(p.sessionID);
+          break;
+        case "permission.asked":
+        case "permission.updated":
+        case "question.asked":
+          waiting.set(p.id, p.sessionID);
+          break;
+        case "permission.replied":
+        case "question.replied":
+        case "question.rejected":
+          waiting.delete(p.requestID ?? p.permissionID);
+          break;
+        default:
+          return;
+      }
+      report(waiting.size > 0 ? "blocked" : busy.size > 0 ? "working" : "idle", current);
+    },
+  };
+};
+`
+}
+
+// opencodeDir is opencode's global config directory.
+func opencodeDir(e Env) string {
+	if dir := e.Getenv("XDG_CONFIG_HOME"); dir != "" {
+		return filepath.Join(dir, "opencode")
+	}
+	return filepath.Join(e.Home, ".config", "opencode")
+}
+
+var opencode = fileAgent{
+	name: "opencode", version: 1, file: filepath.Join("plugins", "bmux-agent-state.js"),
+	text: opencodePlugin,
+}
