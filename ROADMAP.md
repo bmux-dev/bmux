@@ -106,7 +106,7 @@ Targets depend on windows from v0.4.
 | Item | Size | Notes |
 | --- | --- | --- |
 | Targets for every command | M | `session:window.pane`, like tmux. |
-| `send-keys`, `capture-pane` | M | |
+| `send-keys`, `capture-pane` | M | `bmux send` and `bmux capture` cover sessions and panes; window targets come with v0.4. |
 | `list-panes`, `list-windows`, `display-message` | S | |
 | Format variables | M | `#{session_name}`, `#{pane_current_path}`, `#{pane_id}`, … |
 | Hooks | M | `session-created`, `pane-exited`, `client-attached`, … |
@@ -155,6 +155,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
 | herdr's first run and agent integrations | A welcome screen on first attach leading into the integrations panel (Ctrl-a i); `bmux integration` for Claude Code, Codex, omp, opencode and pi, reporting exact working/blocked/idle and the session to resume |
+| Agents supervising agents | `bmux agents`, `bmux capture`, `bmux send --if-seq`, `bmux wait-agent`; `bmux guide`, `bmux capabilities` and an installed skill teach agents to use them |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |

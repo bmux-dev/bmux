@@ -150,7 +150,7 @@ func shellQuote(s string) string {
 }
 
 var claude = hookAgent{
-	name: "claude", version: 1, settings: "settings.json",
+	name: "claude", version: 2, settings: "settings.json",
 	events: []string{"SessionStart", "UserPromptSubmit", "PermissionRequest", "PostToolUse", "PostToolUseFailure",
 		"Notification", "Elicitation", "ElicitationResult", "Stop", "StopFailure", "SessionEnd"},
 	states: func(e hookEvent) string {

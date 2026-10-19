@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"text/tabwriter"
 
@@ -27,156 +28,174 @@ func main() {
 }
 
 func run(args []string) error {
-	if len(args) > 0 {
-		switch args[0] {
-		case "help", "--help", "-h":
-			help()
-			return nil
-		case "version", "--version":
-			fmt.Println("bmux", version)
-			return nil
-		case "default-config":
-			fmt.Print(config.DefaultFile)
-			return nil
-		}
-	}
-	socket, err := daemon.Prepare()
-	if err != nil {
-		return err
-	}
 	if len(args) == 1 && args[0] == "--serve" {
+		socket, err := daemon.Prepare()
+		if err != nil {
+			return err
+		}
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 		defer signal.Stop(stop)
 		return daemon.Serve(socket, stop)
 	}
-	if len(args) > 0 && args[0] == "integration" {
-		// Writes agents' config files and reports from their hooks; never
-		// starts a server.
-		return runIntegration(socket, args[1:], os.Stdin, os.Stdout)
+	name, rest := "", args
+	if len(args) > 0 {
+		name, rest = args[0], args[1:]
 	}
-	if len(args) > 0 && args[0] != "new" && args[0] != "attach" && args[0] != "list" && args[0] != "rename" && args[0] != "kill" && args[0] != "focus" && args[0] != "agent" && args[0] != "restart" && args[0] != "reload" {
-		return fmt.Errorf("unknown command %q; try bmux --help", args[0])
+	switch name {
+	case "--help", "-h":
+		name = "help"
+	case "--version":
+		name = "version"
 	}
-	if len(args) > 0 && args[0] == "agent" {
-		// Reports come from hooks inside a pane; never start a server for them.
-		return reportAgent(socket, args[1:])
+	c, ok := findCommand(name)
+	if !ok {
+		return fmt.Errorf("unknown command %q; try bmux --help", name)
 	}
-	if len(args) > 0 && args[0] == "restart" {
-		if len(args) != 1 {
-			return fmt.Errorf("usage: bmux restart")
-		}
-		return restartServer(socket)
+	if c.server == noSocket {
+		return c.run("", rest)
 	}
-	if len(args) > 0 && args[0] == "reload" {
-		// Rereads the config file in the server; attached clients follow.
-		if len(args) != 1 {
-			return fmt.Errorf("usage: bmux reload")
-		}
-		path, _ := config.Path()
-		if _, err := client.Request(socket, protocol.Request{Op: "reload-config"}); err != nil {
-			return err
-		}
-		fmt.Println("Reloaded", path)
-		return nil
-	}
-	if startsClient(args) {
-		if err := refuseNesting(); err != nil {
-			return err
-		}
-	}
-	if err = daemon.Ensure(socket); err != nil {
+	socket, err := daemon.Prepare()
+	if err != nil {
 		return err
 	}
+	if c.server == startServer {
+		if startsClient(args) {
+			if err := refuseNesting(); err != nil {
+				return err
+			}
+		}
+		if err := daemon.Ensure(socket); err != nil {
+			return err
+		}
+	}
+	return c.run(socket, rest)
+}
+
+func runDefault(socket string, _ []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	if len(args) == 0 {
-		name, err := createDirectorySession(socket, cwd)
-		if err != nil {
-			return err
-		}
-		return client.Run(socket, name, cwd)
-	}
-	switch args[0] {
-	case "new":
-		flags := flag.NewFlagSet("new", flag.ContinueOnError)
-		dir := flags.String("dir", cwd, "working directory")
-		detached := flags.Bool("detach", false, "create without attaching")
-		if err := flags.Parse(args[1:]); err != nil {
-			return err
-		}
-		if flags.NArg() != 1 {
-			return fmt.Errorf("usage: bmux new [--dir PATH] [--detach] NAME")
-		}
-		absolute, err := filepath.Abs(*dir)
-		if err != nil {
-			return err
-		}
-		name := flags.Arg(0)
-		if _, err = client.Request(socket, protocol.Request{Op: "create", Name: name, Dir: absolute}); err != nil {
-			return err
-		}
-		if *detached {
-			fmt.Println("Created session", name)
-			return nil
-		}
-		return client.Run(socket, name, cwd)
-	case "attach":
-		name, err := attachTarget(socket, args[1:])
-		if err != nil {
-			return err
-		}
-		return client.Run(socket, name, cwd)
-	case "list":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: bmux list")
-		}
-		r, err := client.Request(socket, protocol.Request{Op: "list"})
-		if err != nil {
-			return err
-		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-		fmt.Fprintln(w, "SESSION\tSTATE\tPANES\tCLIENTS\tDIRECTORY")
-		for _, s := range r.Sessions {
-			state := "running"
-			if s.Exited {
-				state = "exited"
-			}
-			fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%s\n", s.Name, state, s.Panes, s.Clients, s.Dir)
-		}
-		return w.Flush()
-	case "rename":
-		if len(args) != 3 {
-			return fmt.Errorf("usage: bmux rename OLD NEW")
-		}
-		_, err = client.Request(socket, protocol.Request{Op: "rename", Name: args[1], NewName: args[2]})
-		return err
-	case "kill":
-		if len(args) != 2 {
-			return fmt.Errorf("usage: bmux kill NAME (stops all its panes)")
-		}
-		_, err = client.Request(socket, protocol.Request{Op: "kill", Name: args[1]})
-		return err
-	case "focus":
-		// For editors handing focus back to bmux at an edge. Called inside a
-		// pane, so the session and pane come from the environment, like tmux's
-		// TMUX_PANE. Deliberately not Ensure(): a missing server is an error,
-		// not something to start.
-		if len(args) != 2 {
-			return fmt.Errorf("usage: bmux focus left|right|up|down")
-		}
-		session := os.Getenv("BMUX_SESSION")
-		if session == "" {
-			return fmt.Errorf("not inside a bmux pane")
-		}
-		// The ID survives renames. Servers older than v0.1.1 ignore it and use the name.
-		sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
-		paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
-		_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, SessionID: sessionID, PaneID: paneID, Direction: args[1]})
+	name, err := createDirectorySession(socket, cwd)
+	if err != nil {
 		return err
 	}
+	return client.Run(socket, name, cwd)
+}
+
+func runNew(socket string, args []string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	flags := flag.NewFlagSet("new", flag.ContinueOnError)
+	dir := flags.String("dir", cwd, "working directory")
+	detached := flags.Bool("detach", false, "create without attaching")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("usage: bmux new [--dir PATH] [--detach] NAME")
+	}
+	absolute, err := filepath.Abs(*dir)
+	if err != nil {
+		return err
+	}
+	name := flags.Arg(0)
+	if _, err = client.Request(socket, protocol.Request{Op: "create", Name: name, Dir: absolute}); err != nil {
+		return err
+	}
+	if *detached {
+		fmt.Println("Created session", name)
+		return nil
+	}
+	return client.Run(socket, name, cwd)
+}
+
+func runAttach(socket string, args []string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	name, err := attachTarget(socket, args)
+	if err != nil {
+		return err
+	}
+	return client.Run(socket, name, cwd)
+}
+
+func runList(socket string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: bmux list")
+	}
+	r, err := client.Request(socket, protocol.Request{Op: "list"})
+	if err != nil {
+		return err
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(w, "SESSION\tSTATE\tPANES\tCLIENTS\tDIRECTORY")
+	for _, s := range r.Sessions {
+		state := "running"
+		if s.Exited {
+			state = "exited"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%s\n", s.Name, state, s.Panes, s.Clients, s.Dir)
+	}
+	return w.Flush()
+}
+
+func runRename(socket string, args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: bmux rename OLD NEW")
+	}
+	_, err := client.Request(socket, protocol.Request{Op: "rename", Name: args[0], NewName: args[1]})
+	return err
+}
+
+func runKill(socket string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: bmux kill NAME (stops all its panes)")
+	}
+	_, err := client.Request(socket, protocol.Request{Op: "kill", Name: args[0]})
+	return err
+}
+
+// runFocus is for editors handing focus back to bmux at an edge. Called
+// inside a pane, so the session and pane come from the environment, like
+// tmux's TMUX_PANE.
+func runFocus(socket string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: bmux focus left|right|up|down")
+	}
+	session := os.Getenv("BMUX_SESSION")
+	if session == "" {
+		return fmt.Errorf("not inside a bmux pane")
+	}
+	// The ID survives renames. Servers older than v0.1.1 ignore it and use the name.
+	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
+	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
+	_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, SessionID: sessionID, PaneID: paneID, Direction: args[0]})
+	return err
+}
+
+func runRestart(socket string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: bmux restart")
+	}
+	return restartServer(socket)
+}
+
+// runReload rereads the config file in the server; attached clients follow.
+func runReload(socket string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: bmux reload")
+	}
+	path, _ := config.Path()
+	if _, err := client.Request(socket, protocol.Request{Op: "reload-config"}); err != nil {
+		return err
+	}
+	fmt.Println("Reloaded", path)
 	return nil
 }
 
@@ -299,28 +318,26 @@ func attachTarget(socket string, names []string) (string, error) {
 	return r.Sessions[0].Name, nil
 }
 
-func help() {
-	fmt.Println(helpText)
+// helpText is the usage lines from the command table, then interactive help.
+func helpText() string {
+	var b strings.Builder
+	b.WriteString("bmux — persistent workspaces, ordinary terminal interaction.\n\n")
+	b.WriteString("Agents: run bmux guide to learn how to read, drive and watch panes.\n\n")
+	b.WriteString("Usage:\n")
+	for _, c := range commands {
+		line := strings.TrimSpace("bmux " + c.name + " " + c.usage)
+		const column = 37
+		if len(line) > column {
+			fmt.Fprintf(&b, "  %s\n  %-*s  %s\n", line, column, "", c.summary)
+		} else {
+			fmt.Fprintf(&b, "  %-*s  %s\n", column, line, c.summary)
+		}
+	}
+	b.WriteString(interactiveHelp)
+	return b.String()
 }
 
-const helpText = `bmux — persistent workspaces, ordinary terminal interaction.
-
-Usage:
-  bmux                                   Create and attach a fresh session in this directory
-  bmux new [--dir PATH] [--detach] NAME  Create a shell session
-  bmux attach [NAME]                     Attach by name, or to the first listed session
-  bmux list                              List sessions
-  bmux rename OLD NEW                    Rename a session
-  bmux kill NAME                         Terminate a session and all its panes
-  bmux focus left|right|up|down          Move pane focus (for editors at an edge)
-  bmux agent STATE [NAME] [-- CMD...]    Report this pane's agent: working, blocked, idle, clear
-  bmux integration status|install|uninstall [AGENT]
-                                         Make claude, codex, omp, opencode and pi report exact state
-  bmux restart                           Save sessions, restart the server, restore them
-  bmux reload                            Reread the config file (also Ctrl-a r)
-  bmux default-config                    Print every setting with its default
-  bmux version                           Print the version
-
+const interactiveHelp = `
 Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
   Ctrl-a n   New session          Ctrl-a p   Last session

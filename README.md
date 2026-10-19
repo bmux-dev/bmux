@@ -176,6 +176,12 @@ settings and only run inside bmux panes. Any other agent can report with
 `bmux agent working|blocked|idle`; see
 [reporting agent state](docs/usage.md#reporting-agent-state).
 
+Agents can drive bmux too. `bmux agents`, `bmux capture`, `bmux send` and
+`bmux wait-agent` list agent panes, read what they ask, answer them and wait
+until one needs you; `bmux guide` teaches an agent all of it, so one agent can
+supervise the others and report to you. See
+[scripting panes and agents](docs/usage.md#scripting-panes-and-agents).
+
 ## Restarts and upgrades
 
 bmux saves every session every few seconds and when the server stops. After an

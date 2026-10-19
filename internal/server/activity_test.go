@@ -14,10 +14,13 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
+// activity lists each pane's activity without its seq, which tests of seq
+// itself check separately.
 func activity(t *testing.T, s *session) map[int]protocol.PaneActivity {
 	t.Helper()
 	result := make(map[int]protocol.PaneActivity)
 	for _, a := range s.status().Activity {
+		a.Seq = 0
 		result[a.Pane] = a
 	}
 	return result
@@ -137,6 +140,47 @@ func TestAgentReportsDriveStateAndAttention(t *testing.T) {
 	}
 }
 
+func TestAgentSeqChangesExactlyWhenStateDoes(t *testing.T) {
+	s := editorNavigationSession(t)
+	seq := func(pane int) uint64 {
+		t.Helper()
+		for _, a := range s.status().Activity {
+			if a.Pane == pane {
+				return a.Seq
+			}
+		}
+		return 0
+	}
+	report := func(pane int, state string) uint64 {
+		t.Helper()
+		if err := s.reportAgent(pane, state, "omp", nil); err != nil {
+			t.Fatal(err)
+		}
+		return seq(pane)
+	}
+	working := report(1, protocol.AgentWorking)
+	if working == 0 {
+		t.Fatal("an agent pane has no seq")
+	}
+	if again := report(1, protocol.AgentWorking); again != working {
+		t.Fatalf("repeating a state changed seq %d -> %d", working, again)
+	}
+	blocked := report(1, protocol.AgentBlocked)
+	if blocked <= working {
+		t.Fatalf("blocking kept or lowered seq: %d -> %d", working, blocked)
+	}
+	// Seqs are never shared between panes, so a stale one can't match elsewhere.
+	if other := report(2, protocol.AgentBlocked); other == blocked || other == 0 {
+		t.Fatalf("pane 2 seq %d, pane 1 seq %d", other, blocked)
+	}
+	if err := s.reportAgent(1, "clear", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if relabeled := report(1, protocol.AgentBlocked); relabeled == blocked {
+		t.Fatal("an agent coming back after clear reused its old seq")
+	}
+}
+
 func TestAgentReportRequestTargetsSessionIDWithoutTouchingRecency(t *testing.T) {
 	srv, s := viewportSession(t)
 	before := srv.request(protocol.Request{Op: "list"}).Sessions[0]
@@ -145,6 +189,9 @@ func TestAgentReportRequestTargetsSessionIDWithoutTouchingRecency(t *testing.T) 
 	}
 	after := srv.request(protocol.Request{Op: "list"}).Sessions[0]
 	want := []protocol.PaneActivity{{Pane: 1, Agent: "claude", State: protocol.AgentBlocked, Attention: true}}
+	if len(after.Activity) == 1 {
+		after.Activity[0].Seq = 0
+	}
 	if !reflect.DeepEqual(after.Activity, want) || !after.Used.Equal(before.Used) {
 		t.Fatalf("list after report: %+v", after)
 	}
@@ -288,13 +335,20 @@ func TestAgentOutputTimingSeparatesWorkingFromWaiting(t *testing.T) {
 		a, _ := p.activityLocked(1)
 		return a
 	}
+	var last protocol.PaneActivity
 	expect := func(step string, want protocol.PaneActivity) {
 		t.Helper()
 		want.Pane = 1
 		if want.Agent == "" {
 			want.Agent = "opencode"
 		}
-		if got := state(); got != want {
+		got := state()
+		if changed := got.State != last.State || got.Agent != last.Agent; changed == (got.Seq == last.Seq) {
+			t.Fatalf("%s: seq %d after %d, though the state changed: %v", step, got.Seq, last.Seq, changed)
+		}
+		last = got
+		got.Seq = 0
+		if got != want {
 			t.Fatalf("%s: %+v, want %+v", step, got, want)
 		}
 	}

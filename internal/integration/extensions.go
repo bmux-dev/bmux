@@ -143,12 +143,12 @@ func ompDir(e Env) string {
 }
 
 var pi = fileAgent{
-	name: "pi", version: 1, file: filepath.Join("extensions", "bmux-agent-state.ts"),
+	name: "pi", version: 2, file: filepath.Join("extensions", "bmux-agent-state.ts"),
 	text: piExtension("pi", "agent_settled", "", `"pi", "--session", sessionFile`),
 }
 
 var omp = fileAgent{
-	name: "omp", version: 1, file: filepath.Join("extensions", "bmux-agent-state.ts"),
+	name: "omp", version: 2, file: filepath.Join("extensions", "bmux-agent-state.ts"),
 	// omp marks the shells it spawns with OMPCODE=1; an omp started from one
 	// is nested, not the pane's agent.
 	text: piExtension("omp", "agent_end", ` && process.env.OMPCODE !== "1"`, `"omp", "--resume=" + sessionFile`),
