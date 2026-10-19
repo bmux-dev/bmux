@@ -66,6 +66,31 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 | Pass-through list for Ctrl-h/j/k/l | S | Forward to fzf and other listed programs, like vim-tmux-navigator's `is_vim`. |
 | Reload config (`Ctrl-a r`, `bmux reload`) | S | Like tmux's `source-file`. |
 | Key help overlay (`Ctrl-a ?`) | S | Lists current bindings. |
+| Sidebar settings | S | Width (24 columns today), start hidden, and the screen width below which it hides itself (80 today). |
+| Agent detection settings | S | Extra program names to recognize as agents, the working/waiting timing (about 2 seconds each today), and turning detection off. |
+| Alert settings | S | Sound on or off (replaces `BMUX_SOUND`) and custom sound files for "ready" and "blocked", like herdr's `[ui.sound]`. |
+| Restore settings | S | Turn save/restore off, and set or disable each agent's resume command (e.g. add `--model`). |
+| Agent state colors | S | Override the herdr palette used for working, waiting, blocked and idle. |
+
+### First run and agent integrations
+
+Copies herdr's first run. The first time a client attaches, a welcome screen
+explains the basics and leads into an integrations panel.
+
+Today bmux guesses state from output timing: busy while an agent keeps drawing,
+waiting once it goes quiet. That can't tell a finished turn from a permission
+prompt. An integration makes the agent report its own state (working, blocked,
+idle) and exact session through `bmux agent`, like herdr's opencode, pi and omp
+integrations. bmux still never reads the screen; agents without an integration
+keep the timing guess. Integrations change an agent's own config files, so they
+are installed only when you choose to.
+
+| Item | Size | Notes |
+| --- | --- | --- |
+| Welcome screen | S | Shown once on first attach: what bmux is, Ctrl-a for commands, Ctrl-h into the sidebar, "next: install optional agent integrations for more reliable state". Enter, Right or l continues; the choice is remembered (`onboarding = false` in the config file, like herdr). |
+| Integrations panel | M | Opens after the welcome screen and from a key later. One row per supported agent: ✓ installed, ↻ update available, + available (its command is on `PATH`), – not found. Enter installs every available or outdated integration, Esc closes. |
+| `bmux integration install\|uninstall\|status [AGENT]` | S | The same from the command line, for scripts and dotfiles. |
+| Agent integrations | L | Claude Code hooks in `~/.claude/settings.json` (working, blocked on permission prompts, idle, exact `claude --resume` session), and plugins or extensions for opencode, omp, pi and Codex. Files are versioned and marked as managed by bmux so updates are detected; other settings in those files are preserved. |
 
 ### Terminal behavior apps rely on
 
