@@ -416,6 +416,7 @@ width = 24
 | `ui.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
+| `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
 | `sidebar.width` | `24` | Columns including its border, 12 to 60 |
