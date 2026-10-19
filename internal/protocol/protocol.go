@@ -49,6 +49,7 @@ type Request struct {
 	Kind       string `json:"kind,omitempty"`
 	Focused    bool   `json:"focused,omitempty"`
 	PaneID     int    `json:"pane_id,omitempty"`
+	SessionID  uint64 `json:"session_id,omitempty"`
 	Direction  string `json:"direction,omitempty"`
 }
 

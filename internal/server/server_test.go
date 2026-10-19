@@ -233,9 +233,9 @@ func TestValidationAndEnvironment(t *testing.T) {
 	if err := validateName("hsdp-stl-api.2"); err != nil {
 		t.Fatal(err)
 	}
-	env := shellEnv([]string{"TERM=old", "TMUX=old", "TMUX_PANE=%1", "HOME=" + os.TempDir(), "COLORTERM=old", "BMUX_SESSION=old", "BMUX_PANE=old"}, "api", 7)
+	env := shellEnv([]string{"TERM=old", "TMUX=old", "TMUX_PANE=%1", "HOME=" + os.TempDir(), "COLORTERM=old", "BMUX_SESSION=old", "BMUX_SESSION_ID=old", "BMUX_PANE=old"}, 3, "api", 7)
 	joined := strings.Join(env, "\n")
-	if strings.Contains(joined, "=old") || strings.Contains(joined, "TMUX=") || !strings.Contains(joined, "BMUX_SESSION=api") || !strings.Contains(joined, "BMUX_PANE=7") {
+	if strings.Contains(joined, "=old") || strings.Contains(joined, "TMUX=") || !strings.Contains(joined, "BMUX_SESSION=api") || !strings.Contains(joined, "BMUX_SESSION_ID=3") || !strings.Contains(joined, "BMUX_PANE=7") {
 		t.Fatalf("env: %s", joined)
 	}
 	w, h := dimensions(-2, 999999)

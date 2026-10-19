@@ -88,10 +88,11 @@ bmux sets these variables in each pane:
 
 | Variable | Value |
 | --- | --- |
-| `BMUX_SESSION` | Session name |
+| `BMUX_SESSION` | Session name when the pane started |
+| `BMUX_SESSION_ID` | Session identifier; unchanged by renames |
 | `BMUX_PANE` | Pane identifier |
 
-`bmux focus left`, `right`, `up`, or `down` reads both variables to move from
+`bmux focus left`, `right`, `up`, or `down` reads these variables to move from
 the editor's pane. Run it inside a bmux pane. With no neighbor in that direction,
 focus stays put. These variables identify the pane; they are not configuration
 options to set yourself.

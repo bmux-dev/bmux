@@ -116,6 +116,15 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
+	if r.Op == "focus-pane" && r.SessionID != 0 {
+		// Never fall back to the name: after a rename it may belong to another session.
+		item = nil
+		for _, candidate := range s.sessions {
+			if candidate.id == r.SessionID {
+				item = candidate
+			}
+		}
+	}
 	type namedSession struct {
 		name string
 		item *session

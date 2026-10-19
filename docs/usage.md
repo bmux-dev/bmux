@@ -267,7 +267,7 @@ BMUX_ACCENT='#aabbcc' bmux
 BMUX_POWERLINE_ASCII=1 bmux
 ```
 
-Inside panes, bmux sets `BMUX_SESSION` and `BMUX_PANE` for
+Inside panes, bmux sets `BMUX_SESSION`, `BMUX_SESSION_ID` and `BMUX_PANE` for
 [editor mappings](editor-navigation.md). These are pane information, not settings.
 
 ## Runtime files

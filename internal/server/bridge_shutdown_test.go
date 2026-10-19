@@ -138,7 +138,7 @@ func scriptedPane(t *testing.T, body string) (*pane, string) {
 	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	p, err := newPane("regression", dir, path, 80, 24, 1)
+	p, err := newPane(1, "regression", dir, path, 80, 24, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
