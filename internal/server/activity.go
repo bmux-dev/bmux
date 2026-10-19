@@ -278,10 +278,14 @@ func (s *pane) activityLocked(id int) (protocol.PaneActivity, bool) {
 
 // Caller holds session.mu. Only the focused pane of a session with a
 // terminal-focused client is viewed; becoming viewed clears its attention.
+// Viewed is also the focus that apps see: a change sends focus in or out,
+// which the emulator delivers only to apps that enabled focus events (?1004).
 func (s *session) updateViewedLocked() {
 	for id, p := range s.panes {
 		viewed := id == s.focused && s.viewers > 0
-		p.viewed.Store(viewed)
+		if p.viewed.Swap(viewed) != viewed && !s.stopping.Load() {
+			_ = p.input(protocol.Request{Op: "focus", Focused: viewed})
+		}
 		if viewed {
 			p.mu.Lock()
 			p.attention = false

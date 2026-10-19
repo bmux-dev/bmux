@@ -87,10 +87,9 @@ func (s *session) navigatePane(direction string) error {
 			s.mu.Unlock()
 			return p.input(key)
 		}
-		previous := s.focused
 		err := s.selectPaneDirectionLocked(direction, s.focused)
 		if err == nil {
-			err = s.finishLayoutLocked(previous)
+			err = s.finishLayoutLocked()
 		}
 		s.mu.Unlock()
 		return err

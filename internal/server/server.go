@@ -326,9 +326,13 @@ func (s *Server) handle(conn net.Conn) {
 				continue
 			}
 			next = complete
-			if next.Op == "focus" && next.Focused != viewing {
-				viewing = next.Focused
-				item.setViewing(viewing)
+			if next.Op == "focus" {
+				// The client's terminal focus; panes see it through viewing.
+				if next.Focused != viewing {
+					viewing = next.Focused
+					item.setViewing(viewing)
+				}
+				continue
 			}
 			if next.Op == "scroll" {
 				item.mu.Lock()

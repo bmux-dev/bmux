@@ -295,6 +295,13 @@ reattach.
 Several clients can attach to one session. Pane focus is shared. The latest
 attachment or attached-client resize sets the shared application size.
 
+Applications that ask for focus events (`?1004`), such as Neovim for
+`FocusGained`, `FocusLost` and `autoread`, hear that their pane has focus while
+it is the session's focused pane and at least one attached client's terminal
+window has focus. Moving to another pane, switching terminal windows, opening
+the picker and detaching all report focus out. An application that turns
+focus events on while focused is told at once, as in tmux.
+
 Terminating a pane or session also stops its ordinary jobs. Programs that
 deliberately detach themselves from the shell's process session can keep running.
 

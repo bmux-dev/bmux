@@ -74,7 +74,14 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		// The pinned x/vt version passes Cursor.Steady here despite naming
 		// this callback argument "blink". Keep the inversion regression-tested.
 		CursorStyle: func(style vt.CursorStyle, steady bool) { s.style, s.blink = style, !steady },
-		EnableMode:  func(m ansi.Mode) { s.modes[m.Mode()] = true },
+		EnableMode: func(m ansi.Mode) {
+			s.modes[m.Mode()] = true
+			// Like tmux, an app that turns on focus events while its pane is
+			// viewed hears so at once instead of at the next change.
+			if m == ansi.ModeFocusEvent && s.viewed.Load() {
+				s.term.Focus()
+			}
+		},
 		DisableMode: func(m ansi.Mode) { delete(s.modes, m.Mode()) },
 		AltScreen:   func(bool) { s.epoch++ },
 		Bell:        s.noteAttentionLocked,

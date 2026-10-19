@@ -137,10 +137,14 @@ working; two without return it to idle and, if unseen, set attention. Reports
 override timing. A detected agent leaving the foreground drops its reports.
 
 `session.viewers` counts attachments whose last `focus` request was true; the
-attach loop owns each connection's contribution and releases it on exit.
-`updateViewedLocked` runs under `session.mu` after every layout/focus change and
-viewer change, stores `pane.viewed` (atomic, read by callbacks) and clears the
-viewed pane's attention. A viewed pane never gains attention. `list` returns
+attach loop owns each connection's contribution and releases it on exit, and
+never forwards a client's `focus` request to a pane. `updateViewedLocked` runs
+under `session.mu` after every layout/focus change and viewer change, stores
+`pane.viewed` (atomic, read by callbacks) and clears the viewed pane's
+attention. A viewed pane never gains attention. Viewed is also application
+focus: each change sends the pane a focus in/out, which the emulator encodes
+only while the app has `?1004` set, and the `EnableMode` callback reports focus
+in when an app turns `?1004` on in a viewed pane. `list` returns
 `Session.Activity` in unzoomed layout order, only for panes with an agent or
 attention.
 
