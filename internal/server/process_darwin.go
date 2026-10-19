@@ -33,7 +33,9 @@ func foregroundGroupCommand(group int, match func(string) string) (string, error
 		if int(p.Eproc.Pgid) != group || p.Proc.P_stat == 4 || p.Proc.P_stat == 5 {
 			continue
 		}
-		name := strings.TrimRight(string(p.Proc.P_comm[:]), "\x00")
+		// p_comm is NUL-terminated; bytes after the NUL can be left over from
+		// a longer name the process had before exec.
+		name, _, _ := strings.Cut(string(p.Proc.P_comm[:]), "\x00")
 		if found := match(name); found != "" {
 			return found, nil
 		}
