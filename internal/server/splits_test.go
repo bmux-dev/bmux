@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -74,6 +75,54 @@ func TestSplitsFocusZoomAndIndependentShells(t *testing.T) {
 	if len(f.Panes) != 1 || f.Panes[0].Width != 2 {
 		t.Fatal("cannot zoom after terminal shrinks")
 	}
+}
+
+func TestSplitsStartInTheSourcePanesCurrentDirectory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root, work, job, gone := realDir(t, t.TempDir()), realDir(t, t.TempDir()), realDir(t, t.TempDir()), realDir(t, t.TempDir())
+	s, err := newSession("workspace", root, "/bin/sh", 120, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.stop()
+	input := func(r protocol.Request) {
+		t.Helper()
+		if err := s.input(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The shell's directory, not the session's.
+	input(protocol.Request{Op: "paste", PaneID: 1, Text: "cd " + work + "\n"})
+	awaitCwd(t, s.panes[1], work)
+	input(protocol.Request{Op: "split", PaneID: 1, Direction: "horizontal"})
+	awaitCwd(t, s.panes[2], work)
+
+	// A foreground job's directory wins over its shell's, as in tmux.
+	input(protocol.Request{Op: "paste", PaneID: 2, Text: "(cd " + job + " && exec sleep 30)\n"})
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		group, err := foregroundPTYGroup(s.panes[2].pty)
+		if err == nil && group != s.panes[2].cmd.Process.Pid {
+			if dir, err := processCwd(group); err == nil && dir == job {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("foreground job never started in its directory")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	input(protocol.Request{Op: "split", PaneID: 2, Direction: "vertical"})
+	awaitCwd(t, s.panes[3], job)
+
+	// A removed directory falls back to the session's.
+	input(protocol.Request{Op: "paste", PaneID: 3, Text: "cd " + gone + "\n"})
+	awaitCwd(t, s.panes[3], gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	input(protocol.Request{Op: "split", PaneID: 3, Direction: "vertical"})
+	awaitCwd(t, s.panes[4], root)
 }
 
 func TestPaneScrollbackIsIndependent(t *testing.T) {

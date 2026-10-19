@@ -29,6 +29,11 @@ Do not collapse the two pane maps or completion channels merely to reduce fields
 Process discovery/signalling is best effort with SID and birth checks. Deliberately
 detached jobs are out of scope, and POSIX has no portable atomic birth-checked kill.
 
+A split samples the source pane under `session.mu`, releases it to read the
+directory of the PTY's foreground group, then the shell's, from the OS
+(`pane.currentDir`), and reacquires it to split that sampled pane. A missing
+or removed directory falls back to the session's.
+
 ## Input admission
 
 `protocol.MaxPasteBytes` is the decoded logical payload maximum: 4 MiB.

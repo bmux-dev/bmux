@@ -271,9 +271,12 @@ terminal notification. An unrecognized agent that exits without reporting
 ## Panes and session lifetime
 
 Each pane starts a login shell. The server chooses `$SHELL` when it starts,
-falling back to `/bin/sh`. New panes start in the **session's original directory**,
-not the focused pane's current directory. Nested split layouts and pane focus
-survive detach and reattach.
+falling back to `/bin/sh`. A new split starts in the **focused pane's current
+directory**, like tmux's `-c "#{pane_current_path}"`: the directory of the
+program in front of the shell (an editor started in a project, say), otherwise
+the shell's. If that directory was removed, the split starts in the session's
+original directory. Nested split layouts and pane focus survive detach and
+reattach.
 
 - **Ctrl-a x** closes the focused pane and stops its jobs, like tmux's
   `kill-pane`. If only the shell is running it closes at once; if a program is
