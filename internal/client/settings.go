@@ -2,7 +2,6 @@ package client
 
 import (
 	"os"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
@@ -16,6 +15,7 @@ func (u *ui) applySettings(settings config.Config) {
 	first := u.settings.Prefix == ""
 	previous, wasHidden := u.settings.Sidebar, u.sidebarHidden
 	u.settings = settings
+	u.rootKeys, u.prefixKeys = settings.Bindings()
 	applyTheme(themeFor(settings.Theme, settings.UI))
 	if first || previous.Show != settings.Sidebar.Show {
 		u.sidebarHidden = !settings.Sidebar.Show
@@ -73,21 +73,8 @@ func (u *ui) prefixLetter() rune {
 
 // isPrefix matches the configured Ctrl-letter, whichever way tcell reports it.
 func (u *ui) isPrefix(e *tcell.EventKey) bool {
-	letter := u.prefixLetter()
-	if e.Key() == tcell.KeyCtrlA+tcell.Key(letter-'a') {
-		return true
-	}
-	return e.Key() == tcell.KeyRune && e.Modifiers() == tcell.ModCtrl && (e.Rune() == letter || e.Rune() == letter-'a'+'A')
+	return keyName(e) == "C-"+string(u.prefixLetter())
 }
 
 // prefixName is the prefix as the status line shows it, e.g. "Ctrl-a".
 func (u *ui) prefixName() string { return "Ctrl-" + string(u.prefixLetter()) }
-
-func (u *ui) prefixHelp() string {
-	return u.prefixName() + ": | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · r reload · s picker"
-}
-
-// withPrefix rewrites the default "Ctrl-a" in help text to the configured prefix.
-func (u *ui) withPrefix(text string) string {
-	return strings.ReplaceAll(text, "Ctrl-a", u.prefixName())
-}

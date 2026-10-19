@@ -440,6 +440,7 @@ width = 24
 | `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
+| `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](#rebinding-keys) |
 
 **Ctrl-a r** reloads the file in your client and the server; `bmux reload` does
 the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
@@ -447,6 +448,49 @@ the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
 is invalid, the status line (or `bmux reload`) says which, and that setting
 keeps its default, so a typo never leaves you without keys. Unknown settings
 are reported too.
+
+### Rebinding keys
+
+`[keys.root]` holds keys that work without the prefix; `[keys.prefix]` holds
+the keys you press after it. Write only the keys you change; the rest keep
+their defaults (`bmux default-config` lists them). `"none"` unbinds a key:
+a root key then reaches the application, and a prefix key does nothing.
+
+```toml
+[keys.root]
+"C-l" = "none"            # Ctrl-l clears the shell; Ctrl-a arrows still move right
+"A-h" = "navigate-left"   # Alt-h/j/k/l as well as Ctrl-h/j/k/l
+
+[keys.prefix]
+"v" = "split-right"
+"s" = "split-down"
+"w" = "sessions"
+"H" = "resize-left"       # repeats with plain H, like h does by default
+```
+
+Keys are written like Helix's: `C-` Ctrl, `A-` Alt, `S-` Shift, then a
+character or one of `left`, `right`, `up`, `down`, `home`, `end`, `pageup`,
+`pagedown`, `ins`, `del`, `backspace`, `tab`, `ret`, `esc`, `space`, `minus`
+(or `"-"`), `F1` to `F12`. Uppercase letters are shifted keys; Ctrl-Shift
+letters are the same as Ctrl letters in most terminals.
+
+| Action | Default key | What it does |
+| --- | --- | --- |
+| `navigate-left` / `-down` / `-up` / `-right` | root `C-h/j/k/l` | Focus a pane, or move between Vim/Neovim splits |
+| `focus-left` / `-down` / `-up` / `-right` | prefix arrows | Focus a pane, even with an editor in front |
+| `next-pane` | prefix `o` | Cycle panes |
+| `resize-left` / `-down` / `-up` / `-right` | prefix `h/j/k/l` | Move a divider five cells; prefix keys bound to resize repeat without the prefix for a second |
+| `split-right` / `split-down` | prefix `\|` / `-` | Split side by side / stacked |
+| `zoom`, `close-pane` | prefix `m`, `x` | |
+| `sessions`, `new-session`, `last-session` | prefix `s`, `n`, `p` | |
+| `previous-session` / `next-session` | prefix `(` / `)` | |
+| `detach`, `copy` | prefix `d`, `y` | |
+| `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
+| `toggle-sidebar`, `reload-config` | prefix `b`, `r` | |
+| `send-prefix` | the prefix again | Send the prefix key to the application |
+
+The prefix can't be a root key. The status line's hints and the prefix help
+show your bindings.
 
 ## Environment variables
 

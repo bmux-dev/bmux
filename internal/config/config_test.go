@@ -38,9 +38,24 @@ func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
 	cfg, err := Load(write(t, uncommented), noEnv)
 	want := Default()
 	want.Agents.Extra = []string{}
+	want.Keys = Keys{Root: map[string]string{}, Prefix: map[string]string{}}
 	want.Restore.Resume = map[string][]string{"claude": {"claude", "--continue"}, "codex": {"codex", "resume", "--last"}}
 	if err != nil || !reflect.DeepEqual(cfg, want) {
 		t.Fatalf("documented defaults:\n got %+v\nwant %+v\n%v", cfg, want, err)
+	}
+	// Every documented key binding is a real default.
+	binding := regexp.MustCompile(`(?m)^# ("[^"]+" = "[a-z-]+")`)
+	cfg, err = Load(write(t, binding.ReplaceAllString(DefaultFile, "$1")), noEnv)
+	if err != nil || len(cfg.Keys.Root) != len(DefaultRootKeys) || len(cfg.Keys.Prefix) == 0 {
+		t.Fatalf("documented keys: %+v %v", cfg.Keys, err)
+	}
+	for table, documented := range map[string]map[string]string{"root": cfg.Keys.Root, "prefix": cfg.Keys.Prefix} {
+		defaults := map[string]map[string]string{"root": DefaultRootKeys, "prefix": DefaultPrefixKeys}[table]
+		for key, action := range documented {
+			if defaults[key] != action {
+				t.Errorf("keys.%s documents %s = %s, default is %q", table, key, action, defaults[key])
+			}
+		}
 	}
 }
 

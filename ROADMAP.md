@@ -49,12 +49,13 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 ### Keys and config
 
 The config file (`~/.config/bmux/config.toml`) shipped with the prefix
-setting, reload (`Ctrl-a r`, `bmux reload`), `bmux default-config`, and the
-sidebar, agent detection, alert, restore and state-color settings. Still to do:
+setting, reload (`Ctrl-a r`, `bmux reload`), `bmux default-config`, the
+sidebar, agent detection, alert, restore and state-color settings, and
+rebinding root and prefix keys (`[keys.root]`, `[keys.prefix]`, `"none"`
+unbinds, so Ctrl-l can clear the shell). Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Rebind keys, including turning off Ctrl-h/j/k/l | M | Fixes the Ctrl-l conflict. Rebinding everything can wait. |
 | Pass-through list for Ctrl-h/j/k/l | S | Forward to fzf and other listed programs, like vim-tmux-navigator's `is_vim`. |
 | Key help overlay (`Ctrl-a ?`) | S | Lists current bindings. |
 
@@ -190,6 +191,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
+| `bind-key`, `unbind-key` | `[keys.root]` and `[keys.prefix]` in the config file |
 | Status themes | Powerline status bars, accent colors, light theme |
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a

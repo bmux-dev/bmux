@@ -63,7 +63,8 @@ all its panes.
 
 **Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "C-b"` in the
 [config file](#configuration) for tmux's. Splits use **|** and **-**, as in many
-tmux configs. Rebinding other keys is planned.
+tmux configs. Every key can be [rebound](docs/usage.md#rebinding-keys),
+including giving Ctrl-l back to the shell.
 
 ## Keys
 
@@ -206,6 +207,13 @@ waiting-after = "5s"      # quiet this long before an agent counts as waiting
 
 [restore.resume]
 claude = ["claude", "--continue", "--model", "opus"]
+
+[keys.root]               # keys that work without the prefix
+"C-l" = "none"            # Ctrl-l clears the shell again
+
+[keys.prefix]             # keys after the prefix
+"v" = "split-right"
+"minus" = "split-down"
 ```
 
 Apply changes with **Ctrl-a r**, `bmux reload`, or `SIGUSR1` to the server, as

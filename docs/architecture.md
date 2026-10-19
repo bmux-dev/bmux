@@ -84,7 +84,8 @@ Production screens deliver one `rawPasteEvent` after capturing bracketed bytes
 before key interpretation. There is no second key-reconstruction paste path.
 `handleRawPaste` handles session/prompt/filter intent and visible rejection.
 
-Bare Ctrl-h/j/k/l use `navigate-pane`, preserving the existing sequence/ack fence.
+Keys bound to `navigate-*` (bare Ctrl-h/j/k/l by default) use `navigate-pane`,
+preserving the existing sequence/ack fence.
 The server samples the focused pane under `session.mu`, releases it to query the
 PTY foreground group and editor executable, then reacquires it to validate the
 same focus/pane before routing. OS inspection never runs per frame or under state
@@ -196,8 +197,12 @@ socket, because the socket closes before panes finish stopping.
 `config.Load` always returns a usable config: a missing file means defaults,
 and each invalid or unknown setting is reported while keeping its default.
 `BMUX_*` variables override the file. The client applies its part (prefix,
-theme, sidebar, sound) in `applySettings`; theme styles are package variables
-rebuilt by `applyTheme` on the UI goroutine only. The server stores its part
+keys, theme, sidebar, sound) in `applySettings`; theme styles are package
+variables rebuilt by `applyTheme` on the UI goroutine only. Key bindings are
+two tables of canonical key names (`config.KeyName`, matched by the client's
+`keyName` for tcell events) to action names: root keys are checked before the
+prefix, prefix keys after it, and status-line help is generated from them.
+The server stores its part
 (agent names, timing, detection, restore, resume overrides) in an atomic
 process-wide `serverSettings`, read on every sample and save. Terminal padding
 is read only when a client creates its screen.

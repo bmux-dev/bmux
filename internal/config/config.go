@@ -27,6 +27,7 @@ type Config struct {
 	Sound   Sound   `toml:"sound"`
 	Agents  Agents  `toml:"agents"`
 	Restore Restore `toml:"restore"`
+	Keys    Keys    `toml:"keys"`
 }
 
 type UI struct {
@@ -268,6 +269,7 @@ func (c *Config) repair() []string {
 			delete(c.Restore.Resume, agent)
 		}
 	}
+	c.repairKeys(bad)
 	return problems
 }
 
@@ -325,4 +327,38 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 [restore.resume]            # per-agent resume command; [] = plain shell
 # claude = ["claude", "--continue"]
 # codex = ["codex", "resume", "--last"]
+
+# Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
+# Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
+# navigate-left/down/up/right (Vim/Neovim-aware), focus-left/down/up/right,
+# next-pane, resize-left/down/up/right, split-right, split-down, zoom,
+# close-pane, sessions, new-session, last-session, previous-session,
+# next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
+# reload-config, send-prefix.
+
+[keys.root]                 # without the prefix; unbound keys reach the app
+# "C-h" = "navigate-left"   # "none" gives Ctrl-h to the app
+# "C-j" = "navigate-down"
+# "C-k" = "navigate-up"
+# "C-l" = "navigate-right"  # "none" lets Ctrl-l clear the shell
+# "S-pageup" = "scroll-up"
+# "S-pagedown" = "scroll-down"
+
+[keys.prefix]               # after the prefix; the prefix twice sends it
+# "|" = "split-right"
+# "minus" = "split-down"
+# "x" = "close-pane"
+# "m" = "zoom"
+# "o" = "next-pane"
+# "left" = "focus-left"     # and down, up, right
+# "h" = "resize-left"       # j down, k up, l right; repeat without the prefix
+# "s" = "sessions"
+# "n" = "new-session"
+# "p" = "last-session"
+# "(" = "previous-session"
+# ")" = "next-session"
+# "d" = "detach"
+# "y" = "copy"
+# "b" = "toggle-sidebar"
+# "r" = "reload-config"
 `
