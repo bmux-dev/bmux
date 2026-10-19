@@ -1,7 +1,10 @@
 // Package protocol defines the local, versioned client/server wire format.
 package protocol
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 const Version = 3
 
@@ -57,6 +60,12 @@ type Session struct {
 	Clients int       `json:"clients"`
 	Exited  bool      `json:"exited"`
 	Panes   int       `json:"panes"`
+}
+
+// Cell colors are "" for the terminal default, "#rrggbb" for an exact color, or
+// a decimal palette index ("0"-"255") rendered with the attached terminal's theme.
+func PaletteColor(index int) string {
+	return strconv.Itoa(index)
 }
 
 type Cell struct {
