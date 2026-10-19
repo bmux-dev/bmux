@@ -166,9 +166,10 @@ bmux integration install         # every agent found, or name some: install clau
 bmux integration uninstall codex
 ```
 
-Integrations exist for Claude Code and Codex; they add hooks to the agent's
-own config, keep your other settings and only run inside bmux panes. Any
-other agent can report with `bmux agent working|blocked|idle`; see
+Integrations exist for Claude Code, Codex, omp and pi; they add hooks or an
+extension to the agent's own config, keep your other settings and only run
+inside bmux panes. Any other agent can report with
+`bmux agent working|blocked|idle`; see
 [reporting agent state](docs/usage.md#reporting-agent-state).
 
 ## Restarts and upgrades

@@ -51,6 +51,8 @@ func System() (Env, error) {
 var agents = []Agent{
 	claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", ""),
 	codex.agent("Codex", "codex", "CODEX_HOME", ".codex", "Codex runs new hooks only after you trust them: open /hooks in Codex once."),
+	omp.agent("omp", "omp", ompDir, "Restart omp to load it."),
+	pi.agent("pi", "pi", piDir, "Restart pi to load it."),
 }
 
 // Agent is one supported agent's integration.
@@ -62,6 +64,7 @@ type Agent struct {
 	Notes   string // what to do after installing, if anything
 
 	configDir func(Env) string
+	check     func(Env) error // refuses an install that would misfire; may be nil
 	install   func(dir string) error
 	uninstall func(dir string) error
 	// installed returns the installed version, or 0.
@@ -101,7 +104,14 @@ func (a Agent) Status(e Env) (Status, error) {
 }
 
 // Install writes the current version, replacing an older one.
-func (a Agent) Install(e Env) error { return a.install(a.configDir(e)) }
+func (a Agent) Install(e Env) error {
+	if a.check != nil {
+		if err := a.check(e); err != nil {
+			return err
+		}
+	}
+	return a.install(a.configDir(e))
+}
 
 // Uninstall removes only what bmux installed.
 func (a Agent) Uninstall(e Env) error { return a.uninstall(a.configDir(e)) }

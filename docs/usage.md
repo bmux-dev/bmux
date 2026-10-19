@@ -257,12 +257,15 @@ bmux integration uninstall claude
 | --- | --- | --- |
 | Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
 | Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
+| omp (`omp`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals and the ask tool, idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
+| pi (`pi`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts and the ask tool, idle, and the session for `pi --session` |
 
 Every file bmux writes starts with a `bmux-integration: NAME vN` line, which
 is how `status` spots an outdated version; reinstalling updates it. Edited JSON
 files keep every other setting, hook and key order; uninstalling removes only
-bmux's entries and files. The hooks run `bmux integration hook NAME`, so
-`bmux` must be on the agent's `PATH`, and do nothing outside a bmux pane.
+bmux's entries and files. Hooks run `bmux integration hook NAME` and
+extensions run `bmux agent`, so `bmux` must be on the agent's `PATH`; outside
+a bmux pane they do nothing.
 Restarting the agent picks up a new integration. Two agents in one directory
 each resume their own session after a restart.
 
