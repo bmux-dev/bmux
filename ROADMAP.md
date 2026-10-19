@@ -46,30 +46,9 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 **Goal:** a tmux user can switch to bmux for a full day without missing anything basic.
 **Done when:** the owner uses bmux instead of tmux for a week of real work.
 
-### First run and agent integrations
-
-Copies herdr's first run. The first time a client attaches, a welcome screen
-explains the basics and leads into an integrations panel.
-
-Today bmux guesses state from output timing: busy while an agent keeps drawing,
-waiting once it goes quiet. That can't tell a finished turn from a permission
-prompt. An integration makes the agent report its own state (working, blocked,
-idle) and exact session through `bmux agent`, like herdr's opencode, pi and omp
-integrations. bmux still never reads the screen; agents without an integration
-keep the timing guess. Integrations change an agent's own config files, so they
-are installed only when you choose to.
-
-Shipped: `bmux integration status|install|uninstall [AGENT]`, and versioned,
-managed integrations for Claude Code and Codex (hooks), omp and pi
-(extensions) and opencode (a plugin): working, blocked on permission prompts
-and approvals, idle, and the exact session to resume, keeping other settings.
-The integrations panel (Ctrl-a i) lists them as ✓ installed, ↻ update
-available, + available or – not found, and Enter installs every available or
-outdated one. Still to do:
-
-| Item | Size | Notes |
-| --- | --- | --- |
-| Welcome screen | S | Shown once on first attach: what bmux is, Ctrl-a for commands, Ctrl-h into the sidebar, "next: install optional agent integrations for more reliable state". Enter, Right or l continues; the choice is remembered (`onboarding = false` in the config file, like herdr). |
+Everything planned for v0.3 is built; see [Already built](#already-built).
+It ships once the owner has used bmux instead of tmux for a week of real work.
+Fixes that week turns up go here.
 
 ## Restore follow-ups
 
@@ -175,6 +154,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session, Ctrl-a ( / ) previous/next; bare `bmux` names sessions after the directory |
 | tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
+| herdr's first run and agent integrations | A welcome screen on first attach leading into the integrations panel (Ctrl-a i); `bmux integration` for Claude Code, Codex, omp, opencode and pi, reporting exact working/blocked/idle and the session to resume |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
@@ -193,3 +173,8 @@ rename, directional navigation while zoomed, and `bmux --help` wording.
 v0.2.0 added the agent sidebar, restore across restarts and reboots with
 `bmux restart`, flicker-free synchronized output, and app backgrounds set with
 OSC 11.
+
+Since v0.2.0, unreleased (v0.3): splits in the focused pane's directory,
+dragging dividers, rebindable keys with a key list, Ctrl-h/j/k/l pass-through,
+focus events, outer window titles, apps' OSC 52 copies, the welcome screen and
+agent integrations.

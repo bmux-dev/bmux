@@ -92,6 +92,7 @@ type ui struct {
 	help                            bool              // key list overlay open
 	helpOffset                      int               // first key list line shown
 	integrations                    integrationsPanel
+	welcome, welcomed               bool // welcome screen open; already shown by this client
 }
 
 func Run(socket, name, cwd string) error {
@@ -251,7 +252,7 @@ func (u *ui) endSession(name string) {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
-	u.help, u.integrations.open = false, false
+	u.help, u.integrations.open, u.welcome = false, false, false
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -340,7 +341,7 @@ func (u *ui) switchTo(name string) error {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm = 0
-	u.help, u.integrations.open = false, false
+	u.help, u.integrations.open, u.welcome = false, false, false
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -446,6 +447,10 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	}
 	if u.integrations.open {
 		u.integrationsKey(e)
+		return
+	}
+	if u.welcome {
+		u.welcomeKey(e)
 		return
 	}
 	if u.sidebarFocus {
@@ -659,8 +664,9 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		u.pickerMouse(e, x, y)
 		return
 	}
-	if u.help || u.integrations.open {
-		// Overlays are modal: a click closes them and reaches nothing else.
+	if u.help || u.integrations.open || u.welcome {
+		// Overlays are modal: a click closes the key list or panel and
+		// reaches nothing else. The welcome screen waits for its keys.
 		if e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
 			u.help, u.integrations.open = false, false
 		}
@@ -855,6 +861,8 @@ func (u *ui) draw() {
 			u.drawHelp(w, h)
 		} else if u.integrations.open {
 			u.drawIntegrations(w, h)
+		} else if u.welcome {
+			u.drawWelcome(w, h)
 		}
 		u.drawPowerline(w, time.Now())
 	}
@@ -880,6 +888,8 @@ func (u *ui) draw() {
 		footer = "Keys: j/k or arrows scroll · any other key closes"
 	} else if u.integrations.open {
 		footer = "Integrations: Enter installs · Esc closes"
+	} else if u.welcome {
+		footer = "Welcome: Enter continues · Esc skips"
 	} else if time.Now().Before(u.resizeUntil) {
 		_, prefix := u.keyTables()
 		footer = "Resizing: " + directionKeys(prefix, "resize") + " to continue · stops after 1s pause or another key"
