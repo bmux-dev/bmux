@@ -232,25 +232,42 @@ func TestFocusPaneMovesFromRequestedPane(t *testing.T) {
 	}
 }
 
-func TestFocusPaneIgnoresNavigationWhileZoomed(t *testing.T) {
-	s := editorNavigationSession(t)
-	if err := s.input(protocol.Request{Op: "select-pane", PaneID: 1}); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.input(protocol.Request{Op: "zoom", PaneID: 1}); err != nil {
-		t.Fatal(err)
-	}
-	s.mu.Lock()
-	wasZoomed := s.zoomed
-	s.mu.Unlock()
-	if !wasZoomed {
-		t.Skip("zoom is not effective in this layout")
-	}
-	if err := s.input(protocol.Request{Op: "focus-pane", PaneID: 1, Direction: "right"}); err != nil {
-		t.Fatal(err)
-	}
-	if got := focusedPaneID(s); got != 1 {
-		t.Fatalf("zoomed focus-pane moved focus to %d", got)
+// Like tmux's select-pane, directional navigation from a zoomed pane unzooms
+// and moves. With no neighbor in that direction, the pane stays zoomed.
+func TestDirectionalNavigationUnzoomsWhileZoomed(t *testing.T) {
+	for _, op := range []string{"select-pane", "navigate-pane", "focus-pane"} {
+		t.Run(op, func(t *testing.T) {
+			s := editorNavigationSession(t)
+			zoom := func() {
+				t.Helper()
+				if err := s.input(protocol.Request{Op: "select-pane", PaneID: 1}); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.input(protocol.Request{Op: "zoom", PaneID: 1}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			move := func(direction string) {
+				t.Helper()
+				r := protocol.Request{Op: op, Direction: direction}
+				if op == "focus-pane" {
+					r.PaneID = 1
+				}
+				if err := s.input(r); err != nil {
+					t.Fatal(err)
+				}
+			}
+			zoom()
+			move("left")
+			if f := snapshot(s); f.Focused != 1 || !f.Zoomed {
+				t.Fatalf("navigation without neighbor: focused %d zoomed %v, want 1 zoomed", f.Focused, f.Zoomed)
+			}
+			move("right")
+			f := snapshot(s)
+			if f.Focused != 2 || f.Zoomed || len(f.Panes) != 2 {
+				t.Fatalf("navigation while zoomed: focused %d zoomed %v panes %d, want 2 unzoomed with 2 panes", f.Focused, f.Zoomed, len(f.Panes))
+			}
+		})
 	}
 }
 

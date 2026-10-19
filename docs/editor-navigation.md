@@ -23,8 +23,8 @@ bmux to move to a neighboring pane. They also work in tmux. Install one recipe
 in your editor configuration; no plugin manager is needed.
 
 **Ctrl-a arrows**, a **click**, and **Ctrl-a o** navigate bmux panes directly,
-including while an editor is running. Edge-crossing is ignored while a pane is
-zoomed. Unzoom with **Ctrl-a m** before moving to another bmux pane.
+including while an editor is running. Moving to another pane while zoomed
+unzooms first, like tmux.
 
 ## Neovim
 
@@ -101,7 +101,7 @@ options to set yourself.
 - If Backspace moves focus, configure the terminal to send **DEL (`0x7f`)**.
   ASCII BS (`0x08`) is indistinguishable from Ctrl-h.
 - If navigation stops at an editor edge, confirm the mapping is loaded and
-  `bmux` is on the editor's `PATH`. Unzoom before crossing into another pane.
+  `bmux` is on the editor's `PATH`.
 - To check the bmux side without a mapping, run `bmux focus right` in a pane
   with a neighbor on its right.
 - Use Ctrl-a arrows or Ctrl-a o when you want to bypass editor mappings.
