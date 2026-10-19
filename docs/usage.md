@@ -132,7 +132,8 @@ Press Enter to attach before interacting with the application.
 
 ## Keys inside a session
 
-The prefix is **Ctrl-a**. Release it before pressing the next key.
+The prefix is **Ctrl-a** (`prefix` in the [config file](#configuration-file)
+changes it; these docs say Ctrl-a). Release it before pressing the next key.
 
 | Action | Control |
 | --- | --- |
@@ -147,6 +148,7 @@ The prefix is **Ctrl-a**. Release it before pressing the next key.
 | Focus left/down/up/right | Ctrl-h/j/k/l outside Vim/Neovim |
 | Focus the sidebar | Ctrl-h from the leftmost pane |
 | Show / hide the sidebar | Ctrl-a b |
+| Reload the config file | Ctrl-a r |
 | Focus a neighboring pane directly | Ctrl-a arrow keys |
 | Cycle visible panes | Ctrl-a o |
 | Focus a pane | Click it |
@@ -214,7 +216,9 @@ exits.
 When an agent you aren't looking at becomes ready (waiting) or blocked, the
 attached client plays a sound: on macOS the system Glass sound, or Funk when
 blocked; elsewhere the outer terminal's bell. Plain terminal bells from other
-programs mark their pane silently. `BMUX_SOUND=0` turns sounds off.
+programs mark their pane silently. `sound.enabled = false` in the
+[config file](#configuration-file) or `BMUX_SOUND=0` turns sounds off;
+`sound.ready` and `sound.blocked` choose your own sound files.
 
 | Action in the sidebar | Control |
 | --- | --- |
@@ -376,23 +380,54 @@ Oversized, invalid UTF-8, and incomplete bracketed pastes are rejected with an
 error. If the application cannot accept more input, a paste can be rejected;
 wait and retry. In the picker, paste only into a name, directory, or `/` filter.
 
+## Configuration file
+
+bmux reads `~/.config/bmux/config.toml` (or `$XDG_CONFIG_HOME/bmux/config.toml`,
+or the path in `BMUX_CONFIG`). The file is optional and every setting in it is
+optional. `bmux default-config` prints all of them, commented out, with their
+defaults:
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `prefix` | `"ctrl-a"` | The command key: `ctrl-a` to `ctrl-z`, except `ctrl-h/j/k/l` (navigation) and `ctrl-i`/`ctrl-m` (Tab and Enter). Status-line help follows it. |
+| `theme.name` | `"dark"` | `"dark"` or `"light"` |
+| `theme.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
+| `theme.powerline_ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
+| `theme.terminal_padding` | `false` | Keep physical-terminal padding; read when a client starts |
+| `theme.agents.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
+| `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
+| `sidebar.width` | `24` | Columns including its border, 12 to 60 |
+| `sidebar.min_screen_width` | `80` | Hide the sidebar on narrower terminals |
+| `sound.enabled` | `true` | Alert sounds for background agents |
+| `sound.ready` / `sound.blocked` | system sounds | Sound files (absolute or `~/` paths), played with `afplay` on macOS or `paplay`/`aplay` on Linux |
+| `agents.detect` | `true` | Recognize agents in panes; reported agents still show when off |
+| `agents.extra` | `[]` | More program names to recognize as agents |
+| `agents.working_after` / `agents.waiting_after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
+| `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
+| `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
+
+**Ctrl-a r** reloads the file in your client and the server; `bmux reload` does
+the same from a shell, and every attached client follows. If a setting is
+invalid, the status line (or `bmux reload`) says which, and that setting keeps
+its default, so a typo never leaves you without keys. Unknown settings are
+reported too.
+
 ## Environment variables
 
-There is no config file or key rebinding yet. Set variables before starting
-the client, or export them in your shell startup file.
+These override the config file. Set them before starting the client, or
+export them in your shell startup file.
 
 | Variable | Values and default |
 | --- | --- |
-| `BMUX_ACCENT` | `cyan` by default; accepts `amber`, `green`, or a six-digit `#RRGGBB` color |
-| `BMUX_THEME` | `light` selects a light palette; unset or any other value uses dark |
-| `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators; otherwise powerline glyphs with automatic fallback when unavailable |
-| `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding; disabled by default |
-| `BMUX_SOUND` | `0` turns off agent alert sounds; on by default |
+| `BMUX_CONFIG` | Path of the config file |
+| `BMUX_ACCENT` | Overrides `theme.accent` |
+| `BMUX_THEME` | `light` selects a light palette; any other value uses dark |
+| `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators |
+| `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding |
+| `BMUX_SOUND` | `0` turns off agent alert sounds |
 | `BMUX_RUNTIME_DIR` | Custom runtime directory; default follows the rules below |
 
-Theme and accent names are case-insensitive. Unknown accents use cyan. Appearance
-settings affect bmux's bars and highlights, not application colors. Restart the
-client to change appearance; the server can keep running.
+Appearance settings affect bmux's bars and highlights, not application colors.
 
 ```sh
 BMUX_THEME=light BMUX_ACCENT=amber bmux

@@ -5,6 +5,7 @@
 - `cmd/bmux`: CLI argument handling and lifecycle entry points.
 - `internal/daemon`: local server discovery/startup; only depends on protocol RPC.
 - `internal/protocol`: wire framing, shared payload/name/identity contracts, one-shot RPC.
+- `internal/config`: the optional config file, defaults, environment overrides and validation.
 - `internal/server`: session layout, emulator state, owned OS jobs and cancellation.
 - `internal/client`: input, modeless selection, clipboard intent and preview display.
 
@@ -173,6 +174,23 @@ exact. Only layouts, directories and agent conversations return.
 `shutdown` is accepted before the protocol version check so any newer binary
 can stop an older server. `daemon.Stop` waits for `server.lock`, not just the
 socket, because the socket closes before panes finish stopping.
+
+## Configuration
+
+`config.Load` always returns a usable config: a missing file means defaults,
+and each invalid or unknown setting is reported while keeping its default.
+`BMUX_*` variables override the file. The client applies its part (prefix,
+theme, sidebar, sound) in `applySettings`; theme styles are package variables
+rebuilt by `applyTheme` on the UI goroutine only. The server stores its part
+(agent names, timing, detection, restore, resume overrides) in an atomic
+process-wide `serverSettings`, read on every sample and save. Terminal padding
+is read only when a client creates its screen.
+
+`reload-config` rereads the server's file and increments `configRevision`,
+which every snapshot carries as `Frame.Config`; bumping each session's revision
+forces a frame. Clients record the value from an attachment's first frame and
+reread their own file when it later changes, so `bmux reload` reaches every
+attached client. Ctrl-a r reloads the client directly and then asks the server.
 
 ## User-visible behavior details
 

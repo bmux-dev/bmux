@@ -138,7 +138,7 @@ func (s *session) persistentState() (sessionSnapshot, bool) {
 		}
 		if len(p.resume) > 0 {
 			entry.Resume, entry.Reported = append([]string(nil), p.resume...), true
-		} else if argv, ok := agentContinue[detected]; ok {
+		} else if argv, ok := currentSettings().resumeFor(detected); ok {
 			entry.Resume = append([]string(nil), argv...)
 		}
 		p.mu.Unlock()
@@ -335,6 +335,9 @@ func (s *Server) EnablePersistence(path string) error {
 		state = stateFile{Version: stateVersion}
 	}
 	resumed := make(map[string]bool)
+	if !currentSettings().restore {
+		state.Sessions = nil // restore = false: start fresh, keep the file
+	}
 	for _, snap := range state.Sessions {
 		if validateName(snap.Name) != nil {
 			continue
@@ -382,7 +385,7 @@ func (s *Server) saveLoop(stop <-chan struct{}) {
 func (s *Server) saveState() error {
 	s.persistMu.Lock()
 	defer s.persistMu.Unlock()
-	if s.persistPath == "" || s.persistFinal {
+	if s.persistPath == "" || s.persistFinal || !currentSettings().restore {
 		return nil
 	}
 	data, err := json.MarshalIndent(s.captureState(), "", "  ")

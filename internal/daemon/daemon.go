@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/josephferrero/bmux/internal/server"
 	"golang.org/x/sys/unix"
@@ -201,6 +202,13 @@ func Serve(socket string, stop <-chan os.Signal) error {
 		shell = "/bin/sh"
 	}
 	s := server.New(shell)
+	// Agent and restore settings come from the config file; problems are
+	// logged and the affected settings keep their defaults.
+	if path, err := config.Path(); err != nil {
+		fmt.Fprintln(os.Stderr, "bmux: config:", err)
+	} else if err = s.LoadSettings(path); err != nil {
+		fmt.Fprintln(os.Stderr, "bmux: config:", err)
+	}
 	// Restore before accepting connections, so the first client already sees
 	// the sessions. Without a usable state file the server still runs; the
 	// reason is in server.log.

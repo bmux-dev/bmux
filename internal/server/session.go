@@ -366,7 +366,7 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 		return nil, revision
 	}
 	f := &protocol.Frame{Name: s.info.Name, Focused: s.focused, Zoomed: s.zoomed, Width: s.width, Height: s.height, Generation: protocol.SessionGeneration(s.info.Created),
-		Edge: s.edges, EdgeDirection: s.edgeDirection}
+		Edge: s.edges, EdgeDirection: s.edgeDirection, Config: configRevision.Load()}
 	for id := range offsets {
 		if s.panes[id] == nil {
 			delete(offsets, id)
