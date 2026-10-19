@@ -413,6 +413,12 @@ conversation, not the processes that were running.
 the server ends that pane's jobs. Attached clients reconnect to the session
 they showed once the new server is up.
 
+New panes inherit the server's environment. A restart from inside a pane
+keeps the running server's environment, so variables that the pane's shell or
+its programs added (an agent's markers, an activated virtualenv) never reach
+every pane. A restart from a terminal outside bmux uses that terminal's
+environment instead: that's how to change what panes start with.
+
 Sessions are saved to `~/Library/Application Support/bmux/sessions.json` on
 macOS and `${XDG_STATE_HOME:-~/.local/state}/bmux/sessions.json` on Linux, or
 `sessions.json` inside a custom `BMUX_RUNTIME_DIR`, so separate servers keep
