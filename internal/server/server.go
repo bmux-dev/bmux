@@ -180,6 +180,16 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		if err := item.reportAgent(r.PaneID, r.Kind, r.Text, r.Args); err != nil {
 			result.Error = err.Error()
 		}
+	case "pane-command":
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		command, err := item.paneCommand(r.PaneID)
+		if err != nil {
+			result.Error = err.Error()
+		}
+		result.Command = command
 	default:
 		if r.Op == "focus-pane" {
 			// Standalone CLI focus changes (bmux focus), e.g. Neovim

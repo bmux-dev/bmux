@@ -79,6 +79,8 @@ type ui struct {
 	alertsKnown                     bool
 	sound                           func(blocked bool)
 	reconnects                      chan string
+	closeConfirm                    int // pane awaiting y to close, or 0
+	closeCommand                    string
 }
 
 func Run(socket, name, cwd string) error {
@@ -222,6 +224,7 @@ func (u *ui) endSession(name string) {
 	u.focused = 0
 	u.edgeKnown = false
 	u.sidebarFocus = false
+	u.closeConfirm = 0
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -270,7 +273,7 @@ const reconnectTimeout = 20 * time.Second
 
 func (u *ui) notice(text string) { u.message, u.messageUntil = text, time.Now().Add(5*time.Second) }
 
-const prefixHelp = "Ctrl-a: | / - split · arrows focus · hjkl resize · m zoom · b sidebar · s sessions"
+const prefixHelp = "Ctrl-a: | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · s picker"
 
 func (u *ui) send(r protocol.Request) {
 	if r.PaneID == 0 && r.Op != "select-pane" && r.Op != "navigate-pane" && r.Op != "resize" && u.pending == 0 {
@@ -310,6 +313,7 @@ func (u *ui) switchTo(name string) error {
 	u.resizeUntil = time.Time{}
 	u.edgeKnown = false
 	u.sidebarFocus = false
+	u.closeConfirm = 0
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -403,6 +407,11 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 		u.pickerKey(e)
 		return
 	}
+	if u.closeConfirm != 0 {
+		u.resizeUntil = time.Time{}
+		u.answerClosePane(e)
+		return
+	}
 	if u.sidebarFocus {
 		u.resizeUntil = time.Time{}
 		u.sidebarKey(e)
@@ -466,6 +475,12 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 				}
 			case 'b':
 				u.toggleSidebar()
+			case ')':
+				u.cycleSession(1)
+			case '(':
+				u.cycleSession(-1)
+			case 'x':
+				u.beginClosePane()
 			default:
 				u.notice(prefixHelp)
 			}
@@ -834,6 +849,8 @@ func (u *ui) draw() {
 	}
 	if u.prefix {
 		footer = prefixHelp
+	} else if u.closeConfirm != 0 {
+		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
 	} else if u.sidebarFocus {
 		footer = "Sidebar: j/k select · Enter/l open · Esc back · n new session"
 	} else if time.Now().Before(u.resizeUntil) {

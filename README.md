@@ -20,10 +20,10 @@ works out of the box, with no plugin manager.
 | Instead of | Built into bmux |
 | --- | --- |
 | tmux-sessionx, tmux-fzf (sessions) | List-first session picker with fuzzy filtering and a live preview of the running terminal |
-| tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p); bare `bmux` opens a session named after the current directory |
+| tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p), step to the previous or next one (Ctrl-a ( / )); bare `bmux` opens a session named after the current directory |
 | tmux-resurrect + tmux-continuum | Sessions, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations; [`bmux restart`](#restarts-and-upgrades) for upgrades |
 | vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
-| tmux-pain-control | Ctrl-a \| and - splits, Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
+| tmux-pain-control | Ctrl-a \| and - splits, Ctrl-a x close (asks first if a program is running), Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
 | tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH |
 | tmux-better-mouse-mode | Click to focus, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
@@ -74,7 +74,9 @@ many tmux configs. There is no config file or key rebinding yet; both are planne
 | Detach | Ctrl-a d |
 | Create session | Ctrl-a n |
 | Last session | Ctrl-a p |
+| Next / previous session | Ctrl-a ) / Ctrl-a ( |
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
+| Close pane | Ctrl-a x (asks first if a program is running) |
 | Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
 | Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
@@ -200,7 +202,7 @@ runtime paths.
 This is an early prototype. CI runs on macOS and Ubuntu; day-to-day use so far
 is mostly macOS.
 
-- No windows/tabs or dedicated close-pane key yet. Use `exit` to close a shell pane.
+- No windows/tabs yet.
 - Scrollback does not reflow on resize. Keyboard selection and history search are planned.
 
 See the [roadmap](ROADMAP.md) for what's next.

@@ -83,3 +83,27 @@ func TestHelpDescribesActualBehavior(t *testing.T) {
 		}
 	}
 }
+
+func TestClientsRefuseToStartInsideAPane(t *testing.T) {
+	dir, err := os.MkdirTemp("", "bmux-nest-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	t.Setenv("BMUX_RUNTIME_DIR", dir)
+	t.Setenv("BMUX_SESSION", "api")
+	for _, args := range [][]string{nil, {"attach"}, {"attach", "web"}, {"new", "web"}, {"new", "--dir", dir, "web"}} {
+		if err := run(args); err == nil || !strings.Contains(err.Error(), "already inside bmux session api") {
+			t.Errorf("bmux %v inside a pane: %v", args, err)
+		}
+	}
+	// No server was started for a refused command.
+	if _, err := os.Stat(filepath.Join(dir, "server.pid")); !os.IsNotExist(err) {
+		t.Fatal("a refused command started a server")
+	}
+	for _, args := range [][]string{{"new", "--detach", "web"}, {"new", "-detach=true", "web"}, {"list"}, {"kill", "web"}} {
+		if startsClient(args) {
+			t.Errorf("bmux %v would be refused but doesn't attach", args)
+		}
+	}
+}

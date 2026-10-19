@@ -59,6 +59,11 @@ func run(args []string) error {
 		}
 		return restartServer(socket)
 	}
+	if startsClient(args) {
+		if err := refuseNesting(); err != nil {
+			return err
+		}
+	}
 	if err = daemon.Ensure(socket); err != nil {
 		return err
 	}
@@ -150,6 +155,34 @@ func run(args []string) error {
 		paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
 		_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, SessionID: sessionID, PaneID: paneID, Direction: args[1]})
 		return err
+	}
+	return nil
+}
+
+// startsClient reports whether a command would attach this terminal.
+func startsClient(args []string) bool {
+	if len(args) == 0 || args[0] == "attach" {
+		return true
+	}
+	if args[0] != "new" {
+		return false
+	}
+	for _, arg := range args[1:] {
+		switch arg {
+		case "-detach", "--detach", "-detach=true", "--detach=true":
+			return false
+		case "--":
+			return true
+		}
+	}
+	return true
+}
+
+// refuseNesting stops a client from starting inside a bmux pane, like tmux
+// checks $TMUX: a nested client shrinks into the pane and fights over keys.
+func refuseNesting() error {
+	if session := os.Getenv("BMUX_SESSION"); session != "" {
+		return fmt.Errorf("already inside bmux session %s; switch with Ctrl-a s, create with bmux new --detach, or unset BMUX_SESSION to nest anyway", session)
 	}
 	return nil
 }
@@ -260,6 +293,7 @@ Usage:
 Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
   Ctrl-a n   New session          Ctrl-a p   Last session
+  Ctrl-a ( / )   Previous / next session
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
   Ctrl-a h/j/k/l   Resize divider by five cells
@@ -267,6 +301,7 @@ Inside a session:
   Ctrl-h/j/k/l    Navigate bmux panes, or forward to foreground Neovim/Vim
   Ctrl-a arrows   Focus pane      Ctrl-a o   Cycle visible panes
   Ctrl-a m   Zoom / unzoom        Click a pane to focus it
+  Ctrl-a x   Close pane (asks first if a program is running)
   Ctrl-a b   Show / hide sidebar
 
 Sidebar (Ctrl-h from the leftmost pane):

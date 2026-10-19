@@ -21,6 +21,9 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 		} else {
 			u.notice("Paste into a name, directory, or / filter")
 		}
+	} else if u.closeConfirm != 0 {
+		// Pasted text never confirms closing a pane.
+		u.closeConfirm, u.closeCommand = 0, ""
 	} else {
 		u.resumeLive()
 		u.send(protocol.Request{Op: "paste", Text: e.Text})

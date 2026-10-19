@@ -50,11 +50,8 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Close pane (`Ctrl-a x`) | S | Confirm when something other than the shell is running. |
 | New panes open in the focused pane's directory | M | Like tmux's `-c "#{pane_current_path}"`. Per-pane cwd already exists for restore on macOS and Linux. |
 | Drag dividers with the mouse to resize | M | Most `mouse on` tmux users expect this. |
-| Next/previous session (`Ctrl-a )` / `(`) | S | Same keys as tmux. Ctrl-a p stays "last session". |
-| Refuse to nest | S | Running `bmux` inside a bmux pane warns instead of starting a client in a pane, like tmux checks `$TMUX`. |
 
 ### Keys and config
 
@@ -113,7 +110,7 @@ changes and reconnects clients. Still to do:
 | Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
 | Mark restored sessions | S | In the picker and sidebar. |
-| Integrations that report exact resume commands | M | Claude Code's session ID, Codex/opencode/omp session IDs, so two agents in one directory both resume. |
+| Exact resume for two agents in one directory | S | Comes with [agent integrations](#first-run-and-agent-integrations), which report each session's ID. |
 
 ## v0.4: windows and layouts
 
@@ -199,9 +196,9 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 
 | tmux / plugin | bmux |
 | --- | --- |
-| Sessions, detach/attach, `new`/`list`/`attach`/`rename`/`kill` | Built in |
+| Sessions, detach/attach, `new`/`list`/`attach`/`rename`/`kill`, `kill-pane` (Ctrl-a x), refusing to nest | Built in |
 | tmux-sessionx / tmux-fzf session picker | Session picker with fuzzy filter and live preview |
-| tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session; bare `bmux` names sessions after the directory |
+| tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session, Ctrl-a ( / ) previous/next; bare `bmux` names sessions after the directory |
 | tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
 | tmux-pain-control, `split-window`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-`, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |

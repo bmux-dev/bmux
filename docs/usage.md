@@ -51,6 +51,11 @@ bmux kill logs
 or `bmux new NAME`. The server uses `bmux --serve` internally; normal use does
 not require launching it yourself.
 
+Inside a bmux pane, `bmux`, `bmux attach` and `bmux new NAME` refuse to start a
+second client, like tmux checks `$TMUX`: a nested client would shrink into the
+pane and fight over keys. Switch with Ctrl-a s instead, create sessions with
+`bmux new --detach NAME`, or unset `BMUX_SESSION` to nest anyway.
+
 ### Session names
 
 Names accept Unicode letters and digits, dots, dashes, and underscores. They
@@ -135,6 +140,8 @@ The prefix is **Ctrl-a**. Release it before pressing the next key.
 | Detach, leaving sessions running | Ctrl-a d |
 | Create a session | Ctrl-a n |
 | Toggle to the last session you came from | Ctrl-a p |
+| Next / previous session, in sidebar order | Ctrl-a ) / Ctrl-a ( |
+| Close the focused pane | Ctrl-a x |
 | Split side by side | Ctrl-a \| |
 | Split stacked | Ctrl-a - |
 | Focus left/down/up/right | Ctrl-h/j/k/l outside Vim/Neovim |
@@ -154,6 +161,8 @@ The prefix is **Ctrl-a**. Release it before pressing the next key.
 
 Ctrl-a p is a last-session toggle for this client, not previous-in-list
 navigation. It does nothing until you have switched from another session.
+Ctrl-a ) and ( step through sessions in the sidebar's order (creation order)
+and wrap around.
 
 Outside Vim/Neovim, bmux takes Ctrl-h/j/k/l, including in other programs such
 as fzf. These keys do not reach those programs; Ctrl-l does not clear a shell.
@@ -262,12 +271,15 @@ falling back to `/bin/sh`. New panes start in the **session's original directory
 not the focused pane's current directory. Nested split layouts and pane focus
 survive detach and reattach.
 
+- **Ctrl-a x** closes the focused pane and stops its jobs, like tmux's
+  `kill-pane`. If only the shell is running it closes at once; if a program is
+  in front of the shell, the status line names it and only a lowercase **y**
+  closes the pane. Any other key or a paste keeps it.
 - Run `exit`, or use Ctrl-d at an empty shell prompt, to close a shell pane.
 - When the shell exits, the pane closes and its sibling expands. This also
   happens while detached.
 - Closing the last pane removes the session and returns attached clients to
   the picker.
-- There is no dedicated close-pane shortcut yet.
 - A session supports up to 32 panes. Splitting requires enough space; dividers
   stop at minimum pane sizes.
 - Shrinking the terminal can hide panes. Zoom the focused pane to work in a

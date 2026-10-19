@@ -178,6 +178,9 @@ func (s *session) input(r protocol.Request) error {
 	if r.Op == "navigate-pane" {
 		return s.navigatePane(r.Direction)
 	}
+	if r.Op == "close-pane" {
+		return s.closePane(r.PaneID)
+	}
 	s.mu.Lock()
 	if s.stopped || s.stopping.Load() {
 		s.mu.Unlock()
