@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 
@@ -18,6 +19,10 @@ import (
 // attention from any program.
 
 const maxAgentLabelBytes = 40
+
+// agentSeqs numbers agent state changes across every pane of the server, so
+// a seq someone saw earlier can only ever match the same pane and state.
+var agentSeqs atomic.Uint64
 
 const (
 	agentSampleInterval = time.Second
@@ -77,6 +82,7 @@ func (s *pane) noteOutputLocked(now time.Time) {
 // observeAgentLocked applies one sample of the pane's foreground agent.
 // Caller holds pane.mu.
 func (s *pane) observeAgentLocked(detected string) {
+	defer s.trackAgentLocked(s.agentViewLocked())
 	if detected != s.detected {
 		// The recognized agent left the foreground: its reports are stale.
 		if detected == "" && s.detected != "" {
@@ -234,6 +240,7 @@ func (s *pane) reportAgent(state, label string, resume []string) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer s.trackAgentLocked(s.agentViewLocked())
 	switch state {
 	case "clear":
 		s.agent, s.agentState, s.attention, s.resume = "", "", false, nil
@@ -261,18 +268,35 @@ func (s *pane) reportAgent(state, label string, resume []string) error {
 	return nil
 }
 
-// Caller holds pane.mu.
-func (s *pane) activityLocked(id int) (protocol.PaneActivity, bool) {
-	a := protocol.PaneActivity{Pane: id, Agent: s.agent, State: s.agentState, Attention: s.attention}
-	if a.Agent == "" {
-		a.Agent = s.detected
+// agentViewLocked is the agent and state the pane shows: reported ones win
+// over the sampled foreground agent and its output timing. Caller holds
+// pane.mu.
+func (s *pane) agentViewLocked() (agent, state string) {
+	agent, state = s.agent, s.agentState
+	if agent == "" {
+		agent = s.detected
 	}
-	if a.State == "" && s.detected != "" {
-		a.State = protocol.AgentIdle
+	if state == "" && s.detected != "" {
+		state = protocol.AgentIdle
 		if s.busy {
-			a.State = protocol.AgentWorking
+			state = protocol.AgentWorking
 		}
 	}
+	return agent, state
+}
+
+// trackAgentLocked gives the pane a new seq when its agent or state differs
+// from the view captured before a change. Caller holds pane.mu.
+func (s *pane) trackAgentLocked(agent, state string) {
+	if now, nowState := s.agentViewLocked(); now != agent || nowState != state {
+		s.agentSeq = agentSeqs.Add(1)
+	}
+}
+
+// Caller holds pane.mu.
+func (s *pane) activityLocked(id int) (protocol.PaneActivity, bool) {
+	a := protocol.PaneActivity{Pane: id, Attention: s.attention, Seq: s.agentSeq}
+	a.Agent, a.State = s.agentViewLocked()
 	return a, a.Agent != "" || a.Attention
 }
 

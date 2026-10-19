@@ -49,11 +49,11 @@ func System() (Env, error) {
 }
 
 var agents = []Agent{
-	claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", ""),
+	withSkill(claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", "")),
 	codex.agent("Codex", "codex", "CODEX_HOME", ".codex", "Codex runs new hooks only after you trust them: open /hooks in Codex once."),
-	omp.agent("omp", "omp", ompDir, ""),
+	withSkill(omp.agent("omp", "omp", ompDir, "")),
 	opencode.agent("opencode", "opencode", opencodeDir, ""),
-	pi.agent("pi", "pi", piDir, ""),
+	withSkill(pi.agent("pi", "pi", piDir, "")),
 }
 
 // Agent is one supported agent's integration.

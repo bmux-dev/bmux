@@ -132,6 +132,7 @@ func (s *session) status() protocol.Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	result := s.info
+	result.ID = s.id
 	result.Panes = len(s.panes)
 	result.Activity = s.activityLocked()
 	result.Exited = true

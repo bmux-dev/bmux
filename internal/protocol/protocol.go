@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 3
+const Version = 4
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -55,10 +55,28 @@ type Request struct {
 	Direction  string `json:"direction,omitempty"`
 	// Args is the command an agent reports for resuming its conversation.
 	Args []string `json:"args,omitempty"`
+	// IfSeq makes send-input conditional: it is refused unless the pane's
+	// agent seq still equals it. 0 sends unconditionally.
+	IfSeq uint64 `json:"if_seq,omitempty"`
+	// Input is send-input's key presses and pastes, written in order as one
+	// batch.
+	Input []Input `json:"input,omitempty"`
+}
+
+// Input is one key press or one paste for send-input. Paste, when set, is
+// sent as a bracketed paste; otherwise Code and Mod are a key press in
+// ultraviolet key codes and modifiers, as in the attached key operation.
+type Input struct {
+	Code  rune   `json:"code,omitempty"`
+	Mod   int    `json:"mod,omitempty"`
+	Paste string `json:"paste,omitempty"`
 }
 
 type Session struct {
-	Name     string         `json:"name"`
+	Name string `json:"name"`
+	// ID is the session identifier that BMUX_SESSION_ID holds; it survives
+	// renames.
+	ID       uint64         `json:"id,omitempty"`
 	Dir      string         `json:"dir"`
 	Created  time.Time      `json:"created"`
 	Used     time.Time      `json:"used"`
@@ -82,6 +100,9 @@ type PaneActivity struct {
 	Agent     string `json:"agent,omitempty"`
 	State     string `json:"state,omitempty"`
 	Attention bool   `json:"attention,omitempty"`
+	// Seq changes whenever Agent or State does. It is unique across all panes
+	// of a server, so a stale value never matches a different pane.
+	Seq uint64 `json:"seq,omitempty"`
 }
 
 // Cell colors are "" for the terminal default, "#rrggbb" for an exact color, or
@@ -160,4 +181,8 @@ type Response struct {
 	// Command names the program in front of a pane's shell (pane-command);
 	// "" when the shell itself is in front.
 	Command string `json:"command,omitempty"`
+	// Pane is the target pane's activity after capture-pane or send-input,
+	// including a refused send; Text is capture-pane's visible screen.
+	Pane *PaneActivity `json:"pane,omitempty"`
+	Text string        `json:"text,omitempty"`
 }

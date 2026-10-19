@@ -146,6 +146,13 @@ focus, resize). Two consecutive samples with output make a detected agent
 working; two without return it to idle and, if unseen, set attention. Reports
 override timing. A detected agent leaving the foreground drops its reports.
 
+`agentViewLocked` is the agent and state a pane shows (reports over the
+sampled agent and its timing). `reportAgent` and `observeAgentLocked` capture
+it before changing anything and, through a deferred `trackAgentLocked` under
+the same `pane.mu`, give the pane a new `agentSeq` from the server-wide
+`agentSeqs` counter when it differs afterwards. Seqs are therefore unique
+across panes and sessions, so a stale one can't match a reused pane ID.
+
 `session.viewers` counts attachments whose last `focus` request was true; the
 attach loop owns each connection's contribution and releases it on exit, and
 never forwards a client's `focus` request to a pane. `updateViewedLocked` runs
@@ -172,6 +179,29 @@ translation all apply the same `paneOriginX`. Sidebar clicks are chrome; drags
 and app presses that began in a pane still deliver motion and release there.
 The sidebar polls `list` asynchronously at 1 Hz with at most one request in
 flight; the picker's synchronous refresh owns the list while open.
+
+## Scripting
+
+`capture-pane` and `send-input` are one-shot RPCs (`internal/server/script.go`)
+that act on one pane from outside any attachment: no resize, no focus change,
+no viewing, no recent-use change. `send-input` requires a pane ID and never
+falls back to the focused pane. Its `if_seq` check and the whole batch of key
+presses and pastes happen under one `pane.mu` acquisition, with one input
+bridge reservation, so a state change can't land between them and a refused
+send writes nothing. Both accept `SessionID` like `agent-report`, and use the
+same local-socket trust model as attach. `bmux wait-agent` is client-side:
+it polls `list` once a second and prints the lowest seq above `--since` among
+wanted states, excluding the calling pane (`BMUX_SESSION_ID`/`BMUX_PANE`
+against `Session.ID`). With `--notify`, a `notifier` keeps each pane's newest
+wanted change (excluding the supervisor's own pane) and sends one line with
+`send-input`, guarded by the supervisor's seq, only while the supervisor is
+idle and its seq has moved on since the last line it was sent. Waiting never
+runs inside the supervising agent, because an agent harness keeps a turn open
+for any job it would deliver the result of.
+
+`cmd/bmux/commands.go` holds the command table that drives dispatch, `--help`,
+`bmux guide`'s command reference and `bmux capabilities`. The guide's prose is
+`docs/agents.md`, embedded by the `docs` package.
 
 ## Agent integrations
 
@@ -203,6 +233,11 @@ didn't otherwise touch. Every managed file carries `bmux-integration: NAME vN`;
 status compares that with the agent's current version, and a script whose
 hook entries are gone counts as not installed. Files are written atomically
 and keep their mode.
+
+Claude Code, omp and pi also get `skills/bmux/SKILL.md` through `withSkill`,
+which wraps an integration's install, uninstall and version check. The skill
+keeps its frontmatter first and carries the managed header in an HTML comment;
+a missing or older skill makes an installed integration count as outdated.
 
 The client's integrations panel (Ctrl-a i) calls the same package. The client
 and server share a machine (the socket is local), so the files it writes are

@@ -49,6 +49,7 @@ type pane struct {
 	agent        string      // self-reported label; "" when no agent reported
 	agentState   string      // protocol.Agent* or ""
 	attention    bool        // unseen bell, notification, block or finished turn
+	agentSeq     uint64      // agentSeqs value of the latest agent or state change
 	viewed       atomic.Bool // set under session.mu; read by emulator callbacks
 	// Agent sampler state; see activity.go.
 	detected                    string // foreground agent, "" when none

@@ -37,6 +37,12 @@ again; set it to `true` to see it on the next attach.
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
 | `bmux agent STATE [NAME] [-- COMMAND...]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`, optionally with the command that resumes its conversation; used by agent hooks |
+| `bmux agents [--json]` | List panes running a coding agent as `SESSION:PANE` targets, with state and [seq](#scripting-panes-and-agents) |
+| `bmux capture [--json] TARGET` | Print a pane's visible text; `TARGET` is `SESSION` (its focused pane) or `SESSION:PANE` |
+| `bmux send TARGET [--if-seq N] (--key KEY \| --text TEXT)...` | Type keys and text into one pane, in order; with `--if-seq`, only if its agent hasn't changed state |
+| `bmux wait-agent [--state S,...] [--since SEQ] [--timeout D \| --notify SESSION:PANE] [TARGET...]` | Wait until another agent pane is `blocked` or `idle` and print it as JSON; with `--notify`, keep running and type each change into a supervising agent's pane while it's idle |
+| `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
+| `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |
 | `bmux integration install [AGENT...]` | Install or update integrations; with no names, every one that is available or out of date |
 | `bmux integration uninstall AGENT...` | Remove what bmux installed for these agents |
@@ -270,11 +276,11 @@ bmux integration uninstall claude
 
 | Agent | What it installs | Reports |
 | --- | --- | --- |
-| Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
+| Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, plus the [bmux skill](#scripting-panes-and-agents) in `skills/bmux/SKILL.md`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
 | Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
-| omp (`omp`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals and the ask tool, idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
+| omp (`omp`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals and the ask tool, idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
 | opencode (`opencode`) | `plugins/bmux-agent-state.js` in `$XDG_CONFIG_HOME/opencode` or `~/.config/opencode` | working while any session, subagents included, is busy, blocked on permission requests and questions, idle, and the top-level session for `opencode --session` |
-| pi (`pi`) | `extensions/bmux-agent-state.ts` in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts and the ask tool, idle, and the session for `pi --session` |
+| pi (`pi`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts and the ask tool, idle, and the session for `pi --session` |
 
 Every file bmux writes starts with a `bmux-integration: NAME vN` line, which
 is how `status` spots an outdated version; reinstalling updates it. Edited JSON
@@ -306,6 +312,46 @@ characters.
 Agents without hooks also mark their pane when they ring the bell or send a
 terminal notification. An unrecognized agent that exits without reporting
 `clear` keeps its last state until something in that pane reports again.
+
+### Scripting panes and agents
+
+Scripts and coding agents can list agent panes, read them, type into them and
+wait for them, for any program:
+
+```sh
+bmux agents                                   # TARGET  AGENT  STATE  SEQ
+bmux capture api:1                            # the pane's visible text
+bmux send api:1 --if-seq 57 --key down --key enter
+bmux send api:1 --text "use Postgres" --key enter
+bmux wait-agent --since 57                    # blocks; prints the next pane that needs you
+```
+
+A target is `SESSION` (its focused pane) or `SESSION:PANE`; `send` requires
+the pane, so input never lands in whatever happens to be focused. Keys use the
+config file's names (`enter`, `esc`, `down`, `C-c`, `A-x`, `F5`); `--text`
+pastes. Input is sent in order as one batch, without attaching: the session
+isn't resized, focus doesn't move and the pane isn't marked seen.
+
+Each agent pane has a **seq** that changes whenever its agent or state does
+and is never reused, even across panes. `bmux send --if-seq` types nothing,
+and fails with `stale`, unless the seq still matches, so an answer meant for
+one question never reaches the next. `bmux wait-agent` skips the pane it runs
+in and prints the lowest seq above `--since`, so waiting again with each
+printed seq walks through every change in order. `--json` on `agents` and
+`capture` includes the seq.
+
+`bmux wait-agent --notify SESSION:PANE` keeps running and, instead of
+printing, types one `[bmux] … is blocked …` line into that agent's pane for
+each change, only while that agent is idle and only after it has handled the
+previous line. It keeps just each pane's newest change and drops panes that
+went back to work. Run it in a pane of its own: a supervising agent that ran a
+waiting command itself, even as a background job, would stay busy and stop
+answering its user.
+
+`bmux guide` prints the same for coding agents, with the supervision loop and
+rules, and `bmux --help` points agents to it. The Claude Code, omp and pi
+integrations also install a `bmux` skill, so those agents know about it
+without exploring.
 
 ## Panes and session lifetime
 

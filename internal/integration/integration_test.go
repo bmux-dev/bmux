@@ -2,6 +2,7 @@ package integration
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -82,8 +83,23 @@ func TestClaudeIntegrationLifecycleKeepsUserSettings(t *testing.T) {
 		t.Fatalf("settings mode changed to %v", info.Mode().Perm())
 	}
 	script, _ := os.ReadFile(filepath.Join(dir, "hooks", hookScriptName))
-	if !strings.HasPrefix(string(script), "#!/bin/sh\n# bmux-integration: claude v1\n") || !strings.Contains(string(script), "bmux integration hook claude") {
+	if !strings.HasPrefix(string(script), fmt.Sprintf("#!/bin/sh\n# bmux-integration: claude v%d\n", a.Version)) || !strings.Contains(string(script), "bmux integration hook claude") {
 		t.Fatalf("script:\n%s", script)
+	}
+	// The skill is a loadable SKILL.md: frontmatter first, then bmux's header.
+	skill := filepath.Join(dir, "skills", "bmux", "SKILL.md")
+	if data, _ := os.ReadFile(skill); !strings.HasPrefix(string(data), "---\nname: bmux\n") || !strings.Contains(string(data), fmt.Sprintf("bmux-integration: claude v%d", a.Version)) {
+		t.Fatalf("skill:\n%s", data)
+	}
+	// A missing skill is an update, not a working install.
+	if err := os.Remove(skill); err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := a.Status(env); status != Outdated {
+		t.Fatalf("without the skill: %v", status)
+	}
+	if err := a.Install(env); err != nil {
+		t.Fatal(err)
 	}
 
 	// A newer bmux sees the installed version as an update.
@@ -100,6 +116,9 @@ func TestClaudeIntegrationLifecycleKeepsUserSettings(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "hooks", hookScriptName)); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("uninstall left the script")
+	}
+	if _, err := os.Stat(filepath.Dir(skill)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("uninstall left the skill")
 	}
 	if status, _ := a.Status(env); status != Available {
 		t.Fatalf("after uninstall: %v", status)
