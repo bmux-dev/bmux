@@ -168,7 +168,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | Floating popups for lazygit, fzf and scratch shells | `display-popup`, tmux-floax |
 | Menus | `display-menu` |
 | Hint mode: label URLs, paths, hashes and IPs on screen, copy or open with one key | tmux-thumbs, tmux-fingers, tmux-open, extrakto |
-| Desktop notifications when a job or AI agent finishes (forward OSC 9/777 to the outer terminal) | tmux-notify |
+| Desktop notifications when a job or AI agent finishes (forward OSC 9/777 to the outer terminal); agents already get a sound | tmux-notify |
 | Theme presets and custom status segments (host, time, prefix indicator) | tmux-power, tmux-prefix-highlight |
 | Per-client window size and focus | `window-size`, `aggressive-resize` |
 | Read-only attach, detach other clients | `attach -r`, `detach -a` |
@@ -181,11 +181,15 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | --- | --- |
 | Sessions, detach/attach, `new`/`list`/`attach`/`rename`/`kill` | Built in |
 | tmux-sessionx / tmux-fzf session picker | Session picker with fuzzy filter and live preview |
+| tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session; bare `bmux` names sessions after the directory |
+| tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
-| `split-window`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-`, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
+| tmux-pain-control, `split-window`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-`, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md) |
 | tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
-| Mouse mode | Click to focus, drag to select, wheel to scroll; Alt overrides mouse-aware apps |
+| tmux-better-mouse-mode | Click to focus, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
+| tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
+| tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
 | Status themes | Powerline status bars, accent colors, light theme |
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a

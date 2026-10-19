@@ -14,14 +14,22 @@ mouse, and keep your layout across restarts, without a plugin manager.
 
 ## Built in
 
-| Familiar tmux workflow | In bmux |
+Everything below would take a plugin (or a separate app) with tmux. In bmux it
+works out of the box, with no plugin manager.
+
+| Instead of | Built into bmux |
 | --- | --- |
-| tmux-sessionx-style picking | List-first session picker, fuzzy filtering, live previews |
-| herdr-style agent overview | Sidebar of sessions and every coding agent, with working/waiting/blocked state and a sound when one needs you |
-| tmux-resurrect + continuum | Automatic save and restore of sessions, splits, directories and agent conversations |
-| tmux-yank-style copying | Drag to select, release to copy to your clipboard |
+| tmux-sessionx, tmux-fzf (sessions) | List-first session picker with fuzzy filtering and a live preview of the running terminal |
+| tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p); bare `bmux` opens a session named after the current directory |
+| tmux-resurrect + tmux-continuum | Sessions, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations; [`bmux restart`](#restarts-and-upgrades) for upgrades |
 | vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
-| Powerline themes | Built-in status bars, accent colors, and a light theme |
+| tmux-pain-control | Ctrl-a \| and - splits, Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
+| tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH |
+| tmux-better-mouse-mode | Click to focus, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
+| tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
+| tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
+| tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
+| herdr (separate app) | [Agent sidebar](#agents): every coding agent across sessions with working, waiting and blocked state |
 
 The picker starts as a list: browse first, press **/** to search. See what's
 running before attaching. Mouse selection and scrolling work without entering
