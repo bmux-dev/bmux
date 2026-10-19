@@ -38,7 +38,7 @@ func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
 	cfg, err := Load(write(t, uncommented), noEnv)
 	want := Default()
 	want.Agents.Extra = []string{}
-	want.Keys = Keys{Root: map[string]string{}, Prefix: map[string]string{}}
+	want.Keys = Keys{PassThrough: []string{}, Root: map[string]string{}, Prefix: map[string]string{}}
 	want.Restore.Resume = map[string][]string{"claude": {"claude", "--continue"}, "codex": {"codex", "resume", "--last"}}
 	if err != nil || !reflect.DeepEqual(cfg, want) {
 		t.Fatalf("documented defaults:\n got %+v\nwant %+v\n%v", cfg, want, err)

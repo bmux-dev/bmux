@@ -113,8 +113,10 @@ manager. It tries an editor split first, then calls `bmux focus DIRECTION`.
 The same mapping works in tmux. Copy it from
 [Vim and Neovim navigation](docs/editor-navigation.md).
 
-Outside an editor bmux keeps these keys, so **Ctrl-l doesn't clear the shell**.
-**Ctrl-a arrows**, **Ctrl-a o** and clicks always move between bmux panes
+Outside an editor bmux keeps these keys, so by default **Ctrl-l doesn't clear
+the shell**. Set `"C-l" = "none"` under `[keys.root]` to give it back, or list
+programs such as fzf in `keys.pass-through` to forward the keys to them as to
+Vim. **Ctrl-a arrows**, **Ctrl-a o** and clicks always move between bmux panes
 directly, even with an editor in front.
 
 Focus events (`?1004`) work with no `focus-events on` setting: Neovim's

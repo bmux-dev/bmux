@@ -18,6 +18,7 @@ type serverSettings struct {
 	busySamples, quietSamples int
 	restore                   bool
 	resume                    map[string][]string // per-agent override; empty = none
+	passThrough               map[string]bool     // programs that get navigation keys
 }
 
 var (
@@ -42,6 +43,10 @@ func settingsFrom(cfg config.Config) *serverSettings {
 	for _, program := range cfg.Agents.Extra {
 		agents[program] = program
 	}
+	passThrough := make(map[string]bool, len(cfg.Keys.PassThrough))
+	for _, program := range cfg.Keys.PassThrough {
+		passThrough[program] = true
+	}
 	return &serverSettings{
 		detect:       cfg.Agents.Detect,
 		agents:       agents,
@@ -49,6 +54,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		quietSamples: samplesFor(cfg.Agents.WaitingAfter.Duration),
 		restore:      cfg.Restore.Enabled,
 		resume:       cfg.Restore.Resume,
+		passThrough:  passThrough,
 	}
 }
 

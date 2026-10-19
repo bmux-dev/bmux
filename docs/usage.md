@@ -167,9 +167,11 @@ Ctrl-a ) and ( step through sessions in the sidebar's order (creation order)
 and wrap around.
 
 Outside Vim/Neovim, bmux takes Ctrl-h/j/k/l, including in other programs such
-as fzf. These keys do not reach those programs; Ctrl-l does not clear a shell.
-Inside Vim/Neovim they are forwarded. See [editor navigation](editor-navigation.md)
-for mappings that cross editor edges.
+as fzf, so by default Ctrl-l doesn't clear a shell. Inside Vim/Neovim they are
+forwarded. See [editor navigation](editor-navigation.md) for mappings that
+cross editor edges. To forward them to other programs too, list them in
+`keys.pass-through` (like vim-tmux-navigator's `is_vim` pattern); to give a
+key back everywhere, [unbind it](#rebinding-keys).
 
 ### Repeat resizing
 
@@ -441,6 +443,7 @@ width = 24
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](#rebinding-keys) |
+| `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |
 
 **Ctrl-a r** reloads the file in your client and the server; `bmux reload` does
 the same from a shell, and, like Helix, so does sending the server `SIGUSR1`

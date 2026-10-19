@@ -49,7 +49,9 @@ func TestBindingsMergeChangesOverTheDefaults(t *testing.T) {
 }
 
 func TestInvalidBindingsAreReportedAndDropped(t *testing.T) {
-	cfg, err := Load(write(t, `[keys.root]
+	cfg, err := Load(write(t, `[keys]
+pass-through = ["/usr/bin/fzf", "fzf"]
+[keys.root]
 "C-a" = "sessions"
 "C-x" = "explode"
 "Hyper-x" = "zoom"
@@ -61,13 +63,13 @@ func TestInvalidBindingsAreReportedAndDropped(t *testing.T) {
 	if err == nil {
 		t.Fatal("invalid bindings accepted silently")
 	}
-	for _, want := range []string{"prefix can't also be a root key", `unknown action "explode"`, `"Hyper-x"`, "bound twice"} {
+	for _, want := range []string{"prefix can't also be a root key", `unknown action "explode"`, `"Hyper-x"`, "bound twice", "keys.pass-through"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error doesn't mention %s: %v", want, err)
 		}
 	}
 	root, prefix := cfg.Bindings()
-	if root["C-a"] != "" || root["C-x"] != "" || prefix["z"] != "zoom" || prefix["C-a"] != "send-prefix" {
+	if root["C-a"] != "" || root["C-x"] != "" || prefix["z"] != "zoom" || prefix["C-a"] != "send-prefix" || len(cfg.Keys.PassThrough) != 1 || cfg.Keys.PassThrough[0] != "fzf" {
 		t.Fatalf("invalid bindings kept: root %v prefix %v", root, prefix)
 	}
 }
