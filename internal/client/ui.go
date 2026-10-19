@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -786,13 +787,20 @@ func fit(s string, width int) string {
 	return result.String()
 }
 
+func cellColor(name string) tcell.Color {
+	if index, err := strconv.Atoi(name); err == nil && index >= 0 && index <= 255 {
+		return tcell.PaletteColor(index)
+	}
+	return tcell.GetColor(name)
+}
+
 func cellStyle(c protocol.Cell) tcell.Style {
 	s := tcell.StyleDefault
 	if c.FG != "" {
-		s = s.Foreground(tcell.GetColor(c.FG))
+		s = s.Foreground(cellColor(c.FG))
 	}
 	if c.BG != "" {
-		s = s.Background(tcell.GetColor(c.BG))
+		s = s.Background(cellColor(c.BG))
 	}
 	s = s.Bold(c.Attrs&uv.AttrBold != 0).Dim(c.Attrs&uv.AttrFaint != 0).Italic(c.Attrs&uv.AttrItalic != 0).
 		Blink(c.Attrs&uv.AttrBlink != 0).Reverse(c.Attrs&uv.AttrReverse != 0).StrikeThrough(c.Attrs&uv.AttrStrikethrough != 0).Underline(c.Underline)

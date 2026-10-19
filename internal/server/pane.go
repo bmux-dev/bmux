@@ -242,6 +242,32 @@ func rgb(c color.Color) string {
 	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
 }
 
+// cellColor keeps palette colors as indexes so the attached terminal renders
+// them with its own theme. Entries an application redefined are sent exactly.
+func (s *pane) cellColor(c color.Color) string {
+	var index int
+	switch c := c.(type) {
+	case nil:
+		return ""
+	case ansi.BasicColor:
+		index = int(c)
+	case ansi.IndexedColor:
+		index = int(c)
+	default:
+		return rgb(c)
+	}
+	palette := s.term.IndexedColor(index)
+	if _, standard := palette.(ansi.IndexedColor); standard {
+		return protocol.PaletteColor(index)
+	}
+	return rgb(palette)
+}
+
+func (s *pane) cell(c *uv.Cell) protocol.Cell {
+	return protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: s.cellColor(c.Style.Bg),
+		Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
+}
+
 // frame returns only the requested viewport, not the entire scrollback buffer.
 // A slow client cannot block PTY output while rendering or writing to its socket.
 func (s *pane) frame(offset int) (*protocol.TerminalFrame, uint64) {
@@ -297,8 +323,7 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 				c = s.term.CellAt(x, row-history)
 			}
 			if c != nil {
-				f.Rows[y][x] = protocol.Cell{Text: c.Content, Width: c.Width,
-					FG: rgb(c.Style.Fg), BG: rgb(c.Style.Bg), Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
+				f.Rows[y][x] = s.cell(c)
 			}
 		}
 	}
@@ -326,7 +351,7 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 		row := make([]protocol.Cell, width)
 		for x := range row {
 			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = protocol.Cell{Text: c.Content, Width: c.Width, FG: rgb(c.Style.Fg), BG: rgb(c.Style.Bg), Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
+				row[x] = s.cell(c)
 			}
 		}
 		f.Rows = append(f.Rows, row)
