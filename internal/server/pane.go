@@ -56,6 +56,8 @@ type pane struct {
 	activeSamples, quietSamples int
 	lastInput                   time.Time
 	resume                      []string // reported resume command, or nil
+	clipboard                   string   // latest OSC 52 write, for attached clients
+	clipboardSeq                uint64   // its clipboardWrites number, 0 if none
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
@@ -88,6 +90,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 	})
 	s.trackBackground()
 	s.trackNotifications()
+	s.trackClipboard()
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir
 	s.cmd.Env = shellEnv(os.Environ(), sessionID, name, paneID)

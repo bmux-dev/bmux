@@ -140,8 +140,11 @@ type Frame struct {
 	EdgeDirection string `json:"edge_direction,omitempty"`
 	// Config counts server config reloads; clients reread their own
 	// settings when it changes.
-	Config uint64      `json:"config,omitempty"`
-	Panes  []PaneFrame `json:"panes"`
+	Config uint64 `json:"config,omitempty"`
+	// Clipboard is text an app in this session copied with OSC 52 since the
+	// previous frame of this attachment; the client copies it like a selection.
+	Clipboard string      `json:"clipboard,omitempty"`
+	Panes     []PaneFrame `json:"panes"`
 }
 
 type Response struct {

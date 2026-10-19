@@ -223,3 +223,12 @@ Helix's config layout: kebab-case names and a top-level `theme`.
   when it changes. App titles lose control characters and are capped, so an
   app can never send escape sequences to the outer terminal through its title;
   tcell saves the outer title on start and restores it on exit.
+- App clipboard writes (OSC 52) never touch a clipboard on the server. The
+  emulator handler keeps the latest valid write per pane under `pane.mu`,
+  numbered by the process-wide `clipboardWrites`. Each attachment starts at the
+  counter's value when it attached and puts the newest later write from any
+  pane, shown or hidden, into its next frame (`Frame.Clipboard`), so each copy
+  reaches each client once. The client copies it before its stale-ack frame
+  check, through the same worker as selections with sequence 0, which never
+  replaces a selection's notice. Reads are never answered; data that fills
+  x/vt's 4 MiB OSC buffer may be truncated and is dropped.

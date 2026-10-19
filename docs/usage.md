@@ -379,8 +379,15 @@ Enable OSC 52 clipboard writes in your local terminal. The status line says
 the copy was **requested** because bmux cannot verify that the terminal accepted
 it. Terminal-specific size limits apply.
 
-**Application-originated OSC 52 writes are not forwarded yet**, including
-Neovim clipboard writes. Mouse selection in bmux still uses the methods above.
+Applications can copy too. When a program in any pane of the session sends an
+OSC 52 clipboard write, such as Neovim yanking to `+` or `*` (its OSC 52
+provider, also over SSH), every attached client copies the text with the
+methods above, without a status message unless copying fails. Copies made
+while no client was attached are not replayed later. All selection targets
+(clipboard, primary, numbered) go to the clipboard. Apps can't read the
+clipboard: OSC 52 queries are ignored. Writes over about 3 MiB, invalid
+base64 and invalid UTF-8 are dropped.
+
 Cmd-C usually belongs to the outer terminal; use copy-on-release or Ctrl-a y.
 
 Paste with your terminal's normal shortcut. bmux does not read the clipboard
