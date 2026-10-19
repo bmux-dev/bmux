@@ -9,7 +9,9 @@ live previews, copy text with the mouse, and navigate split panes without a
 plugin manager.
 
 **v0.1.1 pre-release for macOS and Linux.** Sessions survive detach and client
-exit, not server exit or reboot.
+exit. Across server restarts and reboots, bmux brings back each session's
+splits and directories as fresh shells, and reopens recognized agents'
+conversations; other running programs are not revived.
 
 <!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
 
@@ -123,7 +125,8 @@ is mostly macOS.
 
 - No windows/tabs or dedicated close-pane key yet. Use `exit` to close a shell pane.
 - Scrollback does not reflow on resize. Keyboard selection and history search are planned.
-- Restore after reboot is planned. There is no saved-workspace restore today.
+- Restores bring back layouts, directories and agent conversations, not scrollback
+  or other running programs. `bmux restart` upgrades the server this way.
 
 See the [roadmap](ROADMAP.md) for what's next.
 

@@ -81,17 +81,19 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 **Done when:** after rebooting, `bmux` brings back every session with its splits,
 directories and allowlisted programs.
 
-Replaces tmux-resurrect and tmux-continuum. Depends on per-pane cwd from v0.2.
+Replaces tmux-resurrect and tmux-continuum.
+
+Built: versioned snapshot (sessions, split tree, focus, zoom, per-pane cwd),
+saves every 5 seconds and on clean shutdown, restore on server start, agent
+resume (reported commands or each agent's "continue latest"), and
+`bmux restart`, which survives protocol changes and reconnects clients.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Snapshot format | M | Sessions, split tree, focused pane, per-pane cwd, window list once v0.4 lands. Versioned so newer releases can read old snapshots. |
-| `bmux save` / `bmux restore` | M | Restored panes start a fresh shell in the saved directory. |
 | Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
-| Automatic saves | S | Periodic (15 minutes by default) and on clean server shutdown. |
-| Restore on server start | S | On by default. The picker marks restored sessions. |
-| Safe upgrades | M | Today a protocol change means stopping the server and losing sessions. Save before stopping, restore after, and say so in the error message. |
+| Mark restored sessions | S | In the picker and sidebar. |
+| Integrations that report exact resume commands | M | Claude Code's session ID, Codex/opencode/omp session IDs, so two agents in one directory both resume. |
 
 ## v0.4: windows and layouts
 

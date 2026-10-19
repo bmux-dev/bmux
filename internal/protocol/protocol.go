@@ -51,6 +51,8 @@ type Request struct {
 	PaneID     int    `json:"pane_id,omitempty"`
 	SessionID  uint64 `json:"session_id,omitempty"`
 	Direction  string `json:"direction,omitempty"`
+	// Args is the command an agent reports for resuming its conversation.
+	Args []string `json:"args,omitempty"`
 }
 
 type Session struct {

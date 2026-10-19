@@ -23,6 +23,12 @@ type Server struct {
 	shell       string
 	closed      bool
 	wg          sync.WaitGroup
+	// persistMu serializes snapshot writes; see persist.go.
+	persistMu    sync.Mutex
+	persistPath  string
+	persistStop  chan struct{}
+	persistLast  []byte
+	persistFinal bool
 }
 
 func New(shell string) *Server {
@@ -70,6 +76,8 @@ func (s *Server) Serve(l net.Listener) error {
 }
 
 func (s *Server) Close() {
+	// Save before anything stops: shutdown must not erase what is restored.
+	s.finishPersistence()
 	s.mu.Lock()
 	s.closed = true
 	if s.listener != nil {
@@ -169,7 +177,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = "session not found"
 			break
 		}
-		if err := item.reportAgent(r.PaneID, r.Kind, r.Text); err != nil {
+		if err := item.reportAgent(r.PaneID, r.Kind, r.Text, r.Args); err != nil {
 			result.Error = err.Error()
 		}
 	default:
@@ -202,6 +210,14 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
+	// Shutdown is accepted from any protocol version so a newer binary can
+	// always stop this server for an upgrade; Close saves sessions first.
+	if r.Op == "shutdown" {
+		_ = conn.SetWriteDeadline(time.Now().Add(time.Second))
+		_ = enc.Encode(protocol.Response{Version: protocol.Version})
+		go s.Close()
+		return
+	}
 	if r.Version != protocol.Version {
 		_ = enc.Encode(protocol.Response{Version: protocol.Version, Error: "protocol version mismatch; use the same bmux binary for client and server"})
 		return

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -85,6 +86,35 @@ func darwinCommandPaths(pid int) (exe, script string, err error) {
 		rest = rest[end+1:]
 	}
 	return exe, script, nil
+}
+
+// proc_pidinfo(PROC_PIDVNODEPATHINFO) returns struct proc_vnodepathinfo: the
+// current directory's vnode_info (152 bytes) then its MAXPATHLEN path, then
+// the same for the root directory. libproc is a thin wrapper over this call.
+const (
+	procInfoCallPIDInfo  = 2
+	procPIDVnodePathInfo = 9
+	vnodeInfoBytes       = 152
+	maxPathBytes         = 1024
+	vnodePathInfoBytes   = 2 * (vnodeInfoBytes + maxPathBytes)
+)
+
+func processCwd(pid int) (string, error) {
+	buf := make([]byte, vnodePathInfoBytes)
+	n, _, errno := unix.Syscall6(unix.SYS_PROC_INFO, procInfoCallPIDInfo, uintptr(pid), procPIDVnodePathInfo, 0,
+		uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if errno != 0 {
+		return "", errno
+	}
+	if int(n) < vnodeInfoBytes+maxPathBytes {
+		return "", fmt.Errorf("short process directory information")
+	}
+	path := buf[vnodeInfoBytes : vnodeInfoBytes+maxPathBytes]
+	end := bytes.IndexByte(path, 0)
+	if end <= 0 {
+		return "", fmt.Errorf("process has no current directory")
+	}
+	return string(path[:end]), nil
 }
 
 func inspectProcess(pid int) (processIdentity, error) {

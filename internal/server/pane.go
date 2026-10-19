@@ -55,6 +55,7 @@ type pane struct {
 	busy, outputSeen            bool
 	activeSamples, quietSamples int
 	lastInput                   time.Time
+	resume                      []string // reported resume command, or nil
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
@@ -208,7 +209,7 @@ func (s *pane) input(r protocol.Request) error {
 	// Conservative bounds audited against the pinned x/vt encoders.
 	reserve := 0
 	switch r.Op {
-	case "paste":
+	case "paste", "type":
 		if len(r.Text) > protocol.MaxPasteBytes {
 			return fmt.Errorf("paste too large; entire request rejected")
 		}
@@ -238,6 +239,10 @@ func (s *pane) input(r protocol.Request) error {
 		s.term.SendKey(uv.KeyPressEvent{Code: r.Code, Text: r.Text, Mod: uv.KeyMod(r.Mod)})
 	case "paste":
 		s.term.Paste(r.Text)
+	case "type":
+		// Typed ahead regardless of bracketed-paste mode, so a shell runs it
+		// as a command; used to resume agents in restored panes.
+		s.term.SendText(r.Text)
 	case "focus":
 		if r.Focused {
 			s.term.Focus()

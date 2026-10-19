@@ -14,9 +14,9 @@ bmux
 Go's binary directory must be on `PATH`. Check `go env GOBIN`; when empty, use
 `$(go env GOPATH)/bin`, usually `~/go/bin`.
 
-The server starts automatically. Sessions survive detach and client exit, but
-end when the server exits or the machine reboots. There is no saved-workspace
-restore yet.
+The server starts automatically. Sessions survive detach and client exit. When
+the server stops or the machine reboots, the next server restores them: see
+[Restarts and reboots](#restarts-and-reboots).
 
 ## Commands
 
@@ -29,7 +29,8 @@ restore yet.
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
-| `bmux agent STATE [NAME]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`; used by agent hooks |
+| `bmux agent STATE [NAME] [-- COMMAND...]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`, optionally with the command that resumes its conversation; used by agent hooks |
+| `bmux restart` | Save sessions, stop the server and start this binary's server, which restores them; attached clients reconnect |
 | `bmux version`, `bmux --version` | Print the version |
 | `bmux help`, `bmux --help`, `bmux -h` | Show help |
 
@@ -231,6 +232,12 @@ across reports. A report never starts a server and fails outside a bmux pane.
 Reports from a recognized agent are dropped when it leaves the foreground.
 Agents bmux doesn't recognize can still report themselves.
 
+After `--`, a report can include the command that reopens this conversation,
+such as `bmux agent idle claude -- claude --resume "$SESSION_ID"`. It replaces
+the built-in resume command when the server restarts. The first word must be
+a command name on `PATH`; at most 64 arguments and 8 KiB, no control
+characters.
+
 For Claude Code, add hooks to `~/.claude/settings.json`:
 
 ```json
@@ -271,6 +278,35 @@ attachment or attached-client resize sets the shared application size.
 
 Terminating a pane or session also stops its ordinary jobs. Programs that
 deliberately detach themselves from the shell's process session can keep running.
+
+## Restarts and reboots
+
+The server saves every session every few seconds and when it stops cleanly
+(`bmux restart`, SIGTERM or SIGINT). The next server, whether after an upgrade,
+a crash or a reboot, restores them before accepting clients:
+
+- the same sessions and names, split layout, focused pane and zoom;
+- a fresh login shell in each pane, in the directory that pane's shell was in;
+- agents, by typing a resume command into the restored shell. Reported
+  commands run as given. Otherwise recognized agents continue their latest
+  conversation in that directory: `claude --continue`, `codex resume --last`,
+  `opencode --continue`, `omp --continue`, `pi --continue`. When two panes
+  would continue the same agent in the same directory, only the first does;
+  the other gets a shell, so one conversation never opens twice.
+
+Nothing else that was running comes back: no scrollback, no editors, servers
+or other programs. Resumed agents are new processes reopening their saved
+conversation, not the processes that were running.
+
+`bmux restart` from inside a pane finishes in the background, because stopping
+the server ends that pane's jobs. Attached clients reconnect to the session
+they showed once the new server is up.
+
+Sessions are saved to `~/Library/Application Support/bmux/sessions.json` on
+macOS and `${XDG_STATE_HOME:-~/.local/state}/bmux/sessions.json` on Linux, or
+`sessions.json` inside a custom `BMUX_RUNTIME_DIR`, so separate servers keep
+separate sessions. A file bmux can't read is moved to `sessions.json.unreadable`
+and the server starts without restoring.
 
 ## Mouse selection and scrollback
 
@@ -379,9 +415,10 @@ it does not move existing sessions.
 
 ### Stop the server
 
-**Stopping the server ends all its sessions and panes.** Save work first.
-Use **Ctrl-a d** instead to detach and leave work running. There is no
-`kill-server` command yet.
+Use **Ctrl-a d** to detach and leave work running. To upgrade, use
+`bmux restart` instead of stopping the server by hand; see
+[Restarts and reboots](#restarts-and-reboots). A server stopped with SIGTERM
+also saves its sessions first.
 
 From a shell outside bmux, resolve the directory using the same environment
 you used to launch bmux:
@@ -401,7 +438,9 @@ kill -TERM "$(cat "$runtime_dir/server.pid")"
 ```
 
 Wait for `server.pid` to disappear before restarting. The next `bmux` command
-starts a new server. The log remains available for troubleshooting.
+starts a new server, which restores the saved sessions. The log remains
+available for troubleshooting. To stop for good without restoring later, kill
+the sessions first with `bmux kill NAME`.
 
 ### Uninstall
 
@@ -428,8 +467,9 @@ settings you added to your shell configuration.
 ### Protocol version mismatch
 
 An upgraded client may not work with a server started by an older binary.
-Finish and save work in existing clients, then [stop the server](#stop-the-server).
-Run `bmux` again with the installed binary. Sessions do not survive this restart.
+Run `bmux restart` with the new binary: it saves the sessions, stops the old
+server, and starts the new one, which restores them. Servers from before
+saving existed are stopped with SIGTERM and their sessions are not restored.
 Do not delete the socket to try to upgrade a running server.
 
 ### Server does not start

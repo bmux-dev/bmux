@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,6 +30,28 @@ func Directory() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "bmux"), nil
+}
+
+// StatePath is where sessions are saved for restarts and reboots. It lives
+// outside the runtime directory, which is cleared at reboot on Linux, except
+// that a custom BMUX_RUNTIME_DIR keeps its own sessions alongside it so
+// separate servers never share or overwrite each other's state.
+func StatePath() (string, error) {
+	if dir := os.Getenv("BMUX_RUNTIME_DIR"); dir != "" {
+		abs, err := filepath.Abs(dir)
+		return filepath.Join(abs, "sessions.json"), err
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	if runtime.GOOS == "darwin" {
+		return filepath.Join(home, "Library", "Application Support", "bmux", "sessions.json"), nil
+	}
+	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
+		return filepath.Join(dir, "bmux", "sessions.json"), nil
+	}
+	return filepath.Join(home, ".local", "state", "bmux", "sessions.json"), nil
 }
 
 func Prepare() (string, error) {
@@ -95,6 +119,49 @@ func Ensure(socket string) error {
 	return fmt.Errorf("server did not start: %w (see %s)", err, filepath.Join(filepath.Dir(socket), "server.log"))
 }
 
+// Stop asks the running server to save its sessions and exit, then waits for
+// its socket to close. It reports whether a server was running and whether it
+// could save: servers older than the shutdown request get SIGTERM instead and
+// lose their sessions.
+func Stop(socket string) (running, saved bool, err error) {
+	c, dialErr := net.DialTimeout("unix", socket, time.Second)
+	if dialErr != nil {
+		return false, false, nil
+	}
+	c.Close()
+	saved = true
+	if _, err = protocol.Call(socket, protocol.Request{Op: "shutdown"}); err != nil {
+		if !strings.Contains(err.Error(), "unknown operation") && !strings.Contains(err.Error(), "version mismatch") {
+			return true, false, err
+		}
+		data, readErr := os.ReadFile(filepath.Join(filepath.Dir(socket), "server.pid"))
+		pid, parseErr := strconv.Atoi(strings.TrimSpace(string(data)))
+		if readErr != nil || parseErr != nil || pid <= 1 {
+			return true, false, fmt.Errorf("this server can't be stopped from this bmux version and has no readable server.pid")
+		}
+		if err = syscall.Kill(pid, syscall.SIGTERM); err != nil {
+			return true, false, err
+		}
+		saved = false
+	}
+	// The socket closes first; the lock is released once the process exits,
+	// after its panes are stopped. Only then can a new server start.
+	lock, err := os.OpenFile(filepath.Join(filepath.Dir(socket), "server.lock"), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return true, saved, err
+	}
+	defer lock.Close()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB) == nil {
+			_ = unix.Flock(int(lock.Fd()), unix.LOCK_UN)
+			return true, saved, nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return true, saved, fmt.Errorf("server did not stop within 10 seconds")
+}
+
 func Serve(socket string, stop <-chan os.Signal) error {
 	lock, err := os.OpenFile(filepath.Join(filepath.Dir(socket), "server.lock"), os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -134,6 +201,14 @@ func Serve(socket string, stop <-chan os.Signal) error {
 		shell = "/bin/sh"
 	}
 	s := server.New(shell)
+	// Restore before accepting connections, so the first client already sees
+	// the sessions. Without a usable state file the server still runs; the
+	// reason is in server.log.
+	if state, err := StatePath(); err != nil {
+		fmt.Fprintln(os.Stderr, "bmux: sessions will not be saved:", err)
+	} else if err = s.EnablePersistence(state); err != nil {
+		fmt.Fprintln(os.Stderr, "bmux: sessions will not be saved:", err)
+	}
 	done := make(chan struct{})
 	go func() {
 		select {

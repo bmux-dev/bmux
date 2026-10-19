@@ -153,6 +153,27 @@ and app presses that began in a pane still deliver motion and release there.
 The sidebar polls `list` asynchronously at 1 Hz with at most one request in
 flight; the picker's synchronous refresh owns the list while open.
 
+## Persistence
+
+`EnablePersistence` restores the state file before `Serve` accepts clients and
+starts the saver; tests that use `New` alone never touch disk. `saveState`
+(serialized by `Server.persistMu`) captures layout under `session.mu`, releases
+it, reads each shell's cwd from the OS (`processCwd`), then agent label and
+resume command under `pane.mu`. It writes atomically (temp file, fsync,
+rename) only when the JSON changed. `Close` saves first and marks the saver
+final, so pane shutdown can never overwrite what will be restored.
+
+Restore creates new sessions (new IDs and creation times, saved recency) with
+pane IDs and the layout tree kept, validating the tree; an invalid tree falls
+back to one pane. Resume commands are typed into the new shell with the `type`
+pane operation, which bypasses bracketed paste so the shell runs it. Built-in
+"continue latest" commands are deduplicated per directory; reported ones are
+exact. Only layouts, directories and agent conversations return.
+
+`shutdown` is accepted before the protocol version check so any newer binary
+can stop an older server. `daemon.Stop` waits for `server.lock`, not just the
+socket, because the socket closes before panes finish stopping.
+
 ## User-visible behavior details
 
 - Attached-client snapshots are coalesced to at most 30 updates per second.
