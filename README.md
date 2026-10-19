@@ -5,13 +5,10 @@
 [![CI](https://github.com/josephferrero/bmux/actions/workflows/ci.yml/badge.svg)](https://github.com/josephferrero/bmux/actions/workflows/ci.yml)
 
 bmux brings common tmux-plugin workflows into one program. Browse sessions with
-live previews, copy text with the mouse, and navigate split panes without a
-plugin manager.
+live previews, watch your coding agents from a sidebar, copy text with the
+mouse, and keep your layout across restarts, without a plugin manager.
 
-**v0.1.1 pre-release for macOS and Linux.** Sessions survive detach and client
-exit. Across server restarts and reboots, bmux brings back each session's
-splits and directories as fresh shells, and reopens recognized agents'
-conversations; other running programs are not revived.
+**v0.1.1 pre-release for macOS and Linux.**
 
 <!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
 
@@ -20,7 +17,8 @@ conversations; other running programs are not revived.
 | Familiar tmux workflow | In bmux |
 | --- | --- |
 | tmux-sessionx-style picking | List-first session picker, fuzzy filtering, live previews |
-| Agent sidebar | Every session and its coding agents on the left; Ctrl-h into it when one needs you |
+| herdr-style agent overview | Sidebar of sessions and every coding agent, with working/waiting/blocked state and a sound when one needs you |
+| tmux-resurrect + continuum | Automatic save and restore of sessions, splits, directories and agent conversations |
 | tmux-yank-style copying | Drag to select, release to copy to your clipboard |
 | vim-tmux-navigator-style navigation | Vim/Neovim-aware Ctrl-h/j/k/l, with edge-crossing via a [small editor mapping](docs/editor-navigation.md) |
 | Powerline themes | Built-in status bars, accent colors, and a light theme |
@@ -82,21 +80,75 @@ many tmux configs. There is no config file or key rebinding yet; both are planne
 navigate panes outside Vim/Neovim; inside those editors, the keys are forwarded.
 Other programs don't receive these shortcuts, including Ctrl-l to clear a shell.
 
-The sidebar shows your sessions on top and, below a divider, every agent
-across them. bmux spots claude, codex, opencode, omp, pi, gemini and other
-coding agents running in a pane and marks them with herdr's icons: yellow **●**
-working, teal **●** went quiet while you weren't looking (finished, or asking
-you something), red **●** [reported](docs/usage.md#reporting-agent-state)
-blocked, green **○** idle. A sound plays when a background agent becomes ready
-or blocked. Any program's bell or desktop notification marks its pane too. The
-sidebar hides below 80 columns.
-
 In the picker, **j/k** or arrows browse, **Enter** attaches, **n** creates,
 **r** renames, and **d** asks to terminate. **/** starts filtering; **Enter**
 finishes the filter, then **Enter** attaches.
 
 The [user guide](docs/usage.md) covers all controls, clipboard setup,
 [server shutdown](docs/usage.md#stop-the-server), and [uninstalling](docs/usage.md#uninstall).
+
+## Agents
+
+Run claude, codex, opencode, omp, pi, gemini or another coding agent in any
+pane; bmux recognizes it from the pane's foreground process, with no setup.
+The sidebar on the left lists your sessions, then every agent across them:
+
+```
+ SESSIONS              │
+ ● api                 │
+   web                 │
+───────────────────────│
+ AGENTS 2              │
+ ● claude      waiting │
+   api                 │
+ ○ opencode       idle │
+   web                 │
+```
+
+| Icon | State |
+| --- | --- |
+| yellow ● | working: still drawing output |
+| teal ● | waiting: went quiet while you weren't looking; it finished or is asking you something |
+| red ● | blocked: the agent [reported](docs/usage.md#reporting-agent-state) it needs a decision |
+| green ○ | idle: ready, and you've seen it |
+
+Press **Ctrl-h** from the leftmost pane to move into the sidebar, **j/k** to
+pick an agent, and **Enter** or **l** to jump to its pane, in whichever session
+it is. A sound plays when an agent you aren't looking at becomes ready or
+blocked (`BMUX_SOUND=0` mutes it). Any program's bell or desktop notification
+marks its pane too. **Ctrl-a b** hides the sidebar; it hides itself below 80
+columns. Icons and colors follow herdr's defaults.
+
+bmux never reads agent state from the screen's text. For exact state, such as
+telling a permission prompt from a finished turn, an agent's hooks can report
+it with `bmux agent working|blocked|idle`; the
+[user guide](docs/usage.md#agents-and-the-sidebar) has a Claude Code setup.
+
+## Restarts and upgrades
+
+bmux saves every session every few seconds and when the server stops. After an
+upgrade, a crash or a reboot, the next server brings back:
+
+- every session with its name, split layout and focused pane;
+- a fresh shell in each pane, in the directory that pane was in;
+- each agent, reopening its latest conversation in that directory
+  (`claude --continue`, `codex resume --last`, `opencode --continue`,
+  `omp --continue`, `pi --continue`), or the exact session its hooks reported.
+
+Scrollback and other running programs don't come back: restored panes are new
+processes, and resumed agents reopen their saved conversation rather than
+continuing the process that was running.
+
+To upgrade, install the new binary and run:
+
+```sh
+bmux restart
+```
+
+It saves, stops the old server, starts the new one and restores your sessions.
+Attached clients reconnect on their own. It works from inside a pane too. See
+[Restarts and reboots](docs/usage.md#restarts-and-reboots) for details and where
+sessions are saved.
 
 ## Configuration
 
@@ -125,8 +177,6 @@ is mostly macOS.
 
 - No windows/tabs or dedicated close-pane key yet. Use `exit` to close a shell pane.
 - Scrollback does not reflow on resize. Keyboard selection and history search are planned.
-- Restores bring back layouts, directories and agent conversations, not scrollback
-  or other running programs. `bmux restart` upgrades the server this way.
 
 See the [roadmap](ROADMAP.md) for what's next.
 
