@@ -63,12 +63,13 @@ Shipped: `bmux integration status|install|uninstall [AGENT]`, and versioned,
 managed integrations for Claude Code and Codex (hooks), omp and pi
 (extensions) and opencode (a plugin): working, blocked on permission prompts
 and approvals, idle, and the exact session to resume, keeping other settings.
-Still to do:
+The integrations panel (Ctrl-a i) lists them as ✓ installed, ↻ update
+available, + available or – not found, and Enter installs every available or
+outdated one. Still to do:
 
 | Item | Size | Notes |
 | --- | --- | --- |
 | Welcome screen | S | Shown once on first attach: what bmux is, Ctrl-a for commands, Ctrl-h into the sidebar, "next: install optional agent integrations for more reliable state". Enter, Right or l continues; the choice is remembered (`onboarding = false` in the config file, like herdr). |
-| Integrations panel | M | Opens after the welcome screen and from a key later. One row per supported agent: ✓ installed, ↻ update available, + available (its command is on `PATH`), – not found. Enter installs every available or outdated integration, Esc closes. |
 
 ## Restore follow-ups
 

@@ -153,6 +153,7 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Show / hide the sidebar | Ctrl-a b |
 | Reload the config file | Ctrl-a r |
 | List key bindings | Ctrl-a ?; j/k or arrows scroll, any other key closes |
+| Agent integrations | Ctrl-a i; Enter installs, Esc closes |
 | Focus a neighboring pane directly | Ctrl-a arrow keys |
 | Cycle visible panes | Ctrl-a o |
 | Focus a pane | Click it |
@@ -244,7 +245,10 @@ you, if any. Keys typed in the sidebar never reach applications.
 Output timing can't tell a finished turn from a permission prompt. An
 integration makes the agent report its own state and exact session instead.
 Integrations change the agent's own config files, so they're installed only
-when you ask:
+when you ask. **Ctrl-a i** opens the integrations panel: one row per agent,
+marked ✓ installed, ↻ update available, + available (the agent is on your
+`PATH`) or – not found. **Enter** installs every available or outdated one
+and shows what happened; **Esc** closes it. The same from a shell:
 
 ```sh
 bmux integration status            # installed, update available, available or not found
@@ -511,7 +515,7 @@ letters are the same as Ctrl letters in most terminals.
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy` | prefix `d`, `y` | |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
-| `toggle-sidebar`, `reload-config`, `help` | prefix `b`, `r`, `?` | `help` lists the bindings in effect |
+| `toggle-sidebar`, `reload-config`, `help`, `integrations` | prefix `b`, `r`, `?`, `i` | `help` lists the bindings in effect; `integrations` opens the integrations panel |
 | `send-prefix` | the prefix again | Send the prefix key to the application |
 
 The prefix can't be a root key. The status line's hints and the prefix help

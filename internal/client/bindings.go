@@ -173,6 +173,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.requestReload()
 	case "help":
 		u.help, u.helpOffset = true, 0
+	case "integrations":
+		u.openIntegrations()
 	}
 }
 

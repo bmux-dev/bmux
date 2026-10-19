@@ -51,42 +51,13 @@ func (u *ui) helpKey(e *tcell.EventKey) {
 
 // drawHelp centers the key list over the dimmed panes, between the bars.
 func (u *ui) drawHelp(w, h int) {
-	u.screen.HideCursor()
-	if w < 10 || h < 6 {
-		return
-	}
-	for y := 1; y < h-1; y++ {
-		for x := range w {
-			if text, style, cellWidth := u.screen.Get(x, y); cellWidth > 0 {
-				u.screen.Put(x, y, text, style.Dim(true))
-			}
-		}
-	}
-	lines := u.helpLines()
-	widest := 0
-	for _, line := range lines {
-		widest = max(widest, displayWidth(line))
-	}
-	width := min(widest+4, w-4)
-	height := min(len(lines)+2, h-2)
-	inner, rows := width-4, height-2
-	u.helpOffset = max(0, min(u.helpOffset, len(lines)-rows))
-	x, y := (w-width)/2, 1+(h-2-height)/2
-	for row := range height {
-		u.screen.PutStrStyled(x, y+row, fit("", width), uiBaseStyle)
-	}
-	u.screen.PutStrStyled(x, y, "┌"+strings.Repeat("─", width-2)+"┐", uiAccentStyle)
-	u.screen.PutStrStyled(x, y+height-1, "└"+strings.Repeat("─", width-2)+"┘", uiAccentStyle)
-	for row := 1; row < height-1; row++ {
-		u.screen.Put(x, y+row, "│", uiAccentStyle)
-		u.screen.Put(x+width-1, y+row, "│", uiAccentStyle)
-	}
-	u.screen.PutStrStyled(x+2, y, fit(" Keys ", min(6, width-4)), uiAccentStyle)
-	for row, line := range lines[u.helpOffset:min(len(lines), u.helpOffset+rows)] {
+	var lines []modalLine
+	for _, line := range u.helpLines() {
 		style := uiBaseStyle
 		if !strings.HasPrefix(line, " ") && line != "" {
 			style = uiAccentStyle
 		}
-		u.screen.PutStrStyled(x+2, y+1+row, fit(line, inner), style)
+		lines = append(lines, modalLine{line, style})
 	}
+	u.drawModal(w, h, "Keys", lines, &u.helpOffset)
 }

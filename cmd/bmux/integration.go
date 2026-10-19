@@ -65,15 +65,20 @@ func runIntegration(socket string, args []string, stdin io.Reader, stdout io.Wri
 			targets = pending
 		}
 		var failed []string
+		done := 0
 		for _, a := range targets {
 			if err := a.Install(env); err != nil {
 				failed = append(failed, fmt.Sprintf("%s: %v", a.Name, err))
 				continue
 			}
+			done++
 			fmt.Fprintf(stdout, "Installed the %s integration in %s\n", a.Label, a.ConfigDir(env))
 			if a.Notes != "" {
 				fmt.Fprintln(stdout, "  "+a.Notes)
 			}
+		}
+		if done > 0 {
+			fmt.Fprintln(stdout, "Restart running agents to pick up new integrations.")
 		}
 		if len(failed) > 0 {
 			return fmt.Errorf("%s", strings.Join(failed, "; "))

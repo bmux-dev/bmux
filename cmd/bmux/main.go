@@ -335,6 +335,7 @@ Inside a session:
   Ctrl-a x   Close pane (asks first if a program is running)
   Ctrl-a b   Show / hide sidebar  Ctrl-a r   Reload config
   Ctrl-a ?   List key bindings (rebind them in the config file)
+  Ctrl-a i   Agent integrations: exact agent state, installed on Enter
 
 Settings: ~/.config/bmux/config.toml (see bmux default-config).
 
