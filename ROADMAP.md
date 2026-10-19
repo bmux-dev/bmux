@@ -7,9 +7,8 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Now** | [v0.1.x](#v01x-fixes) | Fix known bugs in the first release |
-| **Next** | [v0.2](#v02-daily-driver) | Daily driver: replace tmux for a full working day |
-| | [v0.3](#v03-survive-reboots-and-upgrades) | Survive reboots and upgrades (resurrect + continuum) |
+| **Now** | [v0.2](#v02-daily-driver) | Daily driver: replace tmux for a full working day |
+| **Next** | [v0.3](#v03-survive-reboots-and-upgrades) | Survive reboots and upgrades (resurrect + continuum) |
 | | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
 | | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
 | | [v0.6](#v06-scripting) | Scripting and automation |
@@ -41,18 +40,6 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 | Reviving processes after reboot | Not possible in general. See principles. |
 
 ---
-
-## v0.1.x: fixes
-
-**Goal:** the published release does what its docs say.
-**Done when:** every item below is fixed with a regression test and released as v0.1.1.
-
-| Item | Size | Notes |
-| --- | --- | --- |
-| Renaming a session breaks `bmux focus` | S | Panes keep the old name in `BMUX_SESSION`. Resolve by a stable session ID instead of the name. |
-| Directional pane navigation does nothing while zoomed | S | Only the zoomed pane is laid out. Match tmux: unzoom, then move. |
-| `bmux --help` wording | S | Ctrl-a p is "last session", and `kill` stops every pane, not just "its shell". |
-| Document that Ctrl-l doesn't clear the shell | S | Already in the docs. The real fix is rebinding in v0.2. |
 
 ## v0.2: daily driver
 
@@ -197,3 +184,6 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-yank | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52 |
 | Mouse mode | Click to focus, drag to select, wheel to scroll; Alt overrides mouse-aware apps |
 | Status themes | Powerline status bars, accent colors, light theme |
+
+v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a
+rename, directional navigation while zoomed, and `bmux --help` wording.
