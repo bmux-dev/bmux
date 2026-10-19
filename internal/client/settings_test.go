@@ -13,7 +13,7 @@ import (
 func TestConfiguredPrefixReplacesCtrlA(t *testing.T) {
 	u, requests := sidebarUI(t)
 	settings := config.Default()
-	settings.Prefix = "ctrl-b"
+	settings.Prefix = "C-b"
 	u.applySettings(settings)
 
 	u.key(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
@@ -49,7 +49,7 @@ func TestConfiguredPrefixReplacesCtrlA(t *testing.T) {
 func TestReloadAppliesSidebarThemeAndSoundSettings(t *testing.T) {
 	u, requests := sidebarUI(t)
 	u.applySettings(config.Default()) // as Run does at startup
-	t.Cleanup(func() { applyTheme(themeFor(config.Default().Theme)) })
+	t.Cleanup(func() { d := config.Default(); applyTheme(themeFor(d.Theme, d.UI)) })
 	u.configPath = filepath.Join(t.TempDir(), "config.toml")
 	write := func(content string) {
 		t.Helper()
@@ -59,8 +59,10 @@ func TestReloadAppliesSidebarThemeAndSoundSettings(t *testing.T) {
 	}
 	write(`[sidebar]
 width = 30
-[theme.agents]
+
+[ui.agent-colors]
 waiting = "#00ff00"
+
 [sound]
 enabled = false
 `)
@@ -96,7 +98,7 @@ enabled = false
 		t.Fatalf("hiding didn't resize panes: %+v", r)
 	}
 
-	write("prefix = \"ctrl-j\"\n[sidebar]\nshow = false\n")
+	write("prefix = \"C-j\"\n\n[sidebar]\nshow = false\n")
 	u.reloadSettings()
 	if u.prefixName() != "Ctrl-a" || !strings.Contains(u.message, "prefix") {
 		t.Fatalf("an invalid prefix wasn't reported or replaced: %q %q", u.prefixName(), u.message)

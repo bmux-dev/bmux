@@ -61,7 +61,7 @@ This attaches to the most recently used session. Use `bmux list` to see sessions
 or `bmux attach NAME` to choose one. `bmux kill NAME` terminates a session and
 all its panes.
 
-**Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "ctrl-b"` in the
+**Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "C-b"` in the
 [config file](#configuration) for tmux's. Splits use **|** and **-**, as in many
 tmux configs. Rebinding other keys is planned.
 
@@ -182,32 +182,33 @@ sessions are saved.
 ## Configuration
 
 Everything works without a config file. To change settings, create
-`~/.config/bmux/config.toml`; `bmux default-config` prints every setting with
-its default. For example:
+`~/.config/bmux/config.toml`. It's laid out like Helix's: a theme and the
+prefix at the top, one table per area, kebab-case keys, and only the lines you
+change. `bmux default-config` prints every setting with its default.
 
 ```toml
-prefix = "ctrl-b"          # tmux's prefix instead of Ctrl-a
+theme = "light"
+prefix = "C-b"            # tmux's prefix instead of Ctrl-a
 
-[theme]
-name = "light"
+[ui]
 accent = "amber"
 
 [sidebar]
 width = 30
 
 [agents]
-extra = ["myagent"]        # more programs to show as agents
-waiting_after = "5s"       # quiet this long before an agent counts as waiting
+extra = ["myagent"]       # more programs to show as agents
+waiting-after = "5s"      # quiet this long before an agent counts as waiting
 
 [restore.resume]
 claude = ["claude", "--continue", "--model", "opus"]
 ```
 
-Apply changes with **Ctrl-a r** or `bmux reload`; attached clients pick them up.
-Mistakes are shown in the status line and that setting keeps its default. The
-file also covers sounds, agent state colors, turning agent detection or
-restore off, and per-agent resume commands; see
-[configuration](docs/usage.md#configuration-file).
+Apply changes with **Ctrl-a r**, `bmux reload`, or `SIGUSR1` to the server, as
+in Helix; attached clients pick them up. Mistakes are shown in the status line
+and that setting keeps its default. The file also covers sounds, agent state
+colors, turning agent detection or restore off, and per-agent resume commands;
+see [configuration](docs/usage.md#configuration-file).
 
 The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
 and `BMUX_SOUND` environment variables still work and override the file.

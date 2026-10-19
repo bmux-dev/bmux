@@ -26,8 +26,8 @@ func useConfig(t *testing.T, s *Server, content string) string {
 func TestAgentSettingsChangeDetectionAndTiming(t *testing.T) {
 	useConfig(t, New("/bin/sh"), `[agents]
 extra = ["myagent"]
-working_after = "3s"
-waiting_after = "1s"
+working-after = "3s"
+waiting-after = "1s"
 `)
 	if agentMatch("/usr/local/bin/myagent") != "myagent" || agentMatch("claude") != "claude" {
 		t.Fatal("extra agent names don't add to the built-in ones")
@@ -43,13 +43,13 @@ waiting_after = "1s"
 	}
 	sample(true)
 	if sample(true).State == protocol.AgentWorking {
-		t.Fatal("working before working_after")
+		t.Fatal("working before working-after")
 	}
 	if sample(true).State != protocol.AgentWorking {
 		t.Fatal("not working after 3 samples of output")
 	}
 	if a := sample(false); a.State != protocol.AgentIdle || !a.Attention {
-		t.Fatalf("waiting_after of 1s: %+v", a)
+		t.Fatalf("waiting-after of 1s: %+v", a)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestDetectionCanBeTurnedOff(t *testing.T) {
 	srv := New("/bin/sh")
 	srv.sessions["navigation"] = s
 	useConfig(t, srv, "[agents]\ndetect = false\n")
-	if err := srv.reloadSettings(); err != nil {
+	if err := srv.ReloadSettings(); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := activity(t, s)[1]; ok {
@@ -138,7 +138,7 @@ func TestReloadRereadsSettingsAndBumpsTheFrameRevision(t *testing.T) {
 	if after == nil || after.Config <= before.Config {
 		t.Fatalf("frame config revision did not advance: %v revision %d", after, revision)
 	}
-	if err := os.WriteFile(path, []byte("[agents]\nwaiting_after = \"oops\"\n"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("[agents]\nwaiting-after = \"oops\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if r := srv.request(protocol.Request{Op: "reload-config"}); r.Error == "" {

@@ -17,21 +17,23 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// The layout follows Helix's config.toml: a theme name and the prefix at the
+// top, then one table per area, kebab-case keys, and only what you change.
 type Config struct {
+	Theme   string  `toml:"theme"`
 	Prefix  string  `toml:"prefix"`
-	Theme   Theme   `toml:"theme"`
+	UI      UI      `toml:"ui"`
 	Sidebar Sidebar `toml:"sidebar"`
 	Sound   Sound   `toml:"sound"`
 	Agents  Agents  `toml:"agents"`
 	Restore Restore `toml:"restore"`
 }
 
-type Theme struct {
-	Name            string      `toml:"name"`
+type UI struct {
 	Accent          string      `toml:"accent"`
-	PowerlineASCII  bool        `toml:"powerline_ascii"`
-	TerminalPadding bool        `toml:"terminal_padding"`
-	Agents          AgentColors `toml:"agents"`
+	PowerlineASCII  bool        `toml:"powerline-ascii"`
+	TerminalPadding bool        `toml:"terminal-padding"`
+	AgentColors     AgentColors `toml:"agent-colors"`
 }
 
 // AgentColors override the sidebar's state colors; "" keeps herdr's palette.
@@ -45,7 +47,7 @@ type AgentColors struct {
 type Sidebar struct {
 	Show           bool `toml:"show"`
 	Width          int  `toml:"width"`
-	MinScreenWidth int  `toml:"min_screen_width"`
+	MinScreenWidth int  `toml:"min-screen-width"`
 }
 
 type Sound struct {
@@ -57,8 +59,8 @@ type Sound struct {
 type Agents struct {
 	Detect       bool     `toml:"detect"`
 	Extra        []string `toml:"extra"`
-	WorkingAfter Duration `toml:"working_after"`
-	WaitingAfter Duration `toml:"waiting_after"`
+	WorkingAfter Duration `toml:"working-after"`
+	WaitingAfter Duration `toml:"waiting-after"`
 }
 
 type Restore struct {
@@ -81,8 +83,9 @@ func (d Duration) MarshalText() ([]byte, error) { return []byte(d.String()), nil
 
 func Default() Config {
 	return Config{
-		Prefix:  "ctrl-a",
-		Theme:   Theme{Name: "dark", Accent: "cyan"},
+		Theme:   "dark",
+		Prefix:  "C-a",
+		UI:      UI{Accent: "cyan"},
 		Sidebar: Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:   Sound{Enabled: true},
 		Agents:  Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -138,19 +141,19 @@ func applyEnv(cfg *Config, env func(string) string) {
 		return
 	}
 	if v := env("BMUX_THEME"); v != "" {
-		cfg.Theme.Name = strings.ToLower(v)
-		if cfg.Theme.Name != "light" {
-			cfg.Theme.Name = "dark"
+		cfg.Theme = strings.ToLower(v)
+		if cfg.Theme != "light" {
+			cfg.Theme = "dark"
 		}
 	}
 	if v := env("BMUX_ACCENT"); v != "" {
-		cfg.Theme.Accent = v
+		cfg.UI.Accent = v
 	}
 	if v := env("BMUX_POWERLINE_ASCII"); v != "" {
-		cfg.Theme.PowerlineASCII = v == "1"
+		cfg.UI.PowerlineASCII = v == "1"
 	}
 	if v := env("BMUX_TERMINAL_PADDING"); v != "" {
-		cfg.Theme.TerminalPadding = v == "1"
+		cfg.UI.TerminalPadding = v == "1"
 	}
 	if v := env("BMUX_SOUND"); v != "" {
 		cfg.Sound.Enabled = v != "0"
@@ -159,19 +162,20 @@ func applyEnv(cfg *Config, env func(string) string) {
 
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
-// PrefixKey returns the letter of a "ctrl-<letter>" prefix. Ctrl-h/j/k/l
-// navigate, and Ctrl-i/Ctrl-m are Tab and Enter, so they can't be the prefix.
+// PrefixKey returns the letter of a Ctrl-letter prefix, written like Helix
+// keys ("C-a"; "ctrl-a" also works). Ctrl-h/j/k/l navigate, and Ctrl-i and
+// Ctrl-m are Tab and Enter, so they can't be the prefix.
 func PrefixKey(prefix string) (rune, error) {
 	value := strings.ToLower(strings.TrimSpace(prefix))
-	for _, sep := range []string{"ctrl-", "ctrl+", "c-"} {
+	for _, sep := range []string{"c-", "ctrl-", "ctrl+"} {
 		if letter, ok := strings.CutPrefix(value, sep); ok && len(letter) == 1 && letter[0] >= 'a' && letter[0] <= 'z' {
 			if strings.ContainsRune("hijklm", rune(letter[0])) {
-				return 0, fmt.Errorf("prefix %q is taken: Ctrl-h/j/k/l navigate and Ctrl-i/Ctrl-m are Tab and Enter", prefix)
+				return 0, fmt.Errorf("prefix %q is taken: C-h/j/k/l navigate and C-i/C-m are Tab and Enter", prefix)
 			}
 			return rune(letter[0]), nil
 		}
 	}
-	return 0, fmt.Errorf("prefix %q must look like \"ctrl-a\"", prefix)
+	return 0, fmt.Errorf("prefix %q must be a Ctrl-letter like \"C-a\"", prefix)
 }
 
 // ValidResume follows the server's rules for resume commands.
@@ -201,19 +205,19 @@ func (c *Config) repair() []string {
 		bad("%v", err)
 		c.Prefix = d.Prefix
 	}
-	c.Theme.Name = strings.ToLower(c.Theme.Name)
-	if c.Theme.Name != "dark" && c.Theme.Name != "light" {
-		bad("theme.name %q must be \"dark\" or \"light\"", c.Theme.Name)
-		c.Theme.Name = d.Theme.Name
+	c.Theme = strings.ToLower(c.Theme)
+	if c.Theme != "dark" && c.Theme != "light" {
+		bad("theme %q must be \"dark\" or \"light\"", c.Theme)
+		c.Theme = d.Theme
 	}
-	switch accent := strings.ToLower(c.Theme.Accent); {
+	switch accent := strings.ToLower(c.UI.Accent); {
 	case accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
-		c.Theme.Accent = accent
+		c.UI.Accent = accent
 	default:
-		bad("theme.accent %q must be cyan, amber, green or #RRGGBB", c.Theme.Accent)
-		c.Theme.Accent = d.Theme.Accent
+		bad("ui.accent %q must be cyan, amber, green or #RRGGBB", c.UI.Accent)
+		c.UI.Accent = d.UI.Accent
 	}
-	for _, color := range []*string{&c.Theme.Agents.Working, &c.Theme.Agents.Waiting, &c.Theme.Agents.Blocked, &c.Theme.Agents.Idle} {
+	for _, color := range []*string{&c.UI.AgentColors.Working, &c.UI.AgentColors.Waiting, &c.UI.AgentColors.Blocked, &c.UI.AgentColors.Idle} {
 		if *color != "" && !hexColor.MatchString(*color) {
 			bad("agent color %q must be #RRGGBB", *color)
 			*color = ""
@@ -224,7 +228,7 @@ func (c *Config) repair() []string {
 		c.Sidebar.Width = d.Sidebar.Width
 	}
 	if c.Sidebar.MinScreenWidth < c.Sidebar.Width+20 {
-		bad("sidebar.min_screen_width %d must leave at least 20 columns for panes", c.Sidebar.MinScreenWidth)
+		bad("sidebar.min-screen-width %d must leave at least 20 columns for panes", c.Sidebar.MinScreenWidth)
 		c.Sidebar.MinScreenWidth = max(d.Sidebar.MinScreenWidth, c.Sidebar.Width+20)
 	}
 	for _, sound := range []*string{&c.Sound.Ready, &c.Sound.Blocked} {
@@ -242,7 +246,7 @@ func (c *Config) repair() []string {
 		name  string
 		value *Duration
 		def   Duration
-	}{{"agents.working_after", &c.Agents.WorkingAfter, d.Agents.WorkingAfter}, {"agents.waiting_after", &c.Agents.WaitingAfter, d.Agents.WaitingAfter}} {
+	}{{"agents.working-after", &c.Agents.WorkingAfter, d.Agents.WorkingAfter}, {"agents.waiting-after", &c.Agents.WaitingAfter, d.Agents.WaitingAfter}} {
 		if timing.value.Duration < time.Second || timing.value.Duration > time.Minute {
 			bad("%s %s must be between 1s and 1m", timing.name, timing.value.Duration)
 			*timing.value = timing.def
@@ -277,64 +281,46 @@ func expandHome(path string) (string, error) {
 	return path, nil
 }
 
-// DefaultFile documents every setting with its default; `bmux default-config`
-// prints it. Uncommented, it parses to Default().
-const DefaultFile = `# bmux configuration. Save as ~/.config/bmux/config.toml (or set BMUX_CONFIG).
-# Every setting is optional; these are the defaults. Apply changes with
-# Ctrl-a r or bmux reload. BMUX_THEME, BMUX_ACCENT, BMUX_POWERLINE_ASCII,
-# BMUX_TERMINAL_PADDING and BMUX_SOUND still override this file.
+// DefaultFile is a Helix-style config.toml listing every setting, commented
+// out, with its default; `bmux default-config` prints it. Uncommented, it
+// parses to Default().
+const DefaultFile = `# ~/.config/bmux/config.toml
+# Uncomment only what you change. Reload with Ctrl-a r or bmux reload.
 
-# The key that starts commands: ctrl-a through ctrl-z, except
-# ctrl-h/j/k/l (navigation) and ctrl-i/ctrl-m (Tab and Enter).
-# prefix = "ctrl-a"
+# theme = "dark"            # "dark" or "light"
+# prefix = "C-a"            # any C-letter except C-h/j/k/l, C-i, C-m
 
-[theme]
-# "dark" or "light".
-# name = "dark"
-# cyan, amber, green or "#RRGGBB".
-# accent = "cyan"
-# Plain-text separators instead of powerline glyphs.
-# powerline_ascii = false
-# Keep the outer terminal's padding (read when a client starts).
-# terminal_padding = false
+[ui]
+# accent = "cyan"           # cyan, amber, green or "#RRGGBB"
+# powerline-ascii = false   # plain separators instead of powerline glyphs
+# terminal-padding = false  # keep the outer terminal's padding
 
-[theme.agents]
-# Sidebar state colors as "#RRGGBB"; empty keeps herdr's palette.
+[ui.agent-colors]           # "#RRGGBB"; empty keeps herdr's palette
 # working = ""
 # waiting = ""
 # blocked = ""
 # idle = ""
 
 [sidebar]
-# Show the sidebar when a client starts; Ctrl-a b toggles it.
-# show = true
-# Columns, including its border (12-60).
-# width = 24
-# Hide it on terminals narrower than this.
-# min_screen_width = 80
+# show = true               # Ctrl-a b toggles it
+# width = 24                # columns, 12-60
+# min-screen-width = 80     # hide it on narrower terminals
 
 [sound]
-# Play a sound when an agent you aren't looking at becomes ready or blocked.
-# enabled = true
-# Custom sound files (absolute or ~/ paths); empty uses the system sounds.
-# ready = ""
+# enabled = true            # when a background agent is ready or blocked
+# ready = ""                # sound files; empty uses the system sounds
 # blocked = ""
 
 [agents]
-# Recognize coding agents in panes and show them in the sidebar.
-# detect = true
-# More program names to recognize as agents.
-# extra = []
-# Output this long in a row means working; quiet this long means waiting.
-# working_after = "2s"
-# waiting_after = "2s"
+# detect = true             # recognize agents running in panes
+# extra = []                # more program names, e.g. ["myagent"]
+# working-after = "2s"      # drawing this long = working
+# waiting-after = "2s"      # quiet this long = waiting
 
 [restore]
-# Save sessions and restore them after restarts and reboots.
-# enabled = true
+# enabled = true            # save sessions and restore them after restarts
 
-[restore.resume]
-# Replace an agent's resume command; an empty list restores it as a shell.
+[restore.resume]            # per-agent resume command; [] = plain shell
 # claude = ["claude", "--continue"]
 # codex = ["codex", "resume", "--last"]
 `

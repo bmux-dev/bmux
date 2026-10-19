@@ -182,7 +182,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = err.Error()
 		}
 	case "reload-config":
-		if err := s.reloadSettings(); err != nil {
+		if err := s.ReloadSettings(); err != nil {
 			result.Error = err.Error()
 		}
 	case "pane-command":

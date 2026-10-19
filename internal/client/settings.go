@@ -16,7 +16,7 @@ func (u *ui) applySettings(settings config.Config) {
 	first := u.settings.Prefix == ""
 	previous, wasHidden := u.settings.Sidebar, u.sidebarHidden
 	u.settings = settings
-	applyTheme(themeFor(settings.Theme))
+	applyTheme(themeFor(settings.Theme, settings.UI))
 	if first || previous.Show != settings.Sidebar.Show {
 		u.sidebarHidden = !settings.Sidebar.Show
 	}

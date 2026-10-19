@@ -190,7 +190,9 @@ is read only when a client creates its screen.
 which every snapshot carries as `Frame.Config`; bumping each session's revision
 forces a frame. Clients record the value from an attachment's first frame and
 reread their own file when it later changes, so `bmux reload` reaches every
-attached client. Ctrl-a r reloads the client directly and then asks the server.
+attached client. Ctrl-a r reloads the client directly and then asks the server;
+SIGUSR1 to the server is the same as `bmux reload`, as in Helix. Keys follow
+Helix's config layout: kebab-case names and a top-level `theme`.
 
 ## User-visible behavior details
 
