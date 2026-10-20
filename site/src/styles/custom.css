@@ -88,5 +88,6 @@
 .home summary::before { content: '+'; display: inline-block; width: 1.5rem; color: var(--sl-color-accent); }
 .home details[open] > summary::before { content: '–'; }
 .home details > :not(summary) { margin: 0 0 1rem 1.5rem; }
-/* The home page has its own heading; the page title (for <title>) stays out of the way. */
-:root:has(.home) h1#_top { display: none; }
+/* The home page has its own heading; the page title (for <title>) and its panel stay out of the way. */
+:root:has(.home) .content-panel:has(#_top) { display: none; }
+:root:has(.home) .content-panel { border-top: 0; }
