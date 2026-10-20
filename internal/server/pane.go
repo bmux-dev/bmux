@@ -267,7 +267,15 @@ func (s *pane) input(r protocol.Request) error {
 				return err
 			}
 		}
+		reflowed := w != s.term.Width()
 		s.trackHistory(func() { s.term.Resize(w, h) })
+		if reflowed {
+			// Reflow rewrote history: rows no longer sit where their IDs
+			// said, so start a new coordinate epoch. Height-only changes
+			// move rows into history in order, which the IDs already follow.
+			s.epoch++
+			s.historyTotal = s.term.ScrollbackLen()
+		}
 	case "key":
 		s.term.SendKey(uv.KeyPressEvent{Code: r.Code, Text: r.Text, Mod: uv.KeyMod(r.Mod)})
 	case "paste":
@@ -423,9 +431,21 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 	f.Rows = make([][]protocol.Cell, s.term.Height())
 	for y := range f.Rows {
 		f.Rows[y] = make([]protocol.Cell, s.term.Width())
+		row := history - offset + y
+		wrapped := false
+		if row < history {
+			wrapped = s.term.ScrollbackWrapped(row)
+		} else {
+			wrapped = s.term.LineWrapped(row - history)
+		}
+		if wrapped {
+			if f.Wrapped == nil {
+				f.Wrapped = make([]bool, len(f.Rows))
+			}
+			f.Wrapped[y] = true
+		}
 		for x := range f.Rows[y] {
 			var c *uv.Cell
-			row := history - offset + y
 			if row < history {
 				c = s.term.ScrollbackCellAt(x, row)
 			} else {

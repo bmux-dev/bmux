@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 5
+const Version = 6
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -141,6 +141,10 @@ type TerminalFrame struct {
 	Mouse         bool     `json:"mouse"`
 	Alt           bool     `json:"alt"`
 	Exited        bool     `json:"exited"`
+	// Wrapped[y] reports that row y continues onto row y+1 because the
+	// terminal wrapped it; copies join such rows without a newline. Nil when
+	// no row is wrapped.
+	Wrapped []bool `json:"wrapped,omitempty"`
 }
 
 type PaneFrame struct {
