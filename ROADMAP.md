@@ -8,8 +8,8 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
-| **Now** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
-| | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
+| **Done, unreleased** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
+| **Now** | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
 | | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -61,15 +61,17 @@ changes and reconnects clients. With an [agent integration](#already-built)
 **Done when:** a session can hold multiple windows, each with its own split
 layout, and they survive save/restore.
 
-| Item | Size | Notes |
+All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21](https://github.com/josephferrero/bmux/issues/21)):
+
+| Item | Size | Status |
 | --- | --- | --- |
-| Windows (tabs) per session | L | New, close, rename, next/previous, select by number, last window. Window list in the status bar. |
-| Swap and rotate panes | S | tmux's `swap-pane`, `rotate-window`. |
-| Break and join panes | M | Pane to new window, and back. |
-| Preset layouts | M | Even-horizontal, even-vertical, main-horizontal, main-vertical, tiled. A key to cycle them and one to equalize. |
-| Last pane toggle | S | |
-| Project picker | M | Choose a project folder (zoxide or configured roots) and land in its session, creating it if needed. Replaces sesh and tmux-sessionizer. |
-| Layout files | M | Declare a project's windows, panes and commands once. Replaces tmuxinator and tmuxp. Shares the session snapshot format. |
+| Windows (tabs) per session | L | Done: Ctrl-a c, 1–9, ] / [, Tab, `,` rename, & close; tabs on the top bar; saved and restored |
+| Swap and rotate panes | S | Done: Ctrl-a { / }, Ctrl-a Ctrl-o |
+| Break and join panes | M | Done: Ctrl-a ! / @ |
+| Preset layouts | M | Done: Ctrl-a Space cycles, Alt-1…5 pick, Ctrl-a E equalizes |
+| Last pane toggle | S | Done: Ctrl-a ; |
+| Project picker | M | Done: Ctrl-a f and `bmux project`, from zoxide and `projects.roots` |
+| Layout files | M | Done: `.bmux.toml`, commands run once trusted; `bmux layout save` / `trust` |
 
 ## v0.5: keyboard scrollback
 
@@ -147,6 +149,10 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | herdr's first run and agent integrations | A welcome screen on first attach leading into the integrations panel (Ctrl-a i); `bmux integration` for Claude Code, Codex, omp, opencode and pi, reporting exact working/blocked/idle and the session to resume |
 | Agents supervising agents | `bmux agents`, `bmux capture`, `bmux send --if-seq`, `bmux wait-agent`; `bmux guide`, `bmux capabilities` and an installed skill teach agents to use them |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
+| `new-window`, `select-window`, `last-window`, `rename-window`, `kill-window`, window list | Ctrl-a c, 1–9, ] / [, Tab, `,`, &; tabs on the top bar with a `!` for windows waiting on you |
+| `swap-pane`, `rotate-window`, `break-pane`, `join-pane`, `last-pane`, `select-layout` (incl. `-E`) | Ctrl-a { / }, Ctrl-a Ctrl-o, Ctrl-a ! / @, Ctrl-a ;, Ctrl-a Space / Alt-1…5 / E |
+| sesh, tmux-sessionizer | Project picker: Ctrl-a f, `bmux project [DIR]` |
+| tmuxinator, tmuxp | `.bmux.toml` layout files with trusted commands; `bmux layout save` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md), `keys.pass-through` for other programs (its `is_vim` pattern) |
@@ -172,3 +178,8 @@ agents (`bmux agents`, `capture`, `send`, `wait-agent`), splits in the focused
 pane's directory, dragging dividers, Ctrl-a x, Ctrl-a ( / ), refusing to nest,
 Ctrl-h/j/k/l pass-through, focus events, window titles, apps' OSC 52 copies and
 alert sounds on Linux.
+
+Since v0.3.0 (unreleased): windows, pane arrangement and preset layouts,
+the project picker, layout files, deleting sessions from the sidebar, and
+`bmux list` showing window counts. Protocol version 5: run `bmux restart`
+after upgrading.

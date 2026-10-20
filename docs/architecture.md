@@ -307,6 +307,23 @@ exact. Only layouts, directories and agent conversations return.
 can stop an older server. `daemon.Stop` waits for `server.lock`, not just the
 socket, because the socket closes before panes finish stopping.
 
+## Layout files
+
+`create` goes through `Server.createSession`: with a `.bmux.toml` in the
+directory, `parseLayout` turns it into a `sessionSnapshot` (windows and trees
+in the restore format, pane directories resolved, ratios defaulted) and
+`restoreSession` builds it, typing each pane's command like a resume
+command. Parsing is strict; any problem falls back to one pane. Commands run
+only when the file's canonical path and SHA-256 are in the trust store
+(`trusted-layouts.json` beside the state file, written atomically by the
+CLI's `bmux layout trust` and `save`); otherwise they're dropped before the
+build. Either outcome worth telling is `session.notice`, which
+`takeNotice` hands to the first frame of the first attachment
+(`Frame.Notice`). `layout` encodes `persistentState` back into the file
+format, relative to the session directory, keeping the replaced file's
+commands by pane ID; a session built from a file keeps its pane IDs, so
+save and build round-trip.
+
 ## Configuration
 
 `config.Load` always returns a usable config: a missing file means defaults,
