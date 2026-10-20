@@ -12,9 +12,8 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
-| **Done, unreleased** | [v0.4](#v04-windows-and-layouts), [v0.5](#v05-keyboard-scrollback) | Windows and layouts; keyboard scrollback and search |
-| **Next** | [v0.6](#v06-scripting) | Scripting and automation |
+| **Shipped** | v0.5.0 | Keyboard scrollback: [scrollback view, search, prompt jumps, reflow](#already-built) |
+| **Now** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -65,7 +64,7 @@ changes and reconnects clients. With an [agent integration](#already-built)
 **Done when:** a session can hold multiple windows, each with its own split
 layout, and they survive save/restore.
 
-All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21](https://github.com/josephferrero/bmux/issues/21)):
+Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21](https://github.com/josephferrero/bmux/issues/21)):
 
 | Item | Size | Status |
 | --- | --- | --- |
@@ -82,7 +81,7 @@ All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21]
 **Goal:** find and copy anything in history without a mouse, and without a mandatory mode.
 **Done when:** you can search, select and copy from the keyboard, and the mouse workflow is unchanged.
 
-All done on main ([#29](https://github.com/josephferrero/bmux/issues/29)–[#34](https://github.com/josephferrero/bmux/issues/34)):
+Shipped in v0.5.0 ([#29](https://github.com/josephferrero/bmux/issues/29)–[#34](https://github.com/josephferrero/bmux/issues/34)):
 
 | Item | Size | Status |
 | --- | --- | --- |
@@ -162,8 +161,10 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
 | vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](/bmux/guides/editor-navigation/), `keys.pass-through` for other programs (its `is_vim` pattern) |
-| tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client |
-| tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
+| tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client; copies join soft-wrapped lines |
+| tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, drag past the edge to auto-scroll, wheel to scroll; Alt overrides mouse-aware apps |
+| `copy-mode -e` with vi keys, tmux-copycat, `search-backward` | Optional scrollback view (Ctrl-a v): vi moves, `v` / `V` / Ctrl-v, `y` copies; search with Ctrl-a / or `/` `?` `n` `N`; `[` / `]` jump between shell prompts (OSC 133) |
+| `history-limit`, rewrap on resize | `scrollback.lines`; wrapped lines reflow on screen and in scrollback |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
 | `.tmux.conf`, `source-file` | `~/.config/bmux/config.toml` (Helix layout), reload with Ctrl-a r, `bmux reload` or SIGUSR1; `bmux default-config` |
@@ -185,7 +186,12 @@ pane's directory, dragging dividers, Ctrl-a x, Ctrl-a ( / ), refusing to nest,
 Ctrl-h/j/k/l pass-through, focus events, window titles, apps' OSC 52 copies and
 alert sounds on Linux.
 
-Since v0.3.0 (unreleased): windows, pane arrangement and preset layouts,
-the project picker, layout files, deleting sessions from the sidebar, and
-`bmux list` showing window counts. Protocol version 5: run `bmux restart`
-after upgrading.
+v0.4.0 added windows (tabs) per session, swapping, rotating, breaking and
+joining panes, preset layouts, the last-pane toggle, the project picker
+(Ctrl-a f, `bmux project`), `.bmux.toml` layout files, deleting sessions from
+the sidebar, and window counts in `bmux list`.
+
+v0.5.0 added the scrollback view (Ctrl-a v) with vi-style keyboard selection,
+history search (Ctrl-a /), jumps between shell prompts, auto-scroll while
+dragging a selection, reflow on resize with copies that join wrapped lines,
+and the `scrollback.lines` setting.
