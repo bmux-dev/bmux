@@ -13,7 +13,8 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.5.0 | Keyboard scrollback: [scrollback view, search, prompt jumps, reflow](#already-built) |
-| **Now** | [Install and updates](#install-and-updates), [v0.6](#v06-scripting) | Prebuilt binaries, an install script and `bmux update`; scripting and automation |
+| **Done, unreleased** | [Install and updates](#install-and-updates) | Prebuilt binaries, an install script, an update hint and `bmux update` |
+| **Now** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -67,8 +68,8 @@ shows when a newer release is out and updates itself with `bmux update`.
 | Item | Size | Status |
 | --- | --- | --- |
 | Prebuilt binaries and checksums ([#49](https://github.com/bmux-dev/bmux/issues/49)) | S | Done: GoReleaser builds Linux and macOS on amd64 and arm64 for every `v*` tag, with `checksums.txt` |
-| Install script ([#50](https://github.com/bmux-dev/bmux/issues/50)) | S | Planned: `curl … \| sh`, checksum-verified, no root |
-| Update hint and `bmux update` ([#51](https://github.com/bmux-dev/bmux/issues/51)) | M | Planned: a small `↑` in the status bar when a release is out; `bmux update` replaces the binary after checking its checksum |
+| Install script ([#50](https://github.com/bmux-dev/bmux/issues/50)) | S | Done: `curl -fsSL …/install.sh \| sh`, checksum-verified, into `~/.local/bin` without root |
+| Update hint and `bmux update` ([#51](https://github.com/bmux-dev/bmux/issues/51)) | M | Done: a small `↑` in the status bar when a release is out (checked once a day, `[update] check`); `bmux update` replaces the binary after checking its checksum, `bmux restart` switches the server |
 
 ## v0.4: windows and layouts
 

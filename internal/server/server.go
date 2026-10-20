@@ -189,6 +189,12 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		if err := s.ReloadSettings(); err != nil {
 			result.Error = err.Error()
 		}
+	case "update-installed":
+		// bmux update replaced this server's binary; clients show that a
+		// restart switches to it.
+		if err := s.updateInstalled(r.Text); err != nil {
+			result.Error = err.Error()
+		}
 	case "environment":
 		// Panes start from this environment; bmux restart passes it on, so
 		// a restart from inside a pane never leaks that pane's variables.

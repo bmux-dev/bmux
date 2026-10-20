@@ -104,9 +104,9 @@ codex = []
 	if key, _ := PrefixKey(cfg.Prefix); key != 'b' {
 		t.Fatalf("prefix key %q", key)
 	}
-	env := map[string]string{"BMUX_THEME": "dark", "BMUX_ACCENT": "green", "BMUX_SOUND": "0", "BMUX_POWERLINE_ASCII": "1"}
+	env := map[string]string{"BMUX_THEME": "dark", "BMUX_ACCENT": "green", "BMUX_SOUND": "0", "BMUX_POWERLINE_ASCII": "1", "BMUX_NO_UPDATE_CHECK": "1"}
 	cfg, err = Load(path, func(k string) string { return env[k] })
-	if err != nil || cfg.Theme != "dark" || cfg.UI.Accent != "green" || cfg.Sound.Enabled || !cfg.UI.PowerlineASCII {
+	if err != nil || cfg.Theme != "dark" || cfg.UI.Accent != "green" || cfg.Sound.Enabled || !cfg.UI.PowerlineASCII || cfg.Update.Check {
 		t.Fatalf("environment overrides: %+v %v", cfg, err)
 	}
 }

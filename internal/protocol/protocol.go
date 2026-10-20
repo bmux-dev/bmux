@@ -193,11 +193,21 @@ type Frame struct {
 	Clipboard string `json:"clipboard,omitempty"`
 	// Notice is something the client should show once, such as a layout
 	// file that couldn't be used; only the session's first attachment gets it.
-	Notice string      `json:"notice,omitempty"`
+	Notice string `json:"notice,omitempty"`
+	// Update is a newer bmux release for the status bar's hint; nil when the
+	// server runs the newest one, or update checks are off.
+	Update *UpdateHint `json:"update,omitempty"`
 	Panes  []PaneFrame `json:"panes"`
 	// Windows lists the session's windows in order; the panes above are the
 	// active one's.
 	Windows []Window `json:"windows,omitempty"`
+}
+
+// UpdateHint names a newer release: available to install with bmux update,
+// or Installed already, waiting for bmux restart to switch the server.
+type UpdateHint struct {
+	Version   string `json:"version"`
+	Installed bool   `json:"installed,omitempty"`
 }
 
 // Window describes one window of a session. Name is "" until it's renamed;

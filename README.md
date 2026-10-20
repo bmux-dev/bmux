@@ -45,13 +45,18 @@ modeless mouse selection.
 
 ## Quick start
 
-Requires **Go 1.26+** and an interactive terminal. Put Go's binary directory on
-your `PATH`: `GOBIN` if set, otherwise `$(go env GOPATH)/bin` (usually `~/go/bin`).
+Requires macOS or Linux and an interactive terminal. Install the latest release
+into `~/.local/bin`:
 
 ```sh
-go install github.com/josephferrero/bmux/cmd/bmux@latest
+curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
 bmux
 ```
+
+The script checks the download against the release's checksums and never uses
+`sudo`; see [installing](docs/usage.md#install-and-start) for its options. With
+**Go 1.26+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
+too (put `$(go env GOPATH)/bin` on your `PATH`).
 
 `bmux` creates a fresh session in the current directory, named after that
 directory. The server starts automatically. Existing sessions keep running.
@@ -211,13 +216,20 @@ Scrollback and other running programs don't come back: restored panes are new
 processes, and resumed agents reopen their saved conversation rather than
 continuing the process that was running.
 
-To upgrade, install the new binary and run:
+When a newer release is out, a small **↑** appears at the right end of the
+status bar (`↑ 0.6.0` when there's room). To upgrade:
 
 ```sh
+bmux update     # downloads the release and checks it against its checksums
 bmux restart
 ```
 
-It saves, stops the old server, starts the new one and restores your sessions.
+`bmux update` replaces the binary only; `bmux restart` switches the server to
+it, so you choose when programs running in panes end. Until then the hint
+shows **↻**. bmux looks for releases once a day; `[update] check = false` in
+the config file turns that off.
+
+`bmux restart` saves, stops the old server, starts the new one and restores your sessions.
 Attached clients reconnect on their own. It works from inside a pane too. See
 [Restarts and reboots](https://bmux-dev.github.io/bmux/guides/restarts/) for details and where
 sessions are saved.

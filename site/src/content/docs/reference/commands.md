@@ -28,6 +28,7 @@ sidebar:
 | `bmux integration install [AGENT...]` | Install or update integrations; with no names, every one that is available or out of date |
 | `bmux integration uninstall AGENT...` | Remove what bmux installed for these agents |
 | `bmux restart` | Save sessions, stop the server and start this binary's server, which restores them; attached clients reconnect |
+| `bmux update [--check]` | Install the newest release after checking it against its checksums; `--check` only reports. See [Updates](/bmux/start/installation/#updates) |
 | `bmux version`, `bmux --version` | Print the version |
 | `bmux help`, `bmux --help`, `bmux -h` | Show help |
 
