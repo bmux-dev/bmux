@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/x/vt"
+	"github.com/josephferrero/bmux/internal/vt"
 
 	"github.com/josephferrero/bmux/internal/protocol"
 )

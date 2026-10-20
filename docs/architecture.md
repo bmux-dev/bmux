@@ -8,6 +8,7 @@
 - `internal/config`: the optional config file, defaults, environment overrides and validation.
 - `internal/integration`: agent hook/plugin files, their versions, and mapping hook events to `bmux agent` reports.
 - `internal/server`: session layout, emulator state, owned OS jobs and cancellation.
+- `internal/vt`: the terminal emulator, a copy of charmbracelet/x/vt carrying bmux's soft-wrap tracking and reflow (see its README).
 - `internal/client`: input, modeless selection, clipboard intent and preview display.
 
 ## Lock boundaries
@@ -78,6 +79,24 @@ bytes. Whole intent is admitted or rejected; accepted user bytes aren't truncate
 The emulator pipe has a fast reader. Independent FIFO writing can wait on the PTY
 without blocking emulator state or shutdown. Zero-byte pipe fences synchronize
 user/reply classification; they are part of the contract, not redundant writes.
+
+## Soft wraps and reflow
+
+`internal/vt` flags each row that autowrap moved off, on screen and in
+scrollback. Flags move with inserted, deleted and scrolled lines, go into
+scrollback with their line, and clear when an erase reaches a row's last
+column; a scroll region narrower than the screen forgets the wraps of the
+rows it moves. `Emulator.Resize` reflows the main screen (showing or not):
+rows join into logical lines, which `rewrap` splits at the new width without
+splitting wide characters, mapping old columns so the cursor keeps its
+character. Screen lines stay on screen and history stays history; rows that
+no longer fit move into scrollback. The alternate screen is only cropped.
+
+A width change rewrites history, so `pane.input` starts a new coordinate
+epoch, which clears selections and anchors as a history reset does; a
+height-only change moves rows into history in order and keeps IDs.
+`TerminalFrame.Wrapped` carries each visible row's flag, and selection copies
+join wrapped rows without a newline, keeping their trailing blanks.
 
 ## Snapshots and selection
 
