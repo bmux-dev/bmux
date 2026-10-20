@@ -17,11 +17,11 @@ bmux
 
 | Variable | Effect |
 | --- | --- |
-| `BMUX_VERSION=v0.6.0` | Install that release instead of the newest |
+| `BMUX_VERSION=v0.5.1` | Install that release instead of the newest |
 | `BMUX_INSTALL_DIR=DIR` | Install into `DIR` instead of `~/.local/bin` |
 | `BMUX_RELEASE_URL=URL` | Download `URL/TAG/ASSET` from a mirror; needs `BMUX_VERSION` |
 
-Set them on the `sh` side: `curl -fsSL … | BMUX_VERSION=v0.6.0 sh`. The script
+Set them on the `sh` side: `curl -fsSL … | BMUX_VERSION=v0.5.1 sh`. The script
 never uses `sudo` and writes nothing outside the install directory. It tells
 you if that directory isn't on your `PATH`, or if another `bmux` comes first.
 Run it again to upgrade, or use [`bmux update`](/bmux/start/installation/#updates); if a server is
@@ -36,7 +36,7 @@ go install github.com/josephferrero/bmux/cmd/bmux@latest
 Go's binary directory must be on `PATH`. Check `go env GOBIN`; when empty, use
 `$(go env GOPATH)/bin`, usually `~/go/bin`.
 
-**By hand:** releases after v0.5.0 carry `bmux_<os>_<arch>.tar.gz` and
+**By hand:** releases from v0.5.1 on carry `bmux_<os>_<arch>.tar.gz` and
 `checksums.txt` on the [releases page](https://github.com/bmux-dev/bmux/releases).
 Check that `sha256sum bmux_<os>_<arch>.tar.gz` (`shasum -a 256` on macOS)
 matches its line in `checksums.txt`, and put the `bmux` inside on your `PATH`.

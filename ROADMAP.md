@@ -7,8 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.5.0 | Keyboard scrollback: [scrollback view, search, prompt jumps, reflow](#already-built) |
-| **Done, unreleased** | [Install and updates](#install-and-updates) | Prebuilt binaries, an install script, an update hint and `bmux update` |
+| **Shipped** | v0.5.1 | Install and updates: [prebuilt binaries, install script, `bmux update`](#install-and-updates) |
 | **Now** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -59,6 +58,8 @@ changes and reconnects clients. With an [agent integration](#already-built)
 **Goal:** install and stay current without Go.
 **Done when:** a one-line script installs a verified release binary, and bmux
 shows when a newer release is out and updates itself with `bmux update`.
+
+Shipped in v0.5.1:
 
 | Item | Size | Status |
 | --- | --- | --- |
@@ -203,3 +204,7 @@ v0.5.0 added the scrollback view (Ctrl-a v) with vi-style keyboard selection,
 history search (Ctrl-a /), jumps between shell prompts, auto-scroll while
 dragging a selection, reflow on resize with copies that join wrapped lines,
 and the `scrollback.lines` setting.
+
+v0.5.1 added prebuilt Linux and macOS binaries with checksums, a one-line
+install script, a once-a-day check for new releases with a hint in the status
+bar, and `bmux update`.
