@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
+import starlightThemeNova from 'starlight-theme-nova';
 
 export default defineConfig({
 	site: 'https://bmux-dev.github.io',
@@ -28,7 +29,9 @@ export default defineConfig({
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/bmux-dev/bmux' }],
 			editLink: { baseUrl: 'https://github.com/bmux-dev/bmux/edit/main/site/' },
 			customCss: ['./src/styles/custom.css'],
-			plugins: [starlightLinksValidator()],
+			plugins: [starlightThemeNova({
+					nav: [{ label: 'Docs', href: '/bmux/guides/sessions/' }],
+				}), starlightLinksValidator()],
 			sidebar: [
 				{ label: 'Start here', items: [{ autogenerate: { directory: 'start' } }] },
 				{ label: 'Using bmux', items: [{ autogenerate: { directory: 'guides' } }] },
