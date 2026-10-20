@@ -7,10 +7,9 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
-| **Done, unreleased** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
+| **Shipped** | v0.4.0 | Windows and layouts: [windows, pane arrangement, project picker, layout files](#already-built) |
 | **Now** | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
-| | [v0.6](#v06-scripting) | Scripting and automation |
+| **Next** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -61,7 +60,7 @@ changes and reconnects clients. With an [agent integration](#already-built)
 **Done when:** a session can hold multiple windows, each with its own split
 layout, and they survive save/restore.
 
-All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21](https://github.com/josephferrero/bmux/issues/21)):
+Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21](https://github.com/josephferrero/bmux/issues/21)):
 
 | Item | Size | Status |
 | --- | --- | --- |
@@ -179,7 +178,7 @@ pane's directory, dragging dividers, Ctrl-a x, Ctrl-a ( / ), refusing to nest,
 Ctrl-h/j/k/l pass-through, focus events, window titles, apps' OSC 52 copies and
 alert sounds on Linux.
 
-Since v0.3.0 (unreleased): windows, pane arrangement and preset layouts,
-the project picker, layout files, deleting sessions from the sidebar, and
-`bmux list` showing window counts. Protocol version 5: run `bmux restart`
-after upgrading.
+v0.4.0 added windows (tabs) per session, swapping, rotating, breaking and
+joining panes, preset layouts, the last-pane toggle, the project picker
+(Ctrl-a f, `bmux project`), `.bmux.toml` layout files, deleting sessions from
+the sidebar, and window counts in `bmux list`.
