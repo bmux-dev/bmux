@@ -77,7 +77,7 @@ func runDefault(socket string, _ []string) error {
 	if err != nil {
 		return err
 	}
-	name, err := createDirectorySession(socket, cwd)
+	name, err := client.CreateDirectorySession(socket, cwd)
 	if err != nil {
 		return err
 	}
@@ -119,6 +119,34 @@ func runAttach(socket string, args []string) error {
 		return err
 	}
 	name, err := attachTarget(socket, args)
+	if err != nil {
+		return err
+	}
+	return client.Run(socket, name, cwd)
+}
+
+// runProject lands in DIR's session, creating one named after it if none
+// started there; without DIR it opens the project picker.
+func runProject(socket string, args []string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	switch len(args) {
+	case 0:
+		return client.RunProjects(socket, cwd)
+	case 1:
+	default:
+		return fmt.Errorf("usage: bmux project [DIR]")
+	}
+	dir, err := filepath.Abs(args[0])
+	if err != nil {
+		return err
+	}
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", args[0])
+	}
+	name, err := client.ProjectSession(socket, dir)
 	if err != nil {
 		return err
 	}
@@ -201,7 +229,7 @@ func runReload(socket string, args []string) error {
 
 // startsClient reports whether a command would attach this terminal.
 func startsClient(args []string) bool {
-	if len(args) == 0 || args[0] == "attach" {
+	if len(args) == 0 || args[0] == "attach" || args[0] == "project" {
 		return true
 	}
 	if args[0] != "new" {
@@ -350,6 +378,7 @@ func helpText() string {
 const interactiveHelp = `
 Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
+  Ctrl-a f   Project picker: a folder's session, created if needed
   Ctrl-a n   New session          Ctrl-a p   Last session
   Ctrl-a ( / )   Previous / next session
   Ctrl-a c   New window           Ctrl-a 1-9   Select window

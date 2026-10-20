@@ -32,6 +32,7 @@ again; set it to `true` to see it on the next attach.
 | `bmux` | Create and attach to a fresh session in the current directory; `bmux attach` returns to an existing one |
 | `bmux new [--dir PATH] [--detach] NAME` | Create a named session; attach unless `--detach` is set |
 | `bmux attach [NAME]` | Attach by name, or to the most recently used session (the first in `bmux list`) |
+| `bmux project [DIR]` | Attach to the session started in `DIR`, creating one named after it if there is none; without `DIR`, open the [project picker](#project-picker) |
 | `bmux list` | Show sessions, state, window/pane/client counts, and starting directories, most recently used first |
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
@@ -87,6 +88,26 @@ Bare `bmux` derives a name from the current directory:
 
 Bare `bmux` always creates fresh work. It never reattaches to a matching name,
 not even after `bmux restart`: use `bmux attach` to return to a session.
+
+## Project picker
+
+**Ctrl-a f**, or `bmux project` from a shell, lists project folders, like
+sesh and tmux-sessionizer:
+
+1. folders a session started in, most recently used first, with the session's
+   name;
+2. the directories zoxide knows, in its order, when zoxide is installed;
+3. git repositories under `projects.roots` (`~/code`, `~/src`, `~/projects`
+   and `~/dev` by default, when they exist), up to `projects.depth` levels
+   down (3). Hidden folders, `node_modules`, `vendor` and folders inside a
+   repository aren't searched.
+
+Typing filters the list; Up/Down (or Ctrl-j/k, Ctrl-n/p) select, Backspace
+and Ctrl-u edit the filter. **Enter** attaches to the most recent session
+started in that folder, or creates one named after it, the way bare `bmux`
+names sessions. **Esc** goes back; when `bmux project` opened the picker, it
+exits. `bmux project DIR` does the same for one folder without the list.
+Folders reached through a symlink are the same folder.
 
 ## Session picker
 
@@ -155,6 +176,7 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Action | Control |
 | --- | --- |
 | Open picker | Ctrl-a s, or click the bottom status line |
+| Open the [project picker](#project-picker) | Ctrl-a f |
 | Detach, leaving sessions running | Ctrl-a d |
 | Create a session | Ctrl-a n |
 | Toggle to the last session you came from | Ctrl-a p |
@@ -593,6 +615,9 @@ width = 24
 | `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
+| `projects.roots` | `["~/code", "~/src", "~/projects", "~/dev"]` | Folders the [project picker](#project-picker) searches for git repositories; absolute or `~/` paths. Missing ones are skipped. |
+| `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
+| `projects.zoxide` | `true` | Also list zoxide's directories when zoxide is installed |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](#rebinding-keys) |
 | `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |
 
@@ -643,7 +668,7 @@ letters are the same as Ctrl letters in most terminals.
 | `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `,` | New window in the focused pane's directory; close asks first if a program is running |
 | `next-window` / `previous-window`, `last-window` | prefix `]` / `[`, `tab` | |
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |
-| `sessions`, `new-session`, `last-session` | prefix `s`, `n`, `p` | |
+| `sessions`, `projects`, `new-session`, `last-session` | prefix `s`, `f`, `n`, `p` | |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy` | prefix `d`, `y` | |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |

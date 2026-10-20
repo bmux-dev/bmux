@@ -76,6 +76,7 @@ including giving Ctrl-l back to the shell.
 | Action | Keys or mouse |
 | --- | --- |
 | Session picker | Ctrl-a s, or click the bottom status line |
+| Project picker (open or create a folder's session) | Ctrl-a f, or `bmux project [DIR]` |
 | Detach | Ctrl-a d |
 | Create session | Ctrl-a n |
 | Last session | Ctrl-a p |
