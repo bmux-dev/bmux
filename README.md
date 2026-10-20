@@ -214,13 +214,20 @@ Scrollback and other running programs don't come back: restored panes are new
 processes, and resumed agents reopen their saved conversation rather than
 continuing the process that was running.
 
-To upgrade, install the new binary and run:
+When a newer release is out, a small **↑** appears at the right end of the
+status bar (`↑ 0.6.0` when there's room). To upgrade:
 
 ```sh
+bmux update     # downloads the release and checks it against its checksums
 bmux restart
 ```
 
-It saves, stops the old server, starts the new one and restores your sessions.
+`bmux update` replaces the binary only; `bmux restart` switches the server to
+it, so you choose when programs running in panes end. Until then the hint
+shows **↻**. bmux looks for releases once a day; `[update] check = false` in
+the config file turns that off.
+
+`bmux restart` saves, stops the old server, starts the new one and restores your sessions.
 Attached clients reconnect on their own. It works from inside a pane too. See
 [Restarts and reboots](docs/usage.md#restarts-and-reboots) for details and where
 sessions are saved.

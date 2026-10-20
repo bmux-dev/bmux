@@ -20,6 +20,7 @@ type serverSettings struct {
 	resume                    map[string][]string // per-agent override; empty = none
 	passThrough               map[string]bool     // programs that get navigation keys
 	scrollback                int                 // history lines kept per pane
+	updateCheck               bool                // look for new releases
 }
 
 var (
@@ -57,6 +58,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		resume:       cfg.Restore.Resume,
 		passThrough:  passThrough,
 		scrollback:   cfg.Scrollback.Lines,
+		updateCheck:  cfg.Update.Check,
 	}
 }
 
@@ -92,6 +94,19 @@ func (s *Server) ReloadSettings() error {
 	}
 	err := s.LoadSettings(path)
 	configRevision.Add(1)
+	items := s.bumpRevisions()
+	s.publishUpdate()
+	if !currentSettings().detect {
+		for _, item := range items {
+			item.forgetDetectedAgents()
+		}
+	}
+	return err
+}
+
+// bumpRevisions makes every session send attached clients a new frame, and
+// returns the sessions.
+func (s *Server) bumpRevisions() []*session {
 	s.mu.Lock()
 	items := make([]*session, 0, len(s.sessions))
 	for _, item := range s.sessions {
@@ -103,12 +118,7 @@ func (s *Server) ReloadSettings() error {
 		item.revision++
 		item.mu.Unlock()
 	}
-	if !currentSettings().detect {
-		for _, item := range items {
-			item.forgetDetectedAgents()
-		}
-	}
-	return err
+	return items
 }
 
 // forgetDetectedAgents drops detection results once detection is turned off;

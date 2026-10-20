@@ -17,6 +17,8 @@ import (
 	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/josephferrero/bmux/internal/server"
+	"github.com/josephferrero/bmux/internal/update"
+	"github.com/josephferrero/bmux/internal/version"
 	"golang.org/x/sys/unix"
 )
 
@@ -232,6 +234,14 @@ func Serve(socket string, stop <-chan os.Signal) error {
 		s.SetLayoutTrust(trust)
 	}
 	done := make(chan struct{})
+	// Release builds look for newer releases once a day (update.check);
+	// the cache sits next to the saved sessions so restarts don't re-ask.
+	if current := version.String(); current != version.Dev {
+		if state, err := StatePath(); err == nil {
+			checker := update.Checker{Source: update.GitHub(), Cache: filepath.Join(filepath.Dir(state), "update-check.json"), Interval: update.CheckInterval, Now: time.Now}
+			go s.WatchReleases(current, checker.Latest, time.Hour, done)
+		}
+	}
 	// Like Helix, SIGUSR1 rereads the config file (pkill -USR1 -f 'bmux --serve').
 	reload := make(chan os.Signal, 1)
 	signal.Notify(reload, syscall.SIGUSR1)

@@ -58,6 +58,7 @@ func init() {
 		}},
 		{"layout", "save [SESSION] | trust [DIR]", "Save a session's windows as its folder's .bmux.toml, or trust a folder's file so its commands run", noServer, runLayout},
 		{"restart", "", "Save sessions, restart the server, restore them", noServer, runRestart},
+		{"update", "[--check]", "Install the newest release, checked against its checksums; --check only reports", noServer, runUpdate},
 		{"reload", "", "Reread the config file (also Ctrl-a r)", noServer, runReload},
 		{"guide", "", "How agents read, drive and watch panes (Markdown)", noSocket, runGuide},
 		{"capabilities", "", "Commands, protocol version and the calling pane, as JSON", noSocket, runCapabilities},

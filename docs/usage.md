@@ -23,8 +23,8 @@ bmux
 Set them on the `sh` side: `curl -fsSL … | BMUX_VERSION=v0.6.0 sh`. The script
 never uses `sudo` and writes nothing outside the install directory. It tells
 you if that directory isn't on your `PATH`, or if another `bmux` comes first.
-Run it again to upgrade; if a server is running, `bmux restart` switches it to
-the new version.
+Run it again to upgrade, or use [`bmux update`](#updates); if a server is
+running, `bmux restart` switches it to the new version.
 
 **With Go 1.26+** instead:
 
@@ -54,6 +54,40 @@ Either way bmux adds `onboarding = false` to the top of the
 [config file](#configuration-file), creating it if needed, so it isn't shown
 again; set it to `true` to see it on the next attach.
 
+### Updates
+
+A release build looks for newer releases once a day. The server asks GitHub's
+releases API (`api.github.com/repos/bmux-dev/bmux/releases`), unauthenticated
+and with nothing about you, and caches the answer in `update-check.json` next
+to the saved sessions, so restarts don't ask again. Only releases with a binary
+for your platform count; while bmux is 0.x, pre-releases do too. A failed check
+is logged in `server.log` and retried the next day.
+
+When one is newer than the server, the status bar shows **↑** at its right end,
+or `↑ 0.6.0` when there's room, in space the bar leaves free. Clicking it, or
+the top of the key list (Ctrl-a ?), says what to do:
+
+| Hint | Meaning |
+| --- | --- |
+| ↑ | A newer release is available: run `bmux update` |
+| ↻ | `bmux update` installed it; the server still runs the old binary until `bmux restart` |
+
+`bmux update` downloads the release's archive for your platform and its
+`checksums.txt`, checks the SHA-256, and only then replaces the binary in
+place (one rename, so it's never half-written). It doesn't restart the server,
+since that ends the programs running in panes; run `bmux restart` when you're
+ready. `bmux update --check` only reports whether a release is available.
+
+It refuses, and says what to do instead, for a build from a checkout, a binary
+in a directory you can't write (re-run the install script with
+`BMUX_INSTALL_DIR`, or `sudo bmux update`), and a Homebrew install
+(`brew upgrade`). A `go install` build is replaced with the release binary,
+which works the same.
+
+Turn the daily check off with `[update] check = false` in the
+[config file](#configuration-file), or `BMUX_NO_UPDATE_CHECK=1`; builds from a
+checkout never check. `bmux update` still works either way.
+
 ## Commands
 
 | Command | Behavior |
@@ -79,6 +113,7 @@ again; set it to `true` to see it on the next attach.
 | `bmux integration install [AGENT...]` | Install or update integrations; with no names, every one that is available or out of date |
 | `bmux integration uninstall AGENT...` | Remove what bmux installed for these agents |
 | `bmux restart` | Save sessions, stop the server and start this binary's server, which restores them; attached clients reconnect |
+| `bmux update [--check]` | Install the newest release after checking it against its checksums; `--check` only reports. See [Updates](#updates) |
 | `bmux version`, `bmux --version` | Print the version |
 | `bmux help`, `bmux --help`, `bmux -h` | Show help |
 
