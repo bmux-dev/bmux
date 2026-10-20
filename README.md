@@ -8,7 +8,7 @@ bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, watch your coding agents from a sidebar, copy text with the
 mouse, and keep your layout across restarts, without a plugin manager.
 
-**v0.3.0 pre-release for macOS and Linux.**
+**v0.5.0 pre-release for macOS and Linux.**
 
 <!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
 
@@ -28,6 +28,7 @@ works out of the box, with no plugin manager.
 | tmux-pain-control | Ctrl-a \| and - splits in the focused pane's directory, Ctrl-a x close (asks first if a program is running), Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
 | tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH. Apps' own OSC 52 copies (Neovim yanks) go to the same clipboard |
 | tmux-better-mouse-mode | Click to focus, drag dividers to resize, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
+| tmux-copycat, copy mode | An optional [scrollback view](docs/usage.md#keyboard-scrollback) (Ctrl-a v) with vi keys, search (Ctrl-a /), and jumps between shell prompts; the mouse never needs it |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
 | tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
@@ -265,9 +266,6 @@ and `BMUX_SOUND` environment variables still work and override the file.
 
 This is an early prototype. CI runs on macOS and Ubuntu; it's used day to day
 on macOS and Linux.
-
-- No windows/tabs yet.
-- Scrollback does not reflow on resize. Keyboard selection and history search are planned.
 
 See the [roadmap](ROADMAP.md) for what's next.
 
