@@ -966,7 +966,7 @@ func (u *ui) draw() {
 	} else if u.prompt == "delete" {
 		footer = "Delete session: y yes · n/Esc no"
 	} else if u.view.active {
-		footer = "Scrollback: hjkl w b 0 $ g G move · v V Ctrl-v select · y copy · / ? search · n N next · Esc back"
+		footer = "Scrollback: hjkl w b 0 $ g G move · [ ] prompts · v V Ctrl-v select · y copy · / ? search · n N next · Esc back"
 	} else if u.sidebarFocus {
 		footer = "Sidebar: j/k select · Enter/l open · d delete · Esc back · n new session"
 	} else if u.help {

@@ -91,6 +91,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 	})
 	s.trackBackground()
 	s.trackNotifications()
+	s.trackPrompts()
 	s.trackClipboard()
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir

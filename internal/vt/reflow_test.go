@@ -158,3 +158,57 @@ func TestAlternateScreenIsCroppedWhileMainScreenReflows(t *testing.T) {
 	_, _ = e.WriteString("\x1b[?1049l")
 	expectLines(t, "main screen after returning", screenLines(e), []string{"abcdefgh", "", ""})
 }
+
+// promptRows lists where prompts start: scrollback lines as "h<i>", screen
+// rows as "s<y>".
+func promptRows(e *Emulator) []string {
+	var rows []string
+	for y := range e.ScrollbackLen() {
+		if e.ScrollbackPrompt(y) {
+			rows = append(rows, "h"+string(rune('0'+y)))
+		}
+	}
+	for y := range e.Height() {
+		if e.LinePrompt(y) {
+			rows = append(rows, "s"+string(rune('0'+y)))
+		}
+	}
+	return rows
+}
+
+func TestPromptMarksFollowTheirLines(t *testing.T) {
+	e := NewEmulator(6, 3)
+	prompt := func(text string) {
+		e.MarkPrompt()
+		_, _ = e.WriteString(text)
+	}
+	prompt("$ ls\r\n")
+	_, _ = e.WriteString("a b\r\n")
+	prompt("$ make all")
+	// "$ make all" wraps at the bottom, scrolling "$ ls" into history; the
+	// wrapped line's mark is on its first row.
+	expectLines(t, "rows", promptRows(e), []string{"h0", "s1"})
+	_, _ = e.WriteString("\r\nok\r\n")
+	expectLines(t, "after scrolling into history", promptRows(e), []string{"h0", "h2"})
+
+	e.Resize(12, 3)
+	// Reflow joins "$ make" and " all": the mark stays on the line's first row.
+	if got := promptRows(e); len(got) != 2 || got[0] != "h0" {
+		t.Fatalf("after reflow %v", got)
+	}
+	expectLines(t, "history after reflow", historyLines(e), []string{"$ ls", "a b"})
+
+	// Erasing a prompt's whole row drops its mark; full-screen apps keep none.
+	e = NewEmulator(10, 3)
+	prompt("$ ")
+	_, _ = e.WriteString("\x1b[2K")
+	if got := promptRows(e); len(got) != 0 {
+		t.Fatalf("erased row kept its mark: %v", got)
+	}
+	_, _ = e.WriteString("\x1b[?1049h")
+	e.MarkPrompt()
+	_, _ = e.WriteString("\x1b[?1049l")
+	if got := promptRows(e); len(got) != 0 {
+		t.Fatalf("alternate screen marked a prompt: %v", got)
+	}
+}

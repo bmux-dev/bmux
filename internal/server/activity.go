@@ -182,6 +182,21 @@ func (s *pane) trackNotifications() {
 	})
 }
 
+// trackPrompts records where shell prompts start, from OSC 133;A (FinalTerm
+// shell integration, sent by fish, zsh and bash setups, starship, Ghostty's
+// and iTerm's scripts). The emulator keeps the mark on its line through
+// scrolling and reflow. Handlers return false so the sequence is otherwise
+// ignored as before.
+func (s *pane) trackPrompts() {
+	s.term.RegisterOscHandler(133, func(data []byte) bool {
+		_, arg, _ := strings.Cut(string(data), ";")
+		if arg == "A" || strings.HasPrefix(arg, "A;") {
+			s.term.MarkPrompt()
+		}
+		return false
+	})
+}
+
 func validateAgentLabel(label string) error {
 	if len(label) > maxAgentLabelBytes {
 		return fmt.Errorf("agent name must be at most %d bytes", maxAgentLabelBytes)

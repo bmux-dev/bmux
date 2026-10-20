@@ -241,3 +241,28 @@ func TestSearchMatchesMarksEveryCellOfEachMatch(t *testing.T) {
 		t.Fatalf("exact case %v", got)
 	}
 }
+
+func TestScrollbackViewJumpsBetweenPrompts(t *testing.T) {
+	u, _ := viewUI(t)
+	socket, rpcs := rpcServer(t, func(r protocol.Request) protocol.Response {
+		if r.Direction == "down" {
+			return protocol.Response{Error: "no later prompt"}
+		}
+		return protocol.Response{Range: &protocol.TextRange{Epoch: 3, FromY: 101, ToY: 101}}
+	})
+	u.socket = socket
+	prefixed(u, runeKey('v'))
+	u.key(runeKey('['))
+	r := <-rpcs
+	if r.Op != "jump-prompt" || r.Direction != "up" || r.Range == nil || r.Range.FromY != 104 || r.Range.Epoch != 3 {
+		t.Fatalf("jump %+v", r)
+	}
+	if u.view.cursor != (point{0, 101}) {
+		t.Fatalf("cursor %+v", u.view.cursor)
+	}
+	u.key(runeKey(']'))
+	<-rpcs
+	if u.view.cursor != (point{0, 101}) || !strings.Contains(u.message, "no later prompt") {
+		t.Fatalf("no later prompt: cursor %+v message %q", u.view.cursor, u.message)
+	}
+}

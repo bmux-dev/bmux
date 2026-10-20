@@ -230,6 +230,10 @@ func (u *ui) viewKey(e *tcell.EventKey) {
 			u.runSearch(u.view.query, u.view.up)
 		case 'N':
 			u.runSearch(u.view.query, !u.view.up)
+		case '[':
+			u.jumpToPrompt(true)
+		case ']':
+			u.jumpToPrompt(false)
 		}
 	}
 }
@@ -443,4 +447,25 @@ func searchMatches(row []protocol.Cell, query string) []bool {
 		}
 		offset = start + 1
 	}
+}
+
+// jumpToPrompt moves the cursor to the start of the previous (up) or next
+// shell prompt, from the marks shell integration (OSC 133) leaves.
+func (u *ui) jumpToPrompt(up bool) {
+	direction := "down"
+	if up {
+		direction = "up"
+	}
+	c := u.view.cursor
+	r, err := Request(u.socket, protocol.Request{Op: "jump-prompt", Name: u.name, PaneID: u.view.pane, Direction: direction,
+		Range: &protocol.TextRange{Epoch: u.view.epoch, FromX: c.x, FromY: c.y}})
+	if err != nil || r.Range == nil {
+		message := "no prompt"
+		if err != nil {
+			message = err.Error()
+		}
+		u.notice("Prompt: " + message)
+		return
+	}
+	u.viewMove(point{0, r.Range.FromY})
 }
