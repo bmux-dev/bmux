@@ -14,6 +14,15 @@ bmux
 Go's binary directory must be on `PATH`. Check `go env GOBIN`; when empty, use
 `$(go env GOPATH)/bin`, usually `~/go/bin`.
 
+Releases after v0.5.0 also carry prebuilt binaries for Linux and macOS on
+amd64 and arm64, so Go isn't needed: download `bmux_<os>_<arch>.tar.gz` and
+`checksums.txt` from the [releases page](https://github.com/bmux-dev/bmux/releases),
+check that `sha256sum bmux_<os>_<arch>.tar.gz` (`shasum -a 256` on macOS)
+matches its line in `checksums.txt`, and put the `bmux` inside on your `PATH`.
+The macOS binaries aren't signed: one downloaded with a browser is blocked
+until you run `xattr -d com.apple.quarantine bmux`; `curl` downloads aren't
+affected.
+
 The server starts automatically. Sessions survive detach and client exit. When
 the server stops or the machine reboots, the next server restores them: see
 [Restarts and reboots](#restarts-and-reboots).
