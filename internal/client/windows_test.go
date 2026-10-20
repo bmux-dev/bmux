@@ -14,6 +14,11 @@ import (
 
 func windowUI(t *testing.T) (*ui, chan protocol.Request) {
 	t.Helper()
+	// The top bar starts with user@host; a long hostname (CI runners) would
+	// leave no room for the tabs.
+	identity := powerlineIdentity
+	powerlineIdentity = "me@host"
+	t.Cleanup(func() { powerlineIdentity = identity })
 	u, requests := sidebarUI(t)
 	u.name = "api"
 	f := *u.workspace

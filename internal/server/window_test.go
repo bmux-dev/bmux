@@ -155,18 +155,25 @@ func TestBackgroundWindowsSendNoFramesButListTheirAgents(t *testing.T) {
 		t.Fatal(err)
 	}
 	revision := func() uint64 { s.mu.Lock(); defer s.mu.Unlock(); return s.revisionLocked() }
-	// Let the active window's shell finish starting before measuring.
+	// Let the active window's shell finish starting and go idle at a prompt
+	// before measuring: it prints a marker, then nothing more.
+	mustInput(t, s, protocol.Request{Op: "paste", PaneID: 1, Text: "echo IDLE_$((1+1))\n"})
+	s.mu.Lock()
+	active := s.panes[1]
+	s.mu.Unlock()
+	awaitFrame(t, active, func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "IDLE_2") })
 	before := revision()
 	for settled := time.Now(); time.Since(settled) < 300*time.Millisecond; time.Sleep(20 * time.Millisecond) {
 		if now := revision(); now != before {
 			before, settled = now, time.Now()
 		}
 	}
-	mustInput(t, s, protocol.Request{Op: "paste", PaneID: 2, Text: "echo BACKGROUND\n"})
+	// Only the output has BACK2: a long prompt can wrap the echoed command.
+	mustInput(t, s, protocol.Request{Op: "paste", PaneID: 2, Text: "echo BACK$((1+1))\n"})
 	s.mu.Lock()
 	background := s.panes[2]
 	s.mu.Unlock()
-	awaitFrame(t, background, func(f *protocol.TerminalFrame) bool { return strings.Count(frameText(f), "BACKGROUND") >= 2 })
+	awaitFrame(t, background, func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "BACK2") })
 	if revision() != before {
 		t.Fatal("output in a background window changed the active window's revision")
 	}
