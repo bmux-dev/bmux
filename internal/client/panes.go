@@ -84,6 +84,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 			u.selections[p.ID] = s
 		}
 	}
+	u.noteViewFrame(u.frame)
 }
 
 func (u *ui) activatePane(id int) {
@@ -152,6 +153,7 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 	if p.ID == u.focused {
 		sel = u.selection
 	}
+	viewing := u.view.active && p.ID == u.view.pane
 	for y, row := range f.Rows {
 		if y >= p.Height || paneOriginY+p.Y+y >= h-1 {
 			break
@@ -170,8 +172,11 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 				continue
 			}
 			style := cellStyle(c)
-			if sel.contains(x, f.Base+y) {
+			if sel.contains(x, f.Base+y) || (viewing && u.view.selected(x, f.Base+y)) {
 				style = style.Background(selectionBackground).Foreground(selectionForeground)
+			}
+			if viewing && u.view.cursor == (point{x, f.Base + y}) {
+				style = style.Reverse(true)
 			}
 			text := c.Text
 			if c.Attrs&uv.AttrConceal != 0 {
@@ -183,7 +188,7 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 			u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
 		}
 	}
-	if p.ID == u.focused && f.CursorVisible && !f.Exited && f.CursorX >= 0 && f.CursorY >= 0 && f.CursorX < p.Width && f.CursorY < p.Height && p.X+f.CursorX >= 0 && p.X+f.CursorX < w && paneOriginY+p.Y+f.CursorY >= paneOriginY && paneOriginY+p.Y+f.CursorY < h-1 {
+	if p.ID == u.focused && !viewing && f.CursorVisible && !f.Exited && f.CursorX >= 0 && f.CursorY >= 0 && f.CursorX < p.Width && f.CursorY < p.Height && p.X+f.CursorX >= 0 && p.X+f.CursorX < w && paneOriginY+p.Y+f.CursorY >= paneOriginY && paneOriginY+p.Y+f.CursorY < h-1 {
 		styles := []tcell.CursorStyle{tcell.CursorStyleBlinkingBlock, tcell.CursorStyleBlinkingUnderline, tcell.CursorStyleBlinkingBar}
 		style := styles[max(0, min(f.CursorStyle, 2))]
 		if !f.CursorBlink {

@@ -98,7 +98,7 @@ including giving Ctrl-l back to the shell.
 | List key bindings | Ctrl-a ? |
 | Agent integrations | Ctrl-a i; Enter installs every agent found |
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
-| Select and copy | Drag and release; Alt overrides mouse-aware apps |
+| Select and copy | Drag and release; Alt overrides mouse-aware apps. Or Ctrl-a v, move, v/V/Ctrl-v, y |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
 | Paste | Your terminal's paste shortcut |
 | Send Ctrl-a to the application | Ctrl-a Ctrl-a |

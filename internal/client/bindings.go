@@ -191,6 +191,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.cycleSession(1)
 	case "detach":
 		u.quitting = true
+	case "scrollback":
+		u.openScrollView()
 	case "copy":
 		u.copy()
 	case "scroll-up":
