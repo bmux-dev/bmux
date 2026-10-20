@@ -8,9 +8,8 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
-| **Done, unreleased** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
-| **In review** | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
-| | [v0.6](#v06-scripting) | Scripting and automation |
+| **Done, unreleased** | [v0.4](#v04-windows-and-layouts), [v0.5](#v05-keyboard-scrollback) | Windows and layouts; keyboard scrollback and search |
+| **Next** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -78,7 +77,7 @@ All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21]
 **Goal:** find and copy anything in history without a mouse, and without a mandatory mode.
 **Done when:** you can search, select and copy from the keyboard, and the mouse workflow is unchanged.
 
-All done in stacked pull requests ([#29](https://github.com/josephferrero/bmux/issues/29)–[#34](https://github.com/josephferrero/bmux/issues/34)), awaiting review:
+All done on main ([#29](https://github.com/josephferrero/bmux/issues/29)–[#34](https://github.com/josephferrero/bmux/issues/34)):
 
 | Item | Size | Status |
 | --- | --- | --- |
