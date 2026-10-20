@@ -1,6 +1,9 @@
-# Vim and Neovim navigation
-
-[README](../README.md) · [User guide](usage.md)
+---
+title: "Vim and Neovim navigation"
+description: "Cross Vim and Neovim splits into bmux panes and the sidebar with Ctrl-h/j/k/l."
+sidebar:
+  order: 8
+---
 
 ## How the keys work
 

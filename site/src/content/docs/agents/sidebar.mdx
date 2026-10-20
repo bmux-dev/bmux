@@ -1,0 +1,67 @@
+---
+title: "Agents and the sidebar"
+description: "The sidebar lists every session and every coding agent with its working, waiting or blocked state."
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../components/Screenshot.astro';
+
+The sidebar runs down the left side of the attached view, on the bar
+background. Its top section lists every session in creation order, marked
+with the most urgent state inside it. Below a divider, the **Agents** section
+lists every agent in every session, each with its state and session name, plus
+any other pane waiting on you. Terminals narrower than 80 columns hide it;
+Ctrl-a b hides or shows it at any width that fits.
+
+<Screenshot name="workspace" alt="bmux with the sidebar listing sessions and agents: claude blocked, codex working, opencode idle" />
+
+bmux recognizes an agent when it is the foreground program of a pane:
+aider, amp, claude, codex, copilot, crush, cursor-agent, droid, gemini, goose,
+grok, kimi, kiro-cli, omp, opencode, pi and qwen, including script-based ones
+started through node, bun, deno or python. Without any setup, an agent that
+keeps drawing (spinners, streamed output) for about two seconds is **working**,
+and one that then stays quiet for about two seconds is **waiting**. Output right
+after your typing, a focus change or a resize doesn't count. bmux never reads
+the screen's text.
+
+| Mark | Meaning |
+| --- | --- |
+| ● red / `blocked` | An agent reported it needs a decision |
+| ● teal / `waiting` | An agent stopped working while you weren't looking at its pane: it finished, or it is asking you something |
+| ● teal / `bell` | A program rang the bell or sent a desktop notification (OSC 9 or OSC 777) while you weren't looking |
+| ● yellow / `working` | An agent is working |
+| ○ green / `idle` | An agent is ready for input and you have seen it |
+
+Icons and colors match herdr's defaults. A session row shows its most urgent
+agent: blocked, then waiting, then working, then idle.
+
+A pane counts as seen while it is the focused pane of a session attached in
+a terminal window that has focus. Focusing it clears **waiting**. **blocked**
+stays until the agent reports another state. Rows disappear when the agent
+exits.
+
+When an agent you aren't looking at becomes ready (waiting) or blocked, the
+attached client plays a sound: on macOS the system Glass sound, or Funk when
+blocked; on Linux the freedesktop sound theme's `complete`, or
+`dialog-warning` when blocked, with `pw-play` or `paplay`. Without those, and
+over SSH (so it isn't played on the remote machine), the outer terminal's bell
+rings instead; some terminals, such as Ghostty, keep the bell silent by
+default. Plain terminal bells from other programs mark their pane silently.
+`sound.enabled = false` in the [config file](/bmux/configuration/config-file/) or
+`BMUX_SOUND=0` turns sounds off; `sound.ready` and `sound.blocked` choose your
+own sound files.
+
+| Action in the sidebar | Control |
+| --- | --- |
+| Enter the sidebar | Ctrl-h from the leftmost pane, including from Vim/Neovim via the [editor mapping](/bmux/guides/editor-navigation/) |
+| Move down / up | j/k, Ctrl-j/Ctrl-k, or Down/Up; moving past the last session continues into Agents |
+| Open the selected row | Enter, l, Ctrl-l, Right, or click a row |
+| Back to the panes without switching | Esc, or click a pane |
+| Create a session | n |
+| Delete the selected session | d on a session row, then y; n, Esc, any other key, a paste or a click keeps it |
+| Prefix command | Ctrl-a, as usual |
+
+Opening an agent row attaches its session if needed and focuses that pane.
+Opening a session row focuses its first pane that is blocked or waiting on
+you, if any. Keys typed in the sidebar never reach applications.
