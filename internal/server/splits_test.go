@@ -43,11 +43,11 @@ func TestSplitsFocusZoomAndIndependentShells(t *testing.T) {
 	awaitFrame(t, s.panes[1], func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "LEFT_READY") })
 	awaitFrame(t, s.panes[3], func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "ISOLATED=unset") })
 	input(protocol.Request{Op: "select-pane", Direction: "up"})
-	if s.focused != 2 {
+	if s.focusedLocked() != 2 {
 		t.Fatal("up did not select upper-right pane")
 	}
 	input(protocol.Request{Op: "select-pane", Direction: "left"})
-	if s.focused != 1 {
+	if s.focusedLocked() != 1 {
 		t.Fatal("left did not select left pane")
 	}
 	input(protocol.Request{Op: "zoom"})

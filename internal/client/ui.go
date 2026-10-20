@@ -82,7 +82,10 @@ type ui struct {
 	sound                           func(blocked bool)
 	reconnects                      chan string
 	closeConfirm                    int // pane awaiting y to close, or 0
+	closeWindow                     int // window number awaiting y to close, or 0
 	closeCommand                    string
+	renameWindow                    int         // window the rename-window prompt names
+	windowTabs                      []windowTab // top-bar window labels, for clicks
 	settings                        config.Config
 	configPath                      string
 	configEdge                      uint64 // last seen Frame.Config for this attachment
@@ -251,7 +254,7 @@ func (u *ui) endSession(name string) {
 	u.focused = 0
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
-	u.closeConfirm = 0
+	u.closeConfirm, u.closeWindow = 0, 0
 	u.help, u.integrations.open, u.welcome = false, false, false
 	u.selections = nil
 	u.paneSizes = nil
@@ -340,7 +343,7 @@ func (u *ui) switchTo(name string) error {
 	u.resizeUntil = time.Time{}
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
-	u.closeConfirm = 0
+	u.closeConfirm, u.closeWindow = 0, 0
 	u.help, u.integrations.open, u.welcome = false, false, false
 	u.generation++
 	generation := u.generation
@@ -394,6 +397,9 @@ func (u *ui) openPicker() {
 	u.resizeUntil = time.Time{}
 	u.picker, u.query, u.chosen, u.prefix = true, "", 0, false
 	u.searching = false
+	if u.prompt == "rename-window" {
+		u.prompt, u.promptError = "", "" // names the attached session's window
+	}
 	u.previewEpoch++
 	u.preview, u.previewName, u.previewError = nil, "", ""
 	u.previewRevision = 0
@@ -436,9 +442,13 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 		u.pickerKey(e)
 		return
 	}
-	if u.closeConfirm != 0 {
+	if u.closeConfirm != 0 || u.closeWindow != 0 {
 		u.resizeUntil = time.Time{}
-		u.answerClosePane(e)
+		u.answerClose(e)
+		return
+	}
+	if u.prompt == "rename-window" {
+		u.renameWindowKey(e)
 		return
 	}
 	if u.help {
@@ -682,6 +692,10 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		u.openPicker()
 		return
 	}
+	if y == 0 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
+		u.windowClick(x)
+		return
+	}
 	// Sidebar columns are chrome. A drag or app press that started in a pane
 	// still receives its motion and release there.
 	if ox := u.paneOriginX(screenWidth); ox > 0 {
@@ -887,6 +901,8 @@ func (u *ui) draw() {
 		footer = u.prefixHelp()
 	} else if u.closeConfirm != 0 {
 		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
+	} else if u.closeWindow != 0 {
+		footer = fmt.Sprintf("Close window %d, which runs %s? y closes it · any other key keeps it", u.closeWindow, u.closeCommand)
 	} else if u.prompt == "delete" {
 		footer = "Delete session: y yes · n/Esc no"
 	} else if u.sidebarFocus {
@@ -909,6 +925,13 @@ func (u *ui) draw() {
 		if len(identity) > 0 {
 			footer = identity + " | " + footer
 		}
+	}
+	if !u.picker && u.prompt == "rename-window" {
+		footer = fmt.Sprintf("Rename window %d (Enter saves, empty uses the pane title, Esc cancels): %s", u.renameWindow, u.input)
+		if u.promptError != "" {
+			footer = fmt.Sprintf("Rename window %d (%s): %s", u.renameWindow, u.promptError, u.input)
+		}
+		u.screen.ShowCursor(min(w-1, 1+displayWidth(footer)), h-1)
 	}
 	if h > 1 {
 		u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)

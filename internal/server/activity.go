@@ -300,13 +300,15 @@ func (s *pane) activityLocked(id int) (protocol.PaneActivity, bool) {
 	return a, a.Agent != "" || a.Attention
 }
 
-// Caller holds session.mu. Only the focused pane of a session with a
-// terminal-focused client is viewed; becoming viewed clears its attention.
-// Viewed is also the focus that apps see: a change sends focus in or out,
-// which the emulator delivers only to apps that enabled focus events (?1004).
+// Caller holds session.mu. Only the focused pane of the active window of a
+// session with a terminal-focused client is viewed; becoming viewed clears its
+// attention. Viewed is also the focus that apps see: a change sends focus in
+// or out, which the emulator delivers only to apps that enabled focus events
+// (?1004).
 func (s *session) updateViewedLocked() {
+	focused := s.focusedLocked()
 	for id, p := range s.panes {
-		viewed := id == s.focused && s.viewers > 0
+		viewed := id == focused && s.viewers > 0
 		if p.viewed.Swap(viewed) != viewed && !s.stopping.Load() {
 			_ = p.input(protocol.Request{Op: "focus", Focused: viewed})
 		}
@@ -344,24 +346,24 @@ func (s *session) reportAgent(paneID int, state, label string, resume []string) 
 	return p.reportAgent(state, label, resume)
 }
 
-// Caller holds session.mu. Panes are listed in layout order.
+// Caller holds session.mu. Panes are listed window by window, each in layout
+// order, so background windows' agents still show.
 func (s *session) activityLocked() []protocol.PaneActivity {
-	if s.root == nil {
-		return nil
-	}
-	var positions []placement
-	s.root.place(rect{0, 0, s.width, s.height}, &positions)
 	var result []protocol.PaneActivity
-	for _, pos := range positions {
-		p := s.panes[pos.id]
-		if p == nil {
-			continue
-		}
-		p.mu.Lock()
-		a, ok := p.activityLocked(pos.id)
-		p.mu.Unlock()
-		if ok {
-			result = append(result, a)
+	for _, w := range s.windows {
+		var ids []int
+		w.root.leaves(&ids)
+		for _, id := range ids {
+			p := s.panes[id]
+			if p == nil {
+				continue
+			}
+			p.mu.Lock()
+			a, ok := p.activityLocked(id)
+			p.mu.Unlock()
+			if ok {
+				result = append(result, a)
+			}
 		}
 	}
 	return result

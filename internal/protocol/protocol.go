@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 4
+const Version = 5
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -53,6 +53,9 @@ type Request struct {
 	NeighborID int    `json:"neighbor_id,omitempty"`
 	SessionID  uint64 `json:"session_id,omitempty"`
 	Direction  string `json:"direction,omitempty"`
+	// Window is a 1-based window number for select-window, rename-window and
+	// close-window; 0 means the active window.
+	Window int `json:"window,omitempty"`
 	// Args is the command an agent reports for resuming its conversation.
 	Args []string `json:"args,omitempty"`
 	// IfSeq makes send-input conditional: it is refused unless the pane's
@@ -83,6 +86,7 @@ type Session struct {
 	Clients  int            `json:"clients"`
 	Exited   bool           `json:"exited"`
 	Panes    int            `json:"panes"`
+	Windows  int            `json:"windows,omitempty"`
 	Activity []PaneActivity `json:"activity,omitempty"`
 }
 
@@ -168,6 +172,18 @@ type Frame struct {
 	// previous frame of this attachment; the client copies it like a selection.
 	Clipboard string      `json:"clipboard,omitempty"`
 	Panes     []PaneFrame `json:"panes"`
+	// Windows lists the session's windows in order; the panes above are the
+	// active one's.
+	Windows []Window `json:"windows,omitempty"`
+}
+
+// Window describes one window of a session. Name is "" until it's renamed;
+// Title is then its focused pane's title, for clients to show instead.
+type Window struct {
+	Name   string `json:"name,omitempty"`
+	Title  string `json:"title,omitempty"`
+	Active bool   `json:"active,omitempty"`
+	Panes  []int  `json:"panes"`
 }
 
 type Response struct {
