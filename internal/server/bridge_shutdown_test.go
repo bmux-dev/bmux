@@ -229,7 +229,10 @@ func TestShutdownHUPTrapJobGroupsAndUnrelatedControl(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = control.Process.Kill(); _ = control.Wait() }()
-	p, dir := scriptedPane(t, "set -m\ntrap 'echo hup > hup; exit 0' HUP\n/bin/sh -c 'trap \"\" HUP TERM; echo $$ > child; exec sleep 60' &\necho $! > background\nwhile [ ! -s child ]; do sleep 0.01; done\nkill -STOP $!\necho ready > ready\nwhile :; do sleep 1; done")
+	// The shell idles in the wait builtin, which returns as soon as a trapped
+	// signal arrives. A foreground sleep loop instead delays the trap until a
+	// sleep started after shutdown's HUP finishes, which can be after TERM.
+	p, dir := scriptedPane(t, "set -m\ntrap 'echo hup > hup; exit 0' HUP\n/bin/sh -c 'trap \"\" HUP TERM; echo $$ > child; exec sleep 60' &\necho $! > background\nwhile [ ! -s child ]; do sleep 0.01; done\nkill -STOP $!\necho ready > ready\nsleep 60 &\nwait $!")
 	awaitFile(t, filepath.Join(dir, "ready"))
 	pid, err := strconv.Atoi(awaitFile(t, filepath.Join(dir, "child")))
 	if err != nil {
