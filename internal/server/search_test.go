@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/josephferrero/bmux/internal/protocol"
@@ -49,5 +50,38 @@ func TestSearchHistoryFindsMatchesBothWaysAndWraps(t *testing.T) {
 	}
 	if _, err := p.searchHistory(protocol.TextRange{Epoch: 9}, "err", true); err == nil {
 		t.Fatal("a stale epoch was searched")
+	}
+}
+
+func TestJumpPromptUsesShellIntegrationMarks(t *testing.T) {
+	p := shellless(10, 2)
+	p.trackPrompts()
+	// OSC 133;A starts each prompt, as shell integration sends it.
+	p.write("\x1b]133;A\x07$ one\r\nout\r\n\x1b]133;A;cl=m\x1b\\$ two\r\nout2\r\n")
+	// Rows: 0 "$ one", 1 "out", 2 "$ two", 3 "out2", 4 "" (rows 3-4 on screen).
+	jump := func(from int, up bool) (int, error) {
+		r, err := p.jumpPrompt(protocol.TextRange{Epoch: 1, FromY: from}, up)
+		return r.FromY, err
+	}
+	for _, tc := range []struct {
+		from int
+		up   bool
+		want int
+	}{{4, true, 2}, {2, true, 0}, {0, false, 2}, {1, false, 2}} {
+		if got, err := jump(tc.from, tc.up); err != nil || got != tc.want {
+			t.Fatalf("from %d up %v: %d %v, want %d", tc.from, tc.up, got, err, tc.want)
+		}
+	}
+	if _, err := jump(0, true); err == nil || err.Error() != "no earlier prompt" {
+		t.Fatalf("past the first prompt: %v", err)
+	}
+	if _, err := jump(2, false); err == nil || err.Error() != "no later prompt" {
+		t.Fatalf("past the last prompt: %v", err)
+	}
+	plain := shellless(10, 2)
+	plain.trackPrompts()
+	plain.write("$ no\r\nintegration\r\n")
+	if _, err := plain.jumpPrompt(protocol.TextRange{Epoch: 1, FromY: 2}, true); err == nil || !strings.Contains(err.Error(), "OSC 133") {
+		t.Fatalf("without marks: %v", err)
 	}
 }

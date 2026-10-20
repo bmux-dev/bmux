@@ -17,17 +17,29 @@ type Screen struct {
 	scroll uv.Rectangle
 	// scrollback is the scrollback buffer for lines scrolled off the top.
 	scrollback *Scrollback
-	// bmux: wrapped[y] reports that row y continues onto row y+1 because the
-	// terminal wrapped it. Reflow joins such rows; copies join them too.
-	wrapped []bool
+	// bmux: flags[y] is what's known about row y besides its cells: whether
+	// the terminal wrapped it onto row y+1 (reflow and copies join such
+	// rows), and whether a shell prompt starts on it.
+	flags []LineFlags
 }
+
+// LineFlags record what bmux knows about a line besides its cells.
+// bmux: added for reflow and prompt jumps.
+type LineFlags uint8
+
+const (
+	// FlagWrapped marks a line the terminal wrapped onto the next one.
+	FlagWrapped LineFlags = 1 << iota
+	// FlagPrompt marks a line where a shell prompt starts (OSC 133;A).
+	FlagPrompt
+)
 
 // NewScreen creates a new screen.
 func NewScreen(w, h int) *Screen {
 	s := Screen{
 		buf:        uv.NewRenderBuffer(w, h),
 		scrollback: NewScrollback(DefaultScrollbackSize),
-		wrapped:    make([]bool, h),
+		flags:      make([]LineFlags, h),
 	}
 	s.scroll = s.buf.Bounds()
 	return &s
@@ -42,7 +54,7 @@ func (s *Screen) Reset() {
 	s.saved = Cursor{}
 	s.scroll = s.buf.Bounds()
 	s.buf.Touched = nil
-	clear(s.wrapped)
+	clear(s.flags)
 }
 
 // Bounds returns the bounds of the screen.
@@ -85,42 +97,62 @@ func (s *Screen) Resize(width int, height int) {
 		s.buf.Resize(width, height)
 		s.buf.Touched = nil
 	}
-	s.wrapped = resizeWrapped(s.wrapped, height)
+	s.flags = resizeFlags(s.flags, height)
 	if width != oldWidth {
-		clear(s.wrapped) // cropped or padded rows no longer end where they wrapped
+		// Cropped or padded rows no longer end where they wrapped.
+		for y := range s.flags {
+			s.flags[y] &^= FlagWrapped
+		}
 	}
 	s.scroll = s.buf.Bounds()
 }
 
-// resizeWrapped keeps the first height flags, adding unwrapped rows.
-func resizeWrapped(wrapped []bool, height int) []bool {
-	if height <= len(wrapped) {
-		return wrapped[:height]
+// resizeFlags keeps the first height rows' flags, adding rows without any.
+func resizeFlags(flags []LineFlags, height int) []LineFlags {
+	if height <= len(flags) {
+		return flags[:height]
 	}
-	return append(wrapped, make([]bool, height-len(wrapped))...)
+	return append(flags, make([]LineFlags, height-len(flags))...)
+}
+
+// LineFlags returns row y's flags. bmux: added for reflow and prompt jumps.
+func (s *Screen) LineFlags(y int) LineFlags {
+	if y >= 0 && y < len(s.flags) {
+		return s.flags[y]
+	}
+	return 0
 }
 
 // LineWrapped reports whether row y continues onto the next row.
 // bmux: added for reflow.
 func (s *Screen) LineWrapped(y int) bool {
-	return y >= 0 && y < len(s.wrapped) && s.wrapped[y]
+	return s.LineFlags(y)&FlagWrapped != 0
 }
 
-// setWrapped records whether row y continues onto the next row.
-func (s *Screen) setWrapped(y int, wrapped bool) {
-	if y >= 0 && y < len(s.wrapped) {
-		s.wrapped[y] = wrapped
+// setFlag turns flag on or off for row y.
+func (s *Screen) setFlag(y int, flag LineFlags, on bool) {
+	if y < 0 || y >= len(s.flags) {
+		return
+	}
+	if on {
+		s.flags[y] |= flag
+	} else {
+		s.flags[y] &^= flag
 	}
 }
 
-// clearWrapped forgets wraps in rows erased through their last column: they
-// end where they end now.
-func (s *Screen) clearWrapped(area uv.Rectangle) {
+// clearFlags forgets the wraps of rows erased through their last column,
+// which end where they end now, and the prompts of rows erased whole.
+func (s *Screen) clearFlags(area uv.Rectangle) {
 	if area.Max.X < s.buf.Width() {
 		return
 	}
-	for y := max(0, area.Min.Y); y < min(area.Max.Y, len(s.wrapped)); y++ {
-		s.wrapped[y] = false
+	drop := FlagWrapped
+	if area.Min.X <= 0 {
+		drop |= FlagPrompt
+	}
+	for y := max(0, area.Min.Y); y < min(area.Max.Y, len(s.flags)); y++ {
+		s.flags[y] &^= drop
 	}
 }
 
@@ -143,7 +175,7 @@ func (s *Screen) ClearWithScrollback() {
 		for y := range s.buf.Height() {
 			line := s.buf.Line(y)
 			if line != nil && !s.isLineEmpty(line) {
-				s.scrollback.PushWrapped(line, s.LineWrapped(y))
+				s.scrollback.PushLine(line, s.LineFlags(y))
 			}
 		}
 	}
@@ -164,7 +196,7 @@ func (s *Screen) isLineEmpty(line uv.Line) bool {
 func (s *Screen) ClearArea(area uv.Rectangle) {
 	s.buf.ClearArea(area)
 	s.touchArea(area)
-	s.clearWrapped(area)
+	s.clearFlags(area)
 }
 
 // Fill fills the screen or part of it.
@@ -176,7 +208,7 @@ func (s *Screen) Fill(c *uv.Cell) {
 func (s *Screen) FillArea(c *uv.Cell, area uv.Rectangle) {
 	s.buf.FillArea(c, area)
 	s.touchArea(area)
-	s.clearWrapped(area)
+	s.clearFlags(area)
 }
 
 // setHorizontalMargins sets the horizontal margins.
@@ -377,7 +409,7 @@ func (s *Screen) InsertLine(n int) bool {
 	}
 
 	s.buf.InsertLineArea(y, n, s.blankCell(), s.scroll)
-	s.shiftWrapped(y, n)
+	s.shiftFlags(y, n)
 
 	return true
 }
@@ -409,11 +441,11 @@ func (s *Screen) DeleteLine(n int) bool {
 		scroll.Min.X == 0 && scroll.Max.X == s.buf.Width() {
 		// Save lines that will be deleted
 		linesToSave := min(n, scroll.Max.Y-y)
-		s.scrollback.PushN(s.buf, s.wrapped, y, linesToSave)
+		s.scrollback.PushN(s.buf, s.flags, y, linesToSave)
 	}
 
 	s.buf.DeleteLineArea(y, n, s.blankCell(), scroll)
-	s.shiftWrapped(y, -n)
+	s.shiftFlags(y, -n)
 
 	return true
 }
@@ -438,16 +470,16 @@ func (s *Screen) touchArea(area uv.Rectangle) {
 	}
 }
 
-// shiftWrapped moves wrap flags along with rows inserted (n > 0) or deleted
+// shiftFlags moves line flags along with rows inserted (n > 0) or deleted
 // (n < 0) at row y inside the scroll region. A region narrower than the
-// screen moves only part of each row, so those rows' wraps are forgotten.
+// screen moves only part of each row, so those rows' flags are forgotten.
 // bmux: added for reflow.
-func (s *Screen) shiftWrapped(y, n int) {
-	top, bottom := y, min(s.scroll.Max.Y, len(s.wrapped))
+func (s *Screen) shiftFlags(y, n int) {
+	top, bottom := y, min(s.scroll.Max.Y, len(s.flags))
 	if top >= bottom {
 		return
 	}
-	region := s.wrapped[top:bottom]
+	region := s.flags[top:bottom]
 	if s.scroll.Min.X != 0 || s.scroll.Max.X != s.buf.Width() {
 		clear(region)
 		return

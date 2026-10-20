@@ -169,3 +169,68 @@ func (s *session) searchHistory(id int, from *protocol.TextRange, query, directi
 	match.Epoch = from.Epoch
 	return match, err
 }
+
+// promptLocked reports whether a shell prompt starts on retained row id.
+// Caller holds pane.mu.
+func (p *pane) promptLocked(id int) bool {
+	history := p.term.ScrollbackLen()
+	total := max(p.historyTotal, history)
+	switch start := total - history; {
+	case id < start:
+		return false
+	case id < total:
+		return p.term.ScrollbackPrompt(id - start)
+	default:
+		return p.term.LinePrompt(id - total)
+	}
+}
+
+// jumpPrompt finds the nearest row above (up) or below row from.FromY where a
+// shell prompt starts. Unlike searches, jumps stop at the ends.
+func (p *pane) jumpPrompt(from protocol.TextRange, up bool) (protocol.TextRange, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.term.IsAltScreen() {
+		return protocol.TextRange{}, fmt.Errorf("full-screen programs have no scrollback")
+	}
+	if from.Epoch != p.epoch {
+		return protocol.TextRange{}, fmt.Errorf("the pane's history changed; try again")
+	}
+	history := p.term.ScrollbackLen()
+	total := max(p.historyTotal, history)
+	first, last := total-history, total+p.term.Height()-1
+	step := 1
+	if up {
+		step = -1
+	}
+	for id := from.FromY + step; id >= first && id <= last; id += step {
+		if p.promptLocked(id) {
+			return protocol.TextRange{Epoch: from.Epoch, FromY: id, ToY: id}, nil
+		}
+	}
+	for id := first; id <= last; id++ {
+		if p.promptLocked(id) {
+			if up {
+				return protocol.TextRange{}, fmt.Errorf("no earlier prompt")
+			}
+			return protocol.TextRange{}, fmt.Errorf("no later prompt")
+		}
+	}
+	return protocol.TextRange{}, fmt.Errorf("no prompt marks: the shell doesn't send them (OSC 133 shell integration)")
+}
+
+// jumpPrompt jumps in a pane of the session; pane 0 is the active window's
+// focused pane.
+func (s *session) jumpPrompt(id int, from *protocol.TextRange, direction string) (protocol.TextRange, error) {
+	if from == nil {
+		return protocol.TextRange{}, fmt.Errorf("jump-prompt needs a starting point")
+	}
+	if direction != "up" && direction != "down" {
+		return protocol.TextRange{}, fmt.Errorf("jump direction must be up or down")
+	}
+	p, err := s.livePane(id)
+	if err != nil {
+		return protocol.TextRange{}, err
+	}
+	return p.jumpPrompt(*from, direction == "up")
+}

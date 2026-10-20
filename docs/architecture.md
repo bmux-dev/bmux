@@ -80,23 +80,35 @@ The emulator pipe has a fast reader. Independent FIFO writing can wait on the PT
 without blocking emulator state or shutdown. Zero-byte pipe fences synchronize
 user/reply classification; they are part of the contract, not redundant writes.
 
-## Soft wraps and reflow
+## Line flags, reflow and history RPCs
 
-`internal/vt` flags each row that autowrap moved off, on screen and in
-scrollback. Flags move with inserted, deleted and scrolled lines, go into
-scrollback with their line, and clear when an erase reaches a row's last
-column; a scroll region narrower than the screen forgets the wraps of the
-rows it moves. `Emulator.Resize` reflows the main screen (showing or not):
-rows join into logical lines, which `rewrap` splits at the new width without
-splitting wide characters, mapping old columns so the cursor keeps its
-character. Screen lines stay on screen and history stays history; rows that
-no longer fit move into scrollback. The alternate screen is only cropped.
+`internal/vt` keeps `LineFlags` per row, on screen and in scrollback:
+`FlagWrapped` for a row autowrap moved off, `FlagPrompt` for a row where a
+shell prompt started (`MarkPrompt`, which the pane calls on OSC 133;A, main
+screen only). Flags move with inserted, deleted and scrolled lines and go
+into scrollback with their line. An erase reaching a row's last column
+clears its wrap; erasing the whole row clears its prompt; a scroll region
+narrower than the screen forgets the flags of the rows it moves.
+`Emulator.Resize` reflows the main screen (showing or not): rows join into
+logical lines, which `rewrap` splits at the new width without splitting wide
+characters, mapping old columns so the cursor keeps its character; a line's
+prompt flag stays on its first row. Screen lines stay on screen and history
+stays history; rows that no longer fit move into scrollback. The alternate
+screen is only cropped.
 
 A width change rewrites history, so `pane.input` starts a new coordinate
 epoch, which clears selections and anchors as a history reset does; a
 height-only change moves rows into history in order and keeps IDs.
 `TerminalFrame.Wrapped` carries each visible row's flag, and selection copies
 join wrapped rows without a newline, keeping their trailing blanks.
+
+The keyboard scrollback view is client state over absolute row IDs within
+one epoch. Its copy, search and prompt jumps are one-shot RPCs that read the
+server's retained history under `pane.mu`, so they reach rows the client
+never received: `history-text` (char, line or block ranges, wraps joined),
+`search-history` (one printed line at a time, smartcase, wrapping around)
+and `jump-prompt` (stopping at the ends). Each carries the view's epoch and
+fails instead of reading rows that moved.
 
 ## Snapshots and selection
 
