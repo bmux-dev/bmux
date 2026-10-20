@@ -595,9 +595,16 @@ is unavailable there.
 
 Selections survive pane focus changes. Resizing a pane, repainting selected
 text, or removing it from history clears the selection. Dragging beyond the
-view does not auto-scroll yet. Scrollback does not reflow on resize, and copied
-soft-wrapped lines currently include newlines. Wide, busy histories use more
-memory. Keyboard selection and history search are planned.
+view does not auto-scroll yet. Wide, busy histories use more memory. Keyboard
+selection and history search are planned.
+
+Panes reflow when their width changes, like tmux: lines the terminal wrapped
+join back up and wrap again at the new width, on screen and in scrollback,
+and the cursor stays on the same character. Lines a program ended with a
+newline stay separate. When a pane gets shorter, rows above the cursor move
+into scrollback instead of being cut off. Full-screen programs on the
+alternate screen redraw themselves instead. Copying text the terminal wrapped
+gives one line, without a newline where it wrapped.
 
 ## Clipboard and paste
 

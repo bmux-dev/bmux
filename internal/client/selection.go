@@ -13,6 +13,7 @@ type selection struct {
 	start, end       point
 	active, dragging bool
 	lines            map[int][]protocol.Cell
+	wrapped          map[int]bool // rows the terminal wrapped onto the next
 	epoch            uint64
 	alt, observed    bool
 }
@@ -57,6 +58,7 @@ func (s *selection) remember(f *protocol.TerminalFrame) {
 	s.epoch, s.alt, s.observed = f.Epoch, f.Alt, true
 	if s.lines == nil {
 		s.lines = make(map[int][]protocol.Cell)
+		s.wrapped = make(map[int]bool)
 	}
 	for y, row := range f.Rows {
 		id := f.Base + y
@@ -76,10 +78,12 @@ func (s *selection) remember(f *protocol.TerminalFrame) {
 		}
 		// Refresh unselected cells too: extending a drag must use the latest row.
 		s.lines[id] = append([]protocol.Cell(nil), row...)
+		s.wrapped[id] = y < len(f.Wrapped) && f.Wrapped[y]
 	}
 	for id := range s.lines {
 		if id < f.HistoryStart {
 			delete(s.lines, id)
+			delete(s.wrapped, id)
 		}
 	}
 }
@@ -119,12 +123,16 @@ func sameSelectedCells(old, row []protocol.Cell, lo, hi int) bool {
 	}
 	return true
 }
+
+// text is the selected text. Rows the terminal wrapped join the next row
+// without a newline and keep their trailing blanks, which are part of the
+// line that continues.
 func (s *selection) text() string {
 	if !s.active {
 		return ""
 	}
 	a, b := s.bounds()
-	var lines []string
+	var text strings.Builder
 	for y := a.y; y <= b.y; y++ {
 		row := s.lines[y]
 		lo, hi := 0, len(row)-1
@@ -145,9 +153,16 @@ func (s *selection) text() string {
 			}
 			line.WriteString(visibleCellText(c))
 		}
-		lines = append(lines, strings.TrimRight(line.String(), " "))
+		if y < b.y && s.wrapped[y] {
+			text.WriteString(line.String())
+			continue
+		}
+		text.WriteString(strings.TrimRight(line.String(), " "))
+		if y < b.y {
+			text.WriteByte('\n')
+		}
 	}
-	return strings.Join(lines, "\n")
+	return text.String()
 }
 
 func wordBounds(row []protocol.Cell, x int) (int, int) {

@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/charmbracelet/x/vt"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 func TestCellColorsKeepPaletteIndexes(t *testing.T) {

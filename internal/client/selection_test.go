@@ -31,6 +31,25 @@ func TestSelectionForwardAndReverse(t *testing.T) {
 	}
 }
 
+// A row the terminal wrapped continues the line: copying joins it to the
+// next without a newline and keeps its trailing space, while a row the
+// program ended still ends the copied line.
+func TestSelectionJoinsWrappedRows(t *testing.T) {
+	s := selection{start: point{0, 0}, end: point{2, 2}, active: true}
+	s.remember(&protocol.TerminalFrame{
+		Rows:    [][]protocol.Cell{cells("https:"), cells("//x.io"), cells("next  ")},
+		Wrapped: []bool{true, false, false},
+	})
+	if got := s.text(); got != "https://x.io\nnex" {
+		t.Fatalf("got %q", got)
+	}
+	s = selection{start: point{0, 0}, end: point{2, 2}, active: true}
+	s.remember(&protocol.TerminalFrame{Rows: [][]protocol.Cell{cells("ab cd "), cells("ef    "), cells("next  ")}, Wrapped: []bool{true}})
+	if got := s.text(); got != "ab cd ef\nnex" {
+		t.Fatalf("trailing space of a wrapped row lost: %q", got)
+	}
+}
+
 func TestSelectionWideCharactersAndCachedRows(t *testing.T) {
 	row := []protocol.Cell{{Text: "界", Width: 2}, {}, {Text: "e\u0301", Width: 1}, {Text: " ", Width: 1}}
 	s := selection{start: point{0, 0}, end: point{3, 0}, active: true}
