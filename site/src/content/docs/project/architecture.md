@@ -1,4 +1,9 @@
-# Ownership and contracts
+---
+title: "Architecture"
+description: "Which package owns what, and the contracts between the CLI, daemon, server, client and terminal emulator."
+sidebar:
+  order: 2
+---
 
 ## Responsibilities
 
@@ -8,7 +13,7 @@
 - `internal/config`: the optional config file, defaults, environment overrides and validation.
 - `internal/integration`: agent hook/plugin files, their versions, and mapping hook events to `bmux agent` reports.
 - `internal/server`: session layout, emulator state, owned OS jobs and cancellation.
-- `internal/vt`: the terminal emulator, a copy of charmbracelet/x/vt carrying bmux's soft-wrap tracking and reflow (see its README).
+- `internal/vt`: the terminal emulator, a copy of charmbracelet/x/vt carrying bmux's soft-wrap tracking and reflow (see [its README](https://github.com/bmux-dev/bmux/blob/main/internal/vt/README.md)).
 - `internal/client`: input, modeless selection, clipboard intent and preview display.
 
 ## Lock boundaries

@@ -1,0 +1,52 @@
+---
+title: bmux
+description: "The batteries-included terminal multiplexer: a session picker with live previews, an agent sidebar, modeless mouse selection and restored layouts."
+template: splash
+hero:
+  tagline: Common tmux-plugin workflows in one program, with no plugin manager.
+  actions:
+    - text: Install
+      link: /bmux/start/installation/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/bmux-dev/bmux
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
+import Screenshot from '../../components/Screenshot.astro';
+
+<Screenshot name="workspace" alt="bmux with the agent sidebar and split panes" />
+
+<Aside>v0.3.0 pre-release for macOS and Linux.</Aside>
+
+## Quick start
+
+```sh
+go install github.com/josephferrero/bmux/cmd/bmux@latest
+bmux
+```
+
+## Built in
+
+<CardGrid>
+  <Card title="Session picker" icon="list-format">
+    List-first picker with fuzzy filtering and a live preview of the running terminal. [Sessions](/bmux/guides/sessions/)
+  </Card>
+  <Card title="Agent sidebar" icon="star">
+    Every coding agent across sessions, marked working, waiting or blocked. [Agents and the sidebar](/bmux/agents/sidebar/)
+  </Card>
+  <Card title="Modeless selection" icon="pencil">
+    Drag, double- or triple-click to copy; the wheel scrolls history without copy mode. [Selection and scrollback](/bmux/guides/selection-scrollback/)
+  </Card>
+  <Card title="Restores layouts" icon="laptop">
+    Sessions, splits, directories and agent conversations come back after a restart or reboot; other running programs don't. [Restarts and reboots](/bmux/guides/restarts/)
+  </Card>
+  <Card title="Layout files and projects" icon="document">
+    A `.bmux.toml` declares a folder's windows and panes; Ctrl-a f opens any project. [Layout files](/bmux/guides/layout-files/)
+  </Card>
+  <Card title="Configurable" icon="setting">
+    Works without a config file; every key can be rebound. [Configuration file](/bmux/configuration/config-file/)
+  </Card>
+</CardGrid>

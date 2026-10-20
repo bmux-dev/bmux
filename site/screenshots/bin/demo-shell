@@ -1,0 +1,6 @@
+#!/bin/bash
+# Pane shell for documentation screenshots. bmux runs "$SHELL -l"; ignore the
+# flag and skip startup files so every pane shows the same short prompt. The
+# OSC 133 mark makes [ and ] (jump between prompts) work in the scrollback view.
+export PS1='\[\e]133;A\a\]\[\e[1;36m\]\W\[\e[0m\] \$ '
+exec /bin/bash --noprofile --norc -i

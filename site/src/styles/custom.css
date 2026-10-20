@@ -1,0 +1,27 @@
+:root {
+	--sl-color-accent-low: #06343b;
+	--sl-color-accent: #0891a5;
+	--sl-color-accent-high: #a5f0fa;
+}
+:root[data-theme='light'] {
+	--sl-color-accent-low: #cff5fa;
+	--sl-color-accent: #0a7180;
+	--sl-color-accent-high: #063c44;
+}
+.bmux-shot { margin-block: 1.5rem; }
+.bmux-shot img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 0.75rem;
+	border: 1px solid var(--sl-color-gray-5);
+	box-shadow: var(--sl-shadow-md);
+}
+:root[data-theme='dark'] .bmux-shot-light,
+:root[data-theme='light'] .bmux-shot-dark { display: none; }
+.bmux-shot figcaption {
+	margin-top: 0.5rem;
+	font-size: var(--sl-text-sm);
+	color: var(--sl-color-gray-3);
+	text-align: center;
+}

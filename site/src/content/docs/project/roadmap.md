@@ -1,4 +1,9 @@
-# Roadmap
+---
+title: "Roadmap"
+description: "What bmux has shipped, what is next, and what is deliberately left out."
+sidebar:
+  order: 1
+---
 
 bmux aims to cover what people use tmux **plus its most popular plugins** for,
 with everything built in and no plugin manager.
@@ -156,7 +161,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmuxinator, tmuxp | `.bmux.toml` layout files with trusted commands; `bmux layout save` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
-| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](docs/editor-navigation.md), `keys.pass-through` for other programs (its `is_vim` pattern) |
+| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](/bmux/guides/editor-navigation/), `keys.pass-through` for other programs (its `is_vim` pattern) |
 | tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client |
 | tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, wheel to scroll; Alt overrides mouse-aware apps |
 | tmux-notify (agents) | Sound when a background agent becomes ready or blocked |

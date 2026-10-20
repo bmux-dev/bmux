@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Stands in for a coding agent in documentation screenshots: draws a fixed
+# screen for STATE, reports STATE under NAME with `bmux agent`, then waits.
+# Usage: fake-agent working|blocked|idle NAME
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+  echo "usage: fake-agent working|blocked|idle NAME" >&2
+  exit 2
+fi
+state="$1"
+name="$2"
+where="~${PWD#"$HOME"}"
+b=$'\e[1m' dim=$'\e[2m' cyan=$'\e[36m' yellow=$'\e[33m' green=$'\e[32m' red=$'\e[31m' r=$'\e[0m'
+
+printf '\e[H\e[2J'
+printf ' %s%s%s %s· %s%s\n\n' "$b" "$name" "$r" "$dim" "$where" "$r"
+case "$state" in
+  blocked)
+    printf ' %s›%s Run the server tests\n\n' "$cyan" "$r"
+    printf ' %s●%s Ran go build ./...\n' "$green" "$r"
+    printf ' %s●%s Wants to run %sgo test ./...%s\n\n' "$yellow" "$r" "$b" "$r"
+    printf ' %s%sAllow this command?%s\n' "$b" "$red" "$r"
+    printf '   %s❯ 1. Yes%s\n' "$cyan" "$r"
+    printf "     2. Yes, don't ask again\n"
+    printf '     3. No, tell %s why\n' "$name"
+    ;;
+  working)
+    printf ' %s›%s Add a /health endpoint\n\n' "$cyan" "$r"
+    printf ' %s•%s Read router.go\n' "$green" "$r"
+    printf ' %s•%s Edited health.go %s(+42)%s\n' "$green" "$r" "$dim" "$r"
+    printf ' %s•%s Running go vet ./...\n\n' "$yellow" "$r"
+    printf ' %s⠹ Working%s %s(18s · esc)%s\n' "$yellow" "$r" "$dim" "$r"
+    ;;
+  idle)
+    printf ' %s✓%s Updated the login form\n' "$green" "$r"
+    printf '   %s3 files changed, +58 -12%s\n\n' "$dim" "$r"
+    printf ' %s>%s \n' "$cyan" "$r"
+    ;;
+  *)
+    echo "fake-agent: unknown state $state" >&2
+    exit 2
+    ;;
+esac
+bmux agent "$state" "$name"
+exec sleep 86400

@@ -1,0 +1,120 @@
+---
+title: "Sessions"
+description: "Browse, create, rename and delete sessions from a list-first picker with a live preview, and learn how panes and sessions end."
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../components/Screenshot.astro';
+
+Open with **Ctrl-a s** or click the bottom status line. The picker starts in
+list navigation, not search. A live preview appears below the list. Clicking a
+row selects it for preview; it does not attach.
+
+<Screenshot name="session-picker" alt="The session picker filtered to api, with a live preview of its panes below the list" />
+
+| Action in the list | Control |
+| --- | --- |
+| Move down / up | j/k, Down/Up, Ctrl-j/Ctrl-k, or mouse wheel over the list |
+| Select a row | Click |
+| Attach | Enter |
+| Create | n or Ctrl-n |
+| Rename selected session | r or Ctrl-r |
+| Terminate selected session | d, then lowercase y to confirm |
+| Start or edit a filter | / |
+| Clear a filter, then return to the attached session | Esc; press again after clearing |
+| Exit the client, leaving sessions running | Ctrl-c |
+
+With no attached session and no filter, Esc exits the client.
+
+## Search and filter
+
+Press **/**, then type to fuzzy-match session names and starting directories.
+While editing, letters such as j, k, n, and r are search text.
+
+- **Up/Down** select matches while editing.
+- **Backspace** or **Ctrl-h** deletes the last character; **Ctrl-u** clears the text.
+- **Enter** finishes editing and keeps the filter. Use j/k to browse the results,
+  then **Enter** again to attach.
+- **Esc** cancels editing and clears the filter.
+- **Ctrl-c** exits the client.
+
+## Create, rename, and delete
+
+**Create:** press n, confirm a name with Enter, then confirm the starting
+directory. The name starts with the filter text or the directory name from
+which this client was launched. The directory starts with that client's launch
+directory. Relative paths use that directory; `~` and `~/...` are accepted.
+
+**Rename:** press r, edit the selected session's name, and press Enter.
+
+In either prompt, **Ctrl-u** clears the prefilled text, **Backspace/Ctrl-h**
+deletes a character, and **Esc** cancels. Paste works in these fields and in
+the search filter. Invalid entries show an error so you can correct them.
+
+**Delete:** press d to see the session name, pane count, and attached clients.
+Only unmodified lowercase **y** confirms termination. **n**, **Esc**, **Enter**,
+and other keys cancel. Pasting text does not confirm. Confirming ends the
+session and all its panes. Progress and errors appear in the status line;
+the picker stays usable. Only one termination can be pending in a client.
+
+## Preview
+
+The preview is read-only and uses your terminal's font and the application's
+text and colors. Browsing a preview does not attach, resize the application,
+or move its pane focus. Large screens are cropped around the cursor rather
+than shrunk. Terminals smaller than 30 columns or 16 rows show only the list.
+Press Enter to attach before interacting with the application.
+
+## Session names
+
+Names accept Unicode letters and digits, dots, dashes, and underscores. They
+must be 1–80 bytes. Explicit names must be unique; spaces are not allowed.
+
+Bare `bmux` derives a name from the current directory:
+
+- Replace spaces and unsupported characters with dashes, then trim dashes
+  from both ends.
+- Use `session` if the result is empty, `.` or `..`.
+- Add a numeric suffix when needed: `api`, `api-2`, `api-3`.
+- Shorten long names to fit 80 bytes, including the suffix.
+
+Bare `bmux` always creates fresh work. It never reattaches to a matching name,
+not even after `bmux restart`: use `bmux attach` to return to a session.
+
+## Panes and session lifetime
+
+Each pane starts a login shell. The server chooses `$SHELL` when it starts,
+falling back to `/bin/sh`. A new split starts in the **focused pane's current
+directory**, like tmux's `-c "#{pane_current_path}"`: the directory of the
+program in front of the shell (an editor started in a project, say), otherwise
+the shell's. If that directory was removed, the split starts in the session's
+original directory. Nested split layouts and pane focus survive detach and
+reattach.
+
+- **Ctrl-a x** closes the focused pane and stops its jobs, like tmux's
+  `kill-pane`. If only the shell is running it closes at once; if a program is
+  in front of the shell, the status line names it and only a lowercase **y**
+  closes the pane. Any other key or a paste keeps it.
+- Run `exit`, or use Ctrl-d at an empty shell prompt, to close a shell pane.
+- When the shell exits, the pane closes and its sibling expands. This also
+  happens while detached.
+- Closing the last pane removes the session and returns attached clients to
+  the picker.
+- A session supports up to 32 panes. Splitting requires enough space; dividers
+  stop at minimum pane sizes.
+- Shrinking the terminal can hide panes. Zoom the focused pane to work in a
+  smaller window. Moving focus in a direction unzooms, like tmux.
+
+Several clients can attach to one session. Pane focus is shared. The latest
+attachment or attached-client resize sets the shared application size.
+
+Applications that ask for focus events (`?1004`), such as Neovim for
+`FocusGained`, `FocusLost` and `autoread`, hear that their pane has focus while
+it is the session's focused pane and at least one attached client's terminal
+window has focus. Moving to another pane, switching terminal windows, opening
+the picker and detaching all report focus out. An application that turns
+focus events on while focused is told at once, as in tmux.
+
+Terminating a pane or session also stops its ordinary jobs. Programs that
+deliberately detach themselves from the shell's process session can keep running.
