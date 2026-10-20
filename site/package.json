@@ -8,8 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "predev": "node scripts/sync-agent-guide.mjs",
-    "prebuild": "node scripts/sync-agent-guide.mjs",
+    "predev": "node scripts/sync-docs.mjs",
+    "prebuild": "node scripts/sync-docs.mjs",
     "screenshots": "bash screenshots/render.sh",
     "social-card": "node scripts/render-social-card.mjs"
   },

@@ -281,7 +281,7 @@ and `BMUX_SOUND` environment variables still work and override the file.
 This is an early prototype. CI runs on macOS and Ubuntu; it's used day to day
 on macOS and Linux.
 
-See the [roadmap](https://bmux-dev.github.io/bmux/project/roadmap/) for what's next.
+See the [roadmap](ROADMAP.md) for what's next.
 
 ## Contributing
 
@@ -304,8 +304,7 @@ before changing terminal or session behavior.
 Releases are built by [GoReleaser](.goreleaser.yaml). Pushing a `vX.Y.Z` tag
 runs CI, then uploads the archives and `checksums.txt` to a draft release;
 write the notes and publish it. The version comes from the tag, so a release
-commit only updates the README and the roadmap page
-(`site/src/content/docs/project/roadmap.md`). `goreleaser release --snapshot
+commit only updates the README and ROADMAP. `goreleaser release --snapshot
 --clean` builds the same archives locally into `dist/`.
 
 ## License
