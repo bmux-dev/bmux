@@ -586,9 +586,12 @@ Mouse-aware applications receive mouse events by default. **Alt** gives the
 gesture to bmux instead. If your terminal reserves Shift-drag, it performs
 the terminal's own selection; if it passes Shift through, bmux handles selection.
 
-Typing or pasting returns to live output. Each pane keeps up to **10,000 lines**
-of scrollback. Full-screen alternate-screen applications use their own scrolling;
-bmux history scrolling is unavailable there.
+Typing or pasting returns to live output. Each pane keeps **10,000 lines** of
+scrollback by default; `scrollback.lines` in the [config file](#configuration-file)
+changes it (100 to 200,000), and `bmux reload` applies it to running panes at
+their next output, dropping the oldest lines if it shrank. Full-screen
+alternate-screen applications use their own scrolling; bmux history scrolling
+is unavailable there.
 
 Selections survive pane focus changes. Resizing a pane, repainting selected
 text, or removing it from history clears the selection. Dragging beyond the
@@ -677,6 +680,7 @@ width = 24
 | `projects.roots` | `["~/code", "~/src", "~/projects", "~/dev"]` | Folders the [project picker](#project-picker) searches for git repositories; absolute or `~/` paths. Missing ones are skipped. |
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
 | `projects.zoxide` | `true` | Also list zoxide's directories when zoxide is installed |
+| `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](#rebinding-keys) |
 | `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |
 

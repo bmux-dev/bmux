@@ -24,14 +24,15 @@ type Config struct {
 	Prefix string `toml:"prefix"`
 	// Onboarding shows the welcome screen on the next attach; bmux sets it
 	// to false once the screen has been seen.
-	Onboarding bool     `toml:"onboarding"`
-	UI         UI       `toml:"ui"`
-	Sidebar    Sidebar  `toml:"sidebar"`
-	Sound      Sound    `toml:"sound"`
-	Agents     Agents   `toml:"agents"`
-	Restore    Restore  `toml:"restore"`
-	Projects   Projects `toml:"projects"`
-	Keys       Keys     `toml:"keys"`
+	Onboarding bool       `toml:"onboarding"`
+	UI         UI         `toml:"ui"`
+	Sidebar    Sidebar    `toml:"sidebar"`
+	Sound      Sound      `toml:"sound"`
+	Agents     Agents     `toml:"agents"`
+	Restore    Restore    `toml:"restore"`
+	Projects   Projects   `toml:"projects"`
+	Scrollback Scrollback `toml:"scrollback"`
+	Keys       Keys       `toml:"keys"`
 }
 
 type UI struct {
@@ -85,6 +86,17 @@ type Projects struct {
 	Zoxide bool     `toml:"zoxide"`
 }
 
+// Scrollback is how many lines of history each pane keeps.
+type Scrollback struct {
+	Lines int `toml:"lines"`
+}
+
+// Bounds for scrollback.lines; each line holds a row of cells.
+const (
+	MinScrollbackLines = 100
+	MaxScrollbackLines = 200000
+)
+
 // Duration reads TOML strings such as "2s" or "1500ms".
 type Duration struct{ time.Duration }
 
@@ -107,6 +119,7 @@ func Default() Config {
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
 		Restore:    Restore{Enabled: true},
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3, Zoxide: true},
+		Scrollback: Scrollback{Lines: 10000},
 	}
 }
 
@@ -297,6 +310,10 @@ func (c *Config) repair() []string {
 		bad("projects.depth %d must be between 1 and 6", c.Projects.Depth)
 		c.Projects.Depth = d.Projects.Depth
 	}
+	if c.Scrollback.Lines < MinScrollbackLines || c.Scrollback.Lines > MaxScrollbackLines {
+		bad("scrollback.lines %d must be between %d and %d", c.Scrollback.Lines, MinScrollbackLines, MaxScrollbackLines)
+		c.Scrollback.Lines = d.Scrollback.Lines
+	}
 	c.repairKeys(bad)
 	return problems
 }
@@ -361,6 +378,9 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # roots = ["~/code", "~/src", "~/projects", "~/dev"]  # searched for git repositories
 # depth = 3                 # how many levels down each root to look
 # zoxide = true             # also list zoxide's directories, when installed
+
+[scrollback]
+# lines = 10000             # history kept per pane, 100-200000; bmux reload applies it
 
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:

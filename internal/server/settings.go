@@ -19,6 +19,7 @@ type serverSettings struct {
 	restore                   bool
 	resume                    map[string][]string // per-agent override; empty = none
 	passThrough               map[string]bool     // programs that get navigation keys
+	scrollback                int                 // history lines kept per pane
 }
 
 var (
@@ -55,6 +56,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		restore:      cfg.Restore.Enabled,
 		resume:       cfg.Restore.Resume,
 		passThrough:  passThrough,
+		scrollback:   cfg.Scrollback.Lines,
 	}
 }
 
