@@ -55,6 +55,7 @@ func init() {
 			// Writes agents' config files and reports from their hooks.
 			return runIntegration(socket, args, os.Stdin, os.Stdout)
 		}},
+		{"layout", "save [SESSION] | trust [DIR]", "Save a session's windows as its folder's .bmux.toml, or trust a folder's file so its commands run", noServer, runLayout},
 		{"restart", "", "Save sessions, restart the server, restore them", noServer, runRestart},
 		{"reload", "", "Reread the config file (also Ctrl-a r)", noServer, runReload},
 		{"guide", "", "How agents read, drive and watch panes (Markdown)", noSocket, runGuide},

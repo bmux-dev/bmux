@@ -29,6 +29,7 @@ type session struct {
 	width, height int
 	shell         string
 	revision      uint64
+	notice        string // for the first client to attach, e.g. a layout file problem
 	viewers       int    // attached clients whose terminal has focus
 	edges         uint64 // directional moves that found no neighbor pane
 	edgeDirection string

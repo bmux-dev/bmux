@@ -44,20 +44,22 @@ type sessionSnapshot struct {
 	Layout  *layoutSnapshot `json:"layout,omitempty"`
 }
 
+// Windows and layout trees are also the format of layout files (.bmux.toml),
+// hence the TOML names.
 type windowSnapshot struct {
-	Name    string          `json:"name,omitempty"`
-	Focused int             `json:"focused"`
-	Zoomed  bool            `json:"zoomed,omitempty"`
-	Layout  *layoutSnapshot `json:"layout"`
+	Name    string          `json:"name,omitempty" toml:"name,omitempty"`
+	Focused int             `json:"focused" toml:"focused,omitzero"`
+	Zoomed  bool            `json:"zoomed,omitempty" toml:"zoomed,omitempty"`
+	Layout  *layoutSnapshot `json:"layout" toml:"layout"`
 }
 
 // A leaf names a pane; an inner node has a direction, ratio and two children.
 type layoutSnapshot struct {
-	Pane      int             `json:"pane,omitempty"`
-	Direction string          `json:"direction,omitempty"`
-	Ratio     int             `json:"ratio,omitempty"`
-	First     *layoutSnapshot `json:"first,omitempty"`
-	Second    *layoutSnapshot `json:"second,omitempty"`
+	Pane      int             `json:"pane,omitempty" toml:"pane,omitzero"`
+	Direction string          `json:"direction,omitempty" toml:"direction,omitempty"`
+	Ratio     int             `json:"ratio,omitempty" toml:"ratio,omitzero"`
+	First     *layoutSnapshot `json:"first,omitempty" toml:"first,omitempty"`
+	Second    *layoutSnapshot `json:"second,omitempty" toml:"second,omitempty"`
 }
 
 type paneSnapshot struct {
@@ -68,6 +70,9 @@ type paneSnapshot struct {
 	// built-in ones continue the agent's latest conversation in Dir.
 	Resume   []string `json:"resume,omitempty"`
 	Reported bool     `json:"reported,omitempty"`
+	// Command is a layout file's startup line, typed into the shell as is.
+	// Layout files only; never saved.
+	Command string `json:"-"`
 }
 
 // Built-in resume commands for recognized agents without a reported one.
@@ -245,12 +250,13 @@ func restoreWindows(saved []windowSnapshot, active int, panes map[int]paneSnapsh
 	return windows, restoredActive
 }
 
-// restoreSession rebuilds saved windows with fresh shells. A window with an
-// invalid tree is dropped; if none is left, the session gets one pane in its
-// directory. resumed tracks built-in "continue latest" commands per directory
-// so two panes never reopen the same conversation; reported commands are
-// exact and always run.
-func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool) (*session, error) {
+// restoreSession rebuilds saved windows with fresh shells at width x height
+// (0 for the default size). A window with an invalid tree is dropped; if none
+// is left, the session gets one pane in its directory. resumed tracks
+// built-in "continue latest" commands per directory so two panes never
+// reopen the same conversation; reported commands are exact and always run,
+// and so are layout files' commands.
+func restoreSession(snap sessionSnapshot, shell string, width, height int, resumed map[string]bool) (*session, error) {
 	home, _ := os.UserHomeDir()
 	dir := existingDir(snap.Dir, home)
 	panes := make(map[int]paneSnapshot, len(snap.Panes))
@@ -265,7 +271,7 @@ func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool)
 	if len(windows) == 0 {
 		windows, active, panes = []*window{{root: &layout{id: 1}, focused: 1}}, 0, map[int]paneSnapshot{1: {ID: 1, Dir: dir}}
 	}
-	w, h := dimensions(0, 0)
+	w, h := dimensions(width, height)
 	used := snap.Used
 	if used.IsZero() {
 		used = time.Now()
@@ -311,6 +317,10 @@ func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool)
 	_ = s.resizePanes()
 	s.mu.Unlock()
 	for _, c := range created {
+		if c.snap.Command != "" {
+			_ = c.p.input(protocol.Request{Op: "type", Text: c.snap.Command + "\r"})
+			continue
+		}
 		if len(c.snap.Resume) == 0 || validateResume(c.snap.Resume) != nil {
 			continue
 		}
@@ -389,7 +399,7 @@ func (s *Server) EnablePersistence(path string) error {
 		if validateName(snap.Name) != nil {
 			continue
 		}
-		item, err := restoreSession(snap, s.shell, resumed)
+		item, err := restoreSession(snap, s.shell, 0, 0, resumed)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "bmux: could not restore session %s: %v\n", snap.Name, err)
 			continue

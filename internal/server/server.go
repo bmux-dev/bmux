@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/josephferrero/bmux/internal/protocol"
@@ -31,6 +32,8 @@ type Server struct {
 	persistLast  []byte
 	persistFinal bool
 	configPath   string // guarded by persistMu
+	// layoutTrustPath is the store of trusted layout files; see layoutfile.go.
+	layoutTrustPath atomic.Pointer[string]
 }
 
 func New(shell string) *Server {
@@ -126,7 +129,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
-	if (r.Op == "focus-pane" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input") && r.SessionID != 0 {
+	if (r.Op == "focus-pane" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout") && r.SessionID != 0 {
 		// Never fall back to the name: after a rename it may belong to another session.
 		item = nil
 		for _, candidate := range s.sessions {
@@ -208,6 +211,22 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = err.Error()
 		}
 		result.Command = command
+	case "layout":
+		// The session's windows as a layout file for its directory, for bmux
+		// layout save to write there.
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		item.mu.Lock()
+		dir := item.info.Dir
+		item.mu.Unlock()
+		data, err := item.layout(dir)
+		if err != nil {
+			result.Error = err.Error()
+			break
+		}
+		result.Text, result.Dir = string(data), dir
 	case "capture-pane":
 		if item == nil {
 			result.Error = "session not found"
@@ -326,6 +345,7 @@ func (s *Server) handle(conn net.Conn) {
 	ack := 0
 	force := true
 	viewing := false
+	noticed := false // the session's notice goes out with this attachment's first frame
 	// Copies made before this attachment belong to whoever was attached then.
 	clipboardSeen := clipboardWrites.Load()
 	defer func() {
@@ -402,6 +422,9 @@ func (s *Server) handle(conn net.Conn) {
 			}
 			revision, force = rev, false
 			frame.Clipboard = item.clipboardSince(&clipboardSeen)
+			if !noticed {
+				frame.Notice, noticed = item.takeNotice(), true
+			}
 			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 			if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
 				return

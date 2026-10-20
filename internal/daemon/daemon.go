@@ -56,6 +56,16 @@ func StatePath() (string, error) {
 	return filepath.Join(home, ".local", "state", "bmux", "sessions.json"), nil
 }
 
+// LayoutTrustPath is the store of trusted layout files (bmux layout trust),
+// next to the saved sessions.
+func LayoutTrustPath() (string, error) {
+	state, err := StatePath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(state), "trusted-layouts.json"), nil
+}
+
 func Prepare() (string, error) {
 	dir, err := Directory()
 	if err != nil {
@@ -217,6 +227,9 @@ func Serve(socket string, stop <-chan os.Signal) error {
 		fmt.Fprintln(os.Stderr, "bmux: sessions will not be saved:", err)
 	} else if err = s.EnablePersistence(state); err != nil {
 		fmt.Fprintln(os.Stderr, "bmux: sessions will not be saved:", err)
+	}
+	if trust, err := LayoutTrustPath(); err == nil {
+		s.SetLayoutTrust(trust)
 	}
 	done := make(chan struct{})
 	// Like Helix, SIGUSR1 rereads the config file (pkill -USR1 -f 'bmux --serve').
