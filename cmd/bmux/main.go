@@ -357,6 +357,9 @@ Inside a session:
   Ctrl-a ,   Rename window        Ctrl-a &   Close window
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
+  Ctrl-a ;   Last pane            Ctrl-a { / }   Swap with previous / next pane
+  Ctrl-a Ctrl-o   Rotate panes    Ctrl-a ! / @   Pane to new window / into last window
+  Ctrl-a Space   Next layout (Alt-1..5 pick one)   Ctrl-a E   Even out splits
   Ctrl-a h/j/k/l   Resize divider by five cells
                   Repeat plain h/j/k/l until a one-second pause
   Ctrl-h/j/k/l    Navigate bmux panes, or forward to foreground Neovim/Vim

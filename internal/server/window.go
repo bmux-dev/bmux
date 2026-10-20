@@ -17,6 +17,7 @@ type window struct {
 	focused int
 	last    int // previously focused pane, for last-pane; 0 if none
 	zoomed  bool
+	preset  int // 1 + the index in layoutPresets last applied, for next-layout
 }
 
 const maxWindowName = 40

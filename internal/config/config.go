@@ -336,12 +336,15 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
 # navigate-left/down/up/right (Vim/Neovim-aware), focus-left/down/up/right,
-# next-pane, resize-left/down/up/right, split-right, split-down, zoom,
-# close-pane, new-window, close-window, rename-window, next-window,
-# previous-window, last-window, select-window-1 to select-window-9, sessions,
-# new-session, last-session, previous-session, next-session, detach, copy,
-# scroll-up, scroll-down, toggle-sidebar, reload-config, help, integrations,
-# send-prefix.
+# next-pane, last-pane, resize-left/down/up/right, split-right, split-down,
+# zoom, close-pane, swap-pane-previous, swap-pane-next, rotate-window,
+# break-pane, join-pane, next-layout, layout-even-horizontal,
+# layout-even-vertical, layout-main-horizontal, layout-main-vertical,
+# layout-tiled, equalize-layout, new-window, close-window, rename-window,
+# next-window, previous-window, last-window, select-window-1 to
+# select-window-9, sessions, new-session, last-session, previous-session,
+# next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
+# reload-config, help, integrations, send-prefix.
 
 [keys]
 # pass-through = []         # programs that get Ctrl-h/j/k/l like Vim, e.g. ["fzf"]
@@ -360,6 +363,16 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "x" = "close-pane"
 # "m" = "zoom"
 # "o" = "next-pane"
+# ";" = "last-pane"
+# "{" = "swap-pane-previous"
+# "}" = "swap-pane-next"
+# "C-o" = "rotate-window"
+# "!" = "break-pane"        # to a new window
+# "@" = "join-pane"         # into the last window, beside its focused pane
+# "space" = "next-layout"
+# "A-1" = "layout-even-horizontal"  # A-2 even-vertical, A-3 main-horizontal,
+#                                   # A-4 main-vertical, A-5 tiled
+# "E" = "equalize-layout"
 # "left" = "focus-left"     # and down, up, right
 # "h" = "resize-left"       # j down, k up, l right; repeat without the prefix
 # "s" = "sessions"

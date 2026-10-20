@@ -335,6 +335,10 @@ func (s *session) input(r protocol.Request) error {
 		if !w.root.setDivider(id, r.NeighborID, r.Direction, at, rect{0, 0, s.width, s.height}) {
 			return fmt.Errorf("those panes no longer share a divider")
 		}
+	case "swap-pane", "rotate-window", "select-layout", "last-pane", "break-pane", "join-pane":
+		if err := s.arrangeLocked(r, wi, w, id); err != nil {
+			return err
+		}
 	case "zoom":
 		w.focus(id)
 		w.zoomed = !w.zoomed

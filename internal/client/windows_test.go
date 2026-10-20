@@ -76,6 +76,31 @@ func TestWindowTabsShowWindowsAndSelectOnClickOrNumber(t *testing.T) {
 	}
 }
 
+func TestPaneArrangementKeysSendTheirOperations(t *testing.T) {
+	u, requests := windowUI(t)
+	for _, tc := range []struct {
+		key  *tcell.EventKey
+		want protocol.Request
+	}{
+		{runeKey(';'), protocol.Request{Op: "last-pane"}},
+		{runeKey('{'), protocol.Request{Op: "swap-pane", Direction: "previous"}},
+		{runeKey('}'), protocol.Request{Op: "swap-pane", Direction: "next"}},
+		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModCtrl), protocol.Request{Op: "rotate-window"}},
+		{runeKey('!'), protocol.Request{Op: "break-pane"}},
+		{runeKey('@'), protocol.Request{Op: "join-pane"}},
+		{runeKey(' '), protocol.Request{Op: "select-layout", Kind: "next"}},
+		{runeKey('E'), protocol.Request{Op: "select-layout", Kind: "equalize"}},
+		{tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModAlt), protocol.Request{Op: "select-layout", Kind: "even-horizontal"}},
+		{tcell.NewEventKey(tcell.KeyRune, '5', tcell.ModAlt), protocol.Request{Op: "select-layout", Kind: "tiled"}},
+	} {
+		prefixed(u, tc.key)
+		r := nextRequest(t, requests)
+		if r.Op != tc.want.Op || r.Direction != tc.want.Direction || r.Kind != tc.want.Kind {
+			t.Fatalf("Ctrl-a %s sent %+v, want %+v", keyName(tc.key), r, tc.want)
+		}
+	}
+}
+
 func TestRenameWindowPromptEditsOnlyTheName(t *testing.T) {
 	u, requests := windowUI(t)
 	prefixed(u, runeKey(','))
