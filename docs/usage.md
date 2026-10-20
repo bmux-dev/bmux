@@ -573,7 +573,7 @@ and the server starts without restoring.
 
 | Action | Mouse |
 | --- | --- |
-| Select and copy | Drag, then release |
+| Select and copy | Drag, then release; drag past the pane's top or bottom to scroll |
 | Select a word and copy | Double-click |
 | Select a line and copy | Triple-click |
 | Scroll history | Wheel up/down, three lines per event |
@@ -595,9 +595,14 @@ their next output, dropping the oldest lines if it shrank. Full-screen
 alternate-screen applications use their own scrolling; bmux history scrolling
 is unavailable there.
 
+Dragging a selection above or below the pane scrolls history toward the
+pointer, faster the further out it is, and keeps scrolling while you hold
+still; moving back into the pane stops it. Rows scrolled past too fast to
+draw are still copied, from the server's history.
+
 Selections survive pane focus changes. Resizing a pane, repainting selected
-text, or removing it from history clears the selection. Dragging beyond the
-view does not auto-scroll yet. Wide, busy histories use more memory.
+text, or removing it from history clears the selection. Wide, busy
+histories use more memory.
 
 Panes reflow when their width changes, like tmux: lines the terminal wrapped
 join back up and wrap again at the new width, on screen and in scrollback,

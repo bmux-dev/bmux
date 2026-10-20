@@ -66,6 +66,7 @@ type ui struct {
 	lastClick                       time.Time
 	clickPoint                      point
 	clickCount                      int
+	drag                            dragScroll // auto-scroll while a selection drag is outside the pane
 	appMouseDown                    bool
 	appMouseButton                  int
 	divider                         *dividerDrag // divider being dragged, or nil
@@ -234,6 +235,8 @@ func run(socket, cwd string, start func(*ui) error) error {
 			u.finishClipboard(result)
 		case result := <-u.sidebarResults:
 			u.finishSidebarRefresh(result)
+		case <-u.dragScrollC():
+			u.dragScrollTick()
 		case result := <-u.projectResults:
 			u.finishProjects(result)
 		case name := <-u.reconnects:
@@ -639,6 +642,19 @@ func dropRune(s string) string {
 func displayWidth(s string) int { return uniseg.StringWidth(s) }
 
 func (u *ui) copy() {
+	if u.selection.observed && u.selection.missingRows() {
+		// Auto-scroll outran the frames: copy from the server's history.
+		a, b := u.selection.bounds()
+		r, err := Request(u.socket, protocol.Request{Op: "history-text", Name: u.name, PaneID: u.focused, Range: &protocol.TextRange{
+			Epoch: u.selection.epoch, FromX: a.x, FromY: a.y, ToX: b.x, ToY: b.y, Mode: "char",
+		}})
+		if err != nil {
+			u.notice("Could not copy: " + err.Error())
+			return
+		}
+		u.copyText(r.Text)
+		return
+	}
 	text := u.selection.text()
 	if text == "" {
 		u.notice("Select text by dragging first")
@@ -788,6 +804,7 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	// cannot get stuck when a drag ends on the status bar.
 	if e.Buttons() == tcell.ButtonNone {
 		if u.selection.dragging {
+			u.stopDragScroll()
 			u.selection.dragging = false
 			if u.selection.start != u.selection.end || u.clickCount != 1 {
 				u.copy()
@@ -805,6 +822,15 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		}
 	}
 	y -= paneOriginY
+	if u.selection.dragging && e.Buttons()&tcell.Button1 != 0 && u.clickCount == 1 {
+		visibleRows := min(len(u.frame.Rows), pos.Height, max(0, screenHeight-1-paneOriginY-pos.Y))
+		if y < 0 || y >= visibleRows {
+			u.dragOutside(x, y, visibleRows, pos.Width)
+			u.selection.remember(u.frame)
+			return
+		}
+		u.stopDragScroll()
+	}
 	// Chrome never routes presses/motion/wheel events into an app, including
 	// while an older frame is still waiting for the resize acknowledgement.
 	if screenY < paneOriginY || screenY >= screenHeight-1 {
@@ -887,6 +913,7 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		}
 		u.selection.remember(u.frame)
 	} else if u.selection.dragging {
+		u.stopDragScroll()
 		u.selection.dragging = false
 		if u.selection.start != u.selection.end || u.clickCount != 1 {
 			u.copy()
