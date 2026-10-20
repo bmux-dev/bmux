@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
 #
 # Environment:
-#   BMUX_VERSION=v0.6.0   install this release instead of the newest one
+#   BMUX_VERSION=v0.5.1   install this release instead of the newest one
 #   BMUX_INSTALL_DIR=DIR  install into DIR instead of ~/.local/bin
 #   BMUX_RELEASE_URL=URL  download URL/TAG/ASSET from a mirror (needs BMUX_VERSION)
 #
