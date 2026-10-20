@@ -1,9 +1,4 @@
----
-title: "Roadmap"
-description: "What bmux has shipped, what is next, and what is deliberately left out."
-sidebar:
-  order: 1
----
+# Roadmap
 
 bmux aims to cover what people use tmux **plus its most popular plugins** for,
 with everything built in and no plugin manager.
@@ -173,7 +168,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmuxinator, tmuxp | `.bmux.toml` layout files with trusted commands; `bmux layout save` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
-| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](/bmux/guides/editor-navigation/), `keys.pass-through` for other programs (its `is_vim` pattern) |
+| vim-tmux-navigator | Vim/Neovim-aware Ctrl-h/j/k/l, edge-crossing via [an editor mapping](https://bmux-dev.github.io/bmux/guides/editor-navigation/), `keys.pass-through` for other programs (its `is_vim` pattern) |
 | tmux-yank, `set-clipboard` | Copy on mouse release: pbcopy, wl-copy, xclip, xsel or OSC 52; apps' OSC 52 writes (Neovim yanks) copied by every attached client; copies join soft-wrapped lines |
 | tmux-better-mouse-mode, `mouse on` | Click to focus, drag dividers to resize, drag/double/triple-click to select, drag past the edge to auto-scroll, wheel to scroll; Alt overrides mouse-aware apps |
 | `copy-mode -e` with vi keys, tmux-copycat, `search-backward` | Optional scrollback view (Ctrl-a v): vi moves, `v` / `V` / Ctrl-v, `y` copies; search with Ctrl-a / or `/` `?` `n` `N`; `[` / `]` jump between shell prompts (OSC 133) |
