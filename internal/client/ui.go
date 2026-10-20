@@ -966,7 +966,7 @@ func (u *ui) draw() {
 	} else if u.prompt == "delete" {
 		footer = "Delete session: y yes · n/Esc no"
 	} else if u.view.active {
-		footer = "Scrollback: hjkl/arrows w b 0 $ g G move · v V Ctrl-v select · y copy · Esc back"
+		footer = "Scrollback: hjkl w b 0 $ g G move · v V Ctrl-v select · y copy · / ? search · n N next · Esc back"
 	} else if u.sidebarFocus {
 		footer = "Sidebar: j/k select · Enter/l open · d delete · Esc back · n new session"
 	} else if u.help {
@@ -993,6 +993,14 @@ func (u *ui) draw() {
 		if u.promptError != "" {
 			footer = fmt.Sprintf("Rename window %d (%s): %s", u.renameWindow, u.promptError, u.input)
 		}
+		u.screen.ShowCursor(min(w-1, 1+displayWidth(footer)), h-1)
+	}
+	if !u.picker && u.view.active && u.view.searching {
+		direction := "up"
+		if !u.view.up {
+			direction = "down"
+		}
+		footer = fmt.Sprintf("Search %s (Enter searches, Esc cancels): %s", direction, u.view.input)
 		u.screen.ShowCursor(min(w-1, 1+displayWidth(footer)), h-1)
 	}
 	if h > 1 {

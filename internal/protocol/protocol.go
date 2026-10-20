@@ -229,4 +229,6 @@ type Response struct {
 	// Env is the server's own environment (environment), which a restart
 	// started from inside a pane gives the new server.
 	Env []string `json:"env,omitempty"`
+	// Range is search-history's match: From is its first cell, To its last.
+	Range *TextRange `json:"range,omitempty"`
 }

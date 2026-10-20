@@ -161,6 +161,10 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 		if paneOriginY+p.Y+y < paneOriginY {
 			continue
 		}
+		var matches []bool
+		if viewing {
+			matches = searchMatches(row, u.view.query)
+		}
 		for x, c := range row {
 			if x >= p.Width || p.X+x >= w {
 				break
@@ -172,6 +176,9 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 				continue
 			}
 			style := cellStyle(c)
+			if x < len(matches) && matches[x] {
+				style = style.Background(accentColor).Foreground(chrome.background)
+			}
 			if sel.contains(x, f.Base+y) || (viewing && u.view.selected(x, f.Base+y)) {
 				style = style.Background(selectionBackground).Foreground(selectionForeground)
 			}

@@ -20,6 +20,12 @@ type scrollView struct {
 	anchor point
 	mode   string // "" (no selection), "char", "line" or "block"
 	top    int    // the row expected at the top of the viewport
+	// Search: prompting while searching; query is the last search, which
+	// matches on screen highlight and n/N repeat, up toward older rows.
+	searching bool
+	input     string
+	query     string
+	up        bool
 }
 
 // openScrollView starts the view at the pane's cursor.
@@ -124,6 +130,10 @@ func isBlank(c protocol.Cell) bool { return strings.TrimSpace(c.Text) == "" && c
 
 // viewKey handles every key while the view is open; none reach the pane.
 func (u *ui) viewKey(e *tcell.EventKey) {
+	if u.view.searching {
+		u.searchPromptKey(e)
+		return
+	}
 	if u.isPrefix(e) {
 		u.closeScrollView()
 		u.prefix = true
@@ -214,6 +224,12 @@ func (u *ui) viewKey(e *tcell.EventKey) {
 			u.toggleViewMode("line")
 		case 'y':
 			u.copyView()
+		case '/', '?':
+			u.view.searching, u.view.input, u.view.up = true, "", e.Rune() == '?'
+		case 'n':
+			u.runSearch(u.view.query, u.view.up)
+		case 'N':
+			u.runSearch(u.view.query, !u.view.up)
 		}
 	}
 }
@@ -321,4 +337,110 @@ func (u *ui) wordEnd(p point) point {
 		x++
 	}
 	return point{min(x, max(0, len(row)-1)), p.y}
+}
+
+// openSearch (Ctrl-a /) opens the view with a prompt that searches up from
+// the bottom, most recent first.
+func (u *ui) openSearch() {
+	u.openScrollView()
+	if u.view.active {
+		u.view.searching, u.view.input, u.view.up = true, "", true
+	}
+}
+
+// searchPromptKey edits the search prompt; Enter searches, Esc stays in the
+// view without searching.
+func (u *ui) searchPromptKey(e *tcell.EventKey) {
+	switch e.Key() {
+	case tcell.KeyEscape, tcell.KeyCtrlC:
+		u.view.searching = false
+	case tcell.KeyEnter:
+		u.view.searching = false
+		if u.view.input != "" {
+			u.runSearch(u.view.input, u.view.up)
+		}
+	case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyCtrlH:
+		u.view.input = dropRune(u.view.input)
+	case tcell.KeyCtrlU:
+		u.view.input = ""
+	case tcell.KeyRune:
+		if e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0 {
+			u.view.input += string(e.Rune())
+		}
+	}
+}
+
+// runSearch asks the server for the next match from the cursor, up toward
+// older rows or down toward newer ones, and moves the cursor onto it.
+func (u *ui) runSearch(query string, up bool) {
+	if query == "" {
+		u.notice("No search yet: / searches down, ? searches up")
+		return
+	}
+	u.view.query, u.view.up = query, up
+	direction := "down"
+	if up {
+		direction = "up"
+	}
+	c := u.view.cursor
+	r, err := Request(u.socket, protocol.Request{Op: "search-history", Name: u.name, PaneID: u.view.pane, Text: query, Direction: direction,
+		Range: &protocol.TextRange{Epoch: u.view.epoch, FromX: c.x, FromY: c.y}})
+	if err != nil || r.Range == nil {
+		message := "no match"
+		if err != nil {
+			message = err.Error()
+		}
+		u.notice("Search: " + message)
+		return
+	}
+	u.viewMove(point{r.Range.FromX, r.Range.FromY})
+}
+
+// searchMatches marks the cells of a row inside matches of query, with the
+// server's smartcase: a lowercase query ignores case.
+func searchMatches(row []protocol.Cell, query string) []bool {
+	if query == "" {
+		return nil
+	}
+	fold := strings.ToLower(query) == query
+	var text strings.Builder
+	var owner []int // owner[i] is the column of the cell text byte i came from
+	for x, c := range row {
+		if c.Width == 0 {
+			continue
+		}
+		t := c.Text
+		if t == "" {
+			t = " "
+		}
+		if fold {
+			t = strings.ToLower(t)
+		}
+		text.WriteString(t)
+		for range len(t) {
+			owner = append(owner, x)
+		}
+	}
+	if fold {
+		query = strings.ToLower(query)
+	}
+	var marked []bool
+	s := text.String()
+	for offset := 0; ; {
+		i := strings.Index(s[offset:], query)
+		if i < 0 {
+			return marked
+		}
+		if marked == nil {
+			marked = make([]bool, len(row))
+		}
+		start := offset + i
+		for b := start; b < start+len(query); b++ {
+			x := owner[b]
+			for w := 0; w < max(1, row[x].Width) && x+w < len(row); w++ {
+				marked[x+w] = true
+			}
+		}
+		offset = start + 1
+	}
 }

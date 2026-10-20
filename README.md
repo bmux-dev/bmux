@@ -100,6 +100,7 @@ including giving Ctrl-l back to the shell.
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps. Or Ctrl-a v, move, v/V/Ctrl-v, y |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
+| Search history | Ctrl-a /, then n/N for the next match |
 | Paste | Your terminal's paste shortcut |
 | Send Ctrl-a to the application | Ctrl-a Ctrl-a |
 
