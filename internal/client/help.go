@@ -12,6 +12,9 @@ import (
 func (u *ui) helpLines() []string {
 	root, prefix := u.keyTables()
 	var lines []string
+	if hint := u.updateHint(); hint != nil {
+		lines = append(lines, updateHintMessage(hint), "")
+	}
 	section := func(title string, table map[string]string, prefixed bool) {
 		lines = append(lines, title)
 		for _, action := range config.Actions {

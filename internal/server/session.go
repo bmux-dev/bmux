@@ -473,7 +473,7 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 		return nil, revision
 	}
 	f := &protocol.Frame{Name: s.info.Name, Focused: s.focusedLocked(), Width: s.width, Height: s.height, Generation: protocol.SessionGeneration(s.info.Created),
-		Edge: s.edges, EdgeDirection: s.edgeDirection, Config: configRevision.Load(), Windows: s.windowsLocked()}
+		Edge: s.edges, EdgeDirection: s.edgeDirection, Config: configRevision.Load(), Update: updateHint.Load(), Windows: s.windowsLocked()}
 	if w := s.activeLocked(); w != nil {
 		f.Zoomed = w.zoomed
 	}
