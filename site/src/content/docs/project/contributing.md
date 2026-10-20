@@ -21,6 +21,12 @@ go vet ./...
 Read [AGENTS.md](https://github.com/bmux-dev/bmux/blob/main/AGENTS.md) and the [architecture guide](/bmux/project/architecture/)
 before changing terminal or session behavior.
 
+Releases are built by [GoReleaser](https://github.com/bmux-dev/bmux/blob/main/.goreleaser.yaml). Pushing a `vX.Y.Z` tag
+runs CI, then uploads the archives and `checksums.txt` to a draft release;
+write the notes and publish it. The version comes from the tag, so a release
+commit only updates the README and ROADMAP. `goreleaser release --snapshot
+--clean` builds the same archives locally into `dist/`.
+
 ## Workflow
 
 File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
