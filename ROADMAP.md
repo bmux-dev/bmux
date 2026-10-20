@@ -9,7 +9,7 @@ with everything built in and no plugin manager.
 | --- | --- | --- |
 | **Shipped** | v0.3.0 | Daily driver: [config file, rebindable keys, agent integrations](#already-built) |
 | **Done, unreleased** | [v0.4](#v04-windows-and-layouts) | Windows and layouts |
-| **Now** | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
+| **In review** | [v0.5](#v05-keyboard-scrollback) | Keyboard scrollback and search |
 | | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -78,14 +78,16 @@ All done on main ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21]
 **Goal:** find and copy anything in history without a mouse, and without a mandatory mode.
 **Done when:** you can search, select and copy from the keyboard, and the mouse workflow is unchanged.
 
-| Item | Size | Notes |
+All done in stacked pull requests ([#29](https://github.com/josephferrero/bmux/issues/29)–[#34](https://github.com/josephferrero/bmux/issues/34)), awaiting review:
+
+| Item | Size | Status |
 | --- | --- | --- |
-| Search history (`/`, `?`, `n`/`N`) | M | Highlights matches. |
-| Keyboard selection | M | vi-style `v`/`V`/Ctrl-v and `y`. |
-| Jump between shell prompts | S | Uses OSC 133 prompt marks. |
-| Auto-scroll while dragging a selection | S | |
-| Reflow on resize | L | Wrapped lines rewrap, and copying them doesn't add newlines. |
-| Scrollback size setting | S | 10,000 lines per pane today. |
+| Search history (`/`, `?`, `n`/`N`) | M | Done: Ctrl-a / or / ? in the view, smartcase, wraps around, highlights matches on screen |
+| Keyboard selection | M | Done: Ctrl-a v opens the view; vi-style moves, `v`/`V`/Ctrl-v, `y` copies from the server's history |
+| Jump between shell prompts | S | Done: `[` / `]` in the view, from OSC 133;A prompt marks |
+| Auto-scroll while dragging a selection | S | Done: faster further out; skipped rows copied from the server |
+| Reflow on resize | L | Done: wrapped lines rewrap on screen and in scrollback; copies join them |
+| Scrollback size setting | S | Done: `scrollback.lines` (100–200,000), applied on `bmux reload` |
 
 ## v0.6: scripting
 
