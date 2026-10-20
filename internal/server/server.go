@@ -129,7 +129,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
-	if (r.Op == "focus-pane" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history") && r.SessionID != 0 {
+	if (r.Op == "focus-pane" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history" || r.Op == "jump-prompt") && r.SessionID != 0 {
 		// Never fall back to the name: after a rename it may belong to another session.
 		item = nil
 		for _, candidate := range s.sessions {
@@ -227,6 +227,17 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			break
 		}
 		result.Text, result.Dir = string(data), dir
+	case "jump-prompt":
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		row, err := item.jumpPrompt(r.PaneID, r.Range, r.Direction)
+		if err != nil {
+			result.Error = err.Error()
+			break
+		}
+		result.Range = &row
 	case "search-history":
 		if item == nil {
 			result.Error = "session not found"

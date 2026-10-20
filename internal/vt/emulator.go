@@ -255,6 +255,29 @@ func (e *Emulator) ScrollbackWrapped(y int) bool {
 	return e.Scrollback().Wrapped(y)
 }
 
+// LinePrompt reports whether a shell prompt starts on row y of the showing
+// screen. bmux: added for prompt jumps.
+func (e *Emulator) LinePrompt(y int) bool {
+	return e.scr.LineFlags(y)&FlagPrompt != 0
+}
+
+// ScrollbackPrompt reports whether a shell prompt starts on scrollback line
+// y (0 = oldest). bmux: added for prompt jumps.
+func (e *Emulator) ScrollbackPrompt(y int) bool {
+	return e.Scrollback().LineFlags(y)&FlagPrompt != 0
+}
+
+// MarkPrompt records that a shell prompt starts on the cursor's row of the
+// main screen, as shells report with OSC 133;A. The alternate screen has no
+// history, so prompts there aren't kept. bmux: added for prompt jumps.
+func (e *Emulator) MarkPrompt() {
+	if e.scr != &e.scrs[0] {
+		return
+	}
+	_, y := e.scr.CursorPosition()
+	e.scr.setFlag(y, FlagPrompt, true)
+}
+
 // Read reads data from the terminal input buffer.
 func (e *Emulator) Read(p []byte) (n int, err error) {
 	if e.closed {

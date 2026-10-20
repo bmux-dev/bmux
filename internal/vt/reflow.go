@@ -9,10 +9,15 @@ import (
 // then wrapped again at the new width, in the screen and in scrollback.
 // Screen lines stay on the screen and history stays history, so a cleared
 // screen isn't refilled from scrollback; screen rows that no longer fit move
-// into scrollback, oldest first. The cursor stays on the same character.
+// into scrollback, oldest first. The cursor stays on the same character,
+// and a prompt mark stays on the first row of its line.
 
-// logicalLine is a printed line: its cells, from rows joined where wrapped.
-type logicalLine []uv.Cell
+// logicalLine is a printed line: its cells, from rows joined where wrapped,
+// and whether a prompt starts it.
+type logicalLine struct {
+	cells  []uv.Cell
+	prompt bool
+}
 
 // trimRow drops trailing blank cells from a row that ends there.
 func trimRow(row uv.Line) uv.Line {
@@ -23,19 +28,28 @@ func trimRow(row uv.Line) uv.Line {
 	return row[:end]
 }
 
-// joinRows turns rows and their wrap flags into logical lines.
-func joinRows(rows []uv.Line, wrapped []bool) []logicalLine {
+// joinRows turns rows and their flags into logical lines.
+func joinRows(rows []uv.Line, flags []LineFlags) []logicalLine {
 	var lines []logicalLine
 	var line logicalLine
+	started := false
 	for i, row := range rows {
-		if i < len(wrapped) && wrapped[i] {
-			line = append(line, row...)
+		var f LineFlags
+		if i < len(flags) {
+			f = flags[i]
+		}
+		if !started {
+			line.prompt, started = f&FlagPrompt != 0, true
+		}
+		if f&FlagWrapped != 0 {
+			line.cells = append(line.cells, row...)
 			continue
 		}
-		lines = append(lines, append(line, trimRow(row)...))
-		line = nil
+		line.cells = append(line.cells, trimRow(row)...)
+		lines = append(lines, line)
+		line, started = logicalLine{}, false
 	}
-	if line != nil {
+	if started {
 		lines = append(lines, line)
 	}
 	return lines
@@ -44,16 +58,16 @@ func joinRows(rows []uv.Line, wrapped []bool) []logicalLine {
 // position is a cell in rewrapped rows.
 type position struct{ row, col int }
 
-// rewrap splits a logical line into rows of width cells, never splitting a
-// wide character, and reports where each old column landed: at[i] is the
-// new position of the cell that started at old column i (columns inside a
-// wide character map to its first cell). end is just past the last cell. A
-// line always takes at least one row.
-func rewrap(line logicalLine, width int) (rows []uv.Line, at []position, end position) {
+// rewrap splits a logical line into rows of width cells with their flags,
+// never splitting a wide character, and reports where each old column
+// landed: at[i] is the new position of the cell that started at old column
+// i (columns inside a wide character map to its first cell). end is just
+// past the last cell. A line always takes at least one row.
+func rewrap(line logicalLine, width int) (rows []uv.Line, flags []LineFlags, at []position, end position) {
 	row := newRow(width)
 	col := 0
-	at = make([]position, len(line))
-	for i, c := range line {
+	at = make([]position, len(line.cells))
+	for i, c := range line.cells {
 		if c.IsZero() {
 			// A wide character's trailing cells; the first one placed them.
 			if i > 0 {
@@ -77,7 +91,16 @@ func rewrap(line logicalLine, width int) (rows []uv.Line, at []position, end pos
 		}
 		col += w
 	}
-	return append(rows, row), at, position{len(rows), col}
+	end = position{len(rows), col}
+	rows = append(rows, row)
+	flags = make([]LineFlags, len(rows))
+	for j := range flags[:len(flags)-1] {
+		flags[j] = FlagWrapped
+	}
+	if line.prompt {
+		flags[0] |= FlagPrompt
+	}
+	return rows, flags, at, end
 }
 
 func newRow(width int) uv.Line {
@@ -112,19 +135,19 @@ func (s *Screen) reflow(width, height int, phantom bool) bool {
 	for y := range last + 1 {
 		screenRows = append(screenRows, s.buf.Line(y))
 	}
-	screenWrapped := append([]bool(nil), s.wrapped[:last+1]...)
-	screenWrapped[last] = false // nothing below to continue onto
+	screenFlags := append([]LineFlags(nil), s.flags[:last+1]...)
+	screenFlags[last] &^= FlagWrapped // nothing below to continue onto
 
 	// A line wrapped from scrollback onto the screen belongs to the screen.
 	var history []uv.Line
-	var historyWrapped []bool
+	var historyFlags []LineFlags
 	if sb := s.scrollback; sb != nil {
-		history, historyWrapped = sb.lines, sb.wrapped
-		for len(history) > 0 && historyWrapped[len(history)-1] {
+		history, historyFlags = sb.lines, sb.flags
+		for len(history) > 0 && historyFlags[len(history)-1]&FlagWrapped != 0 {
 			n := len(history) - 1
 			screenRows = append([]uv.Line{history[n]}, screenRows...)
-			screenWrapped = append([]bool{true}, screenWrapped...)
-			history, historyWrapped = history[:n], historyWrapped[:n]
+			screenFlags = append([]LineFlags{historyFlags[n]}, screenFlags...)
+			history, historyFlags = history[:n], historyFlags[:n]
 			cy++
 		}
 	}
@@ -139,7 +162,7 @@ func (s *Screen) reflow(width, height int, phantom bool) bool {
 			}
 			break
 		}
-		if screenWrapped[y] {
+		if screenFlags[y]&FlagWrapped != 0 {
 			offset += len(screenRows[y])
 		} else {
 			cursorLine, offset = cursorLine+1, 0
@@ -147,70 +170,64 @@ func (s *Screen) reflow(width, height int, phantom bool) bool {
 	}
 
 	var rows []uv.Line
-	var rowsWrapped []bool
+	var rowsFlags []LineFlags
 	cursor := position{}
-	for i, line := range joinRows(screenRows, screenWrapped) {
-		lineRows, at, end := rewrap(line, width)
+	for i, line := range joinRows(screenRows, screenFlags) {
+		lineRows, lineFlags, at, end := rewrap(line, width)
 		first := len(rows)
 		if i == cursorLine {
 			cursor, phantom = cursorPosition(line, at, end, cursorOffset, width, phantom)
 			// A cursor past the line's text may need rows of its own.
 			for len(lineRows) <= cursor.row {
 				lineRows = append(lineRows, newRow(width))
+				lineFlags = append(lineFlags, 0)
 			}
 			cursor.row += first
 		}
-		for j, row := range lineRows {
-			rows = append(rows, row)
-			rowsWrapped = append(rowsWrapped, j < len(lineRows)-1)
-		}
+		rows = append(rows, lineRows...)
+		rowsFlags = append(rowsFlags, lineFlags...)
 	}
 
 	// Rewrap history only when lines can change shape.
 	if s.scrollback != nil && width != oldWidth {
 		var rewrapped []uv.Line
-		var flags []bool
-		for _, line := range joinRows(history, historyWrapped) {
-			lineRows, _, _ := rewrap(line, width)
-			for j, row := range lineRows {
-				final := j == len(lineRows)-1
-				if final {
-					row = trimRow(row)
-				}
-				rewrapped = append(rewrapped, row)
-				flags = append(flags, !final)
-			}
+		var flags []LineFlags
+		for _, line := range joinRows(history, historyFlags) {
+			lineRows, lineFlags, _, _ := rewrap(line, width)
+			lineRows[len(lineRows)-1] = trimRow(lineRows[len(lineRows)-1])
+			rewrapped = append(rewrapped, lineRows...)
+			flags = append(flags, lineFlags...)
 		}
-		history, historyWrapped = rewrapped, flags
+		history, historyFlags = rewrapped, flags
 	}
 
 	// Rows that no longer fit go to scrollback, keeping the cursor on screen.
 	if excess := len(rows) - height; excess > 0 {
 		history = append([]uv.Line(nil), history...)
-		historyWrapped = append([]bool(nil), historyWrapped...)
+		historyFlags = append([]LineFlags(nil), historyFlags...)
 		for i := range excess {
 			row := rows[i]
-			if !rowsWrapped[i] {
+			if rowsFlags[i]&FlagWrapped == 0 {
 				row = trimRow(row)
 			}
 			history = append(history, row)
-			historyWrapped = append(historyWrapped, rowsWrapped[i])
+			historyFlags = append(historyFlags, rowsFlags[i])
 		}
-		rows, rowsWrapped = rows[excess:], rowsWrapped[excess:]
+		rows, rowsFlags = rows[excess:], rowsFlags[excess:]
 		cursor.row -= excess
 	}
 	if s.scrollback != nil {
-		s.scrollback.replace(history, historyWrapped)
+		s.scrollback.replace(history, historyFlags)
 	}
 
 	s.buf.Resize(width, height)
 	s.buf.Touched = nil
-	s.wrapped = resizeWrapped(s.wrapped[:0], height)
+	s.flags = resizeFlags(s.flags[:0], height)
 	for y := range height {
 		row := newRow(width)
 		if y < len(rows) {
 			copy(row, rows[y])
-			s.wrapped[y] = rowsWrapped[y]
+			s.flags[y] = rowsFlags[y]
 		}
 		copy(s.buf.Line(y), row)
 	}
@@ -232,7 +249,7 @@ func cursorPosition(line logicalLine, at []position, end position, offset, width
 	if phantom && offset-1 < len(at) {
 		i := offset - 1
 		p := at[i]
-		w := max(1, line[i].Width)
+		w := max(1, line.cells[i].Width)
 		if p.col+w < width {
 			return position{p.row, p.col + w}, false
 		}

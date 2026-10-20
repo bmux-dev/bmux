@@ -621,6 +621,7 @@ go to the view, never to the pane's program, and the status line lists them.
 | Select | v by character, V by line, Ctrl-v a block; the same key again ends it, another switches kind |
 | Copy and leave | y or Enter |
 | Search down / up | / or ?, type, Enter; n repeats, N goes the other way |
+| Previous / next shell prompt | [ / ] |
 | End the selection, then leave | Esc |
 | Leave | q or Ctrl-c |
 
@@ -639,6 +640,14 @@ in the other, and searches wrap around at the ends of history. A query in
 lowercase ignores case; any capital letter makes it exact. The whole retained
 history is searched on the server, a printed line at a time, so text the
 terminal wrapped onto two rows is still found.
+
+**[** and **]** jump to the previous and next shell prompt, so you can go
+back to where a command's output starts. They need your shell to mark its
+prompts with OSC 133 (FinalTerm shell integration): fish, zsh and bash
+integrations, starship, and Ghostty's and iTerm's shell scripts do. For a
+plain bash prompt, put `\[\e]133;A\a\]` at the start of `PS1`. Marks stay on
+their line through scrolling and reflow; erasing the line drops its mark.
+Without marks, the keys say so.
 
 ## Clipboard and paste
 
