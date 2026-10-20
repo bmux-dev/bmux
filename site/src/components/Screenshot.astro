@@ -1,0 +1,24 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+	/** Scene name: shows src/assets/screenshots/NAME-dark.png or NAME-light.png to match the site theme. */
+	name: string;
+	alt: string;
+	caption?: string;
+}
+
+const { name, alt, caption } = Astro.props;
+const shots = import.meta.glob<{ default: ImageMetadata }>('../assets/screenshots/*.png', { eager: true });
+const dark = shots[`../assets/screenshots/${name}-dark.png`];
+const light = shots[`../assets/screenshots/${name}-light.png`];
+if (!dark || !light) {
+	throw new Error(`Screenshot "${name}": ${name}-dark.png or ${name}-light.png is missing from src/assets/screenshots; run npm run screenshots`);
+}
+---
+<figure class="bmux-shot">
+	<Image src={dark.default} alt={alt} class="bmux-shot-dark" />
+	<Image src={light.default} alt={alt} class="bmux-shot-light" />
+	{caption && <figcaption>{caption}</figcaption>}
+</figure>

@@ -1,0 +1,150 @@
+---
+title: bmux
+description: "The batteries-included terminal multiplexer: a session picker with live previews, an agent sidebar, modeless mouse selection and restored layouts."
+template: splash
+---
+
+import Demo from '../../components/Demo.astro';
+
+<div class="home">
+
+<div class="home-hero">
+
+# The batteries-included terminal multiplexer
+
+Common tmux-plugin workflows in one program, with no plugin manager. Browse
+sessions with live previews, watch your coding agents from a sidebar, copy text
+with the mouse, and keep your layout across restarts.
+
+<div class="home-install">
+<span class="home-install-label">install script</span>
+
+```sh frame="none"
+curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
+```
+
+</div>
+
+<p class="home-note">macOS or Linux. Checks the download against the release checksums and never uses sudo. Or <code>go install github.com/josephferrero/bmux/cmd/bmux@latest</code> with Go 1.26+. <a href="/bmux/start/installation/">Full install steps</a></p>
+
+</div>
+
+<Demo />
+
+<div class="home-section">
+
+## What is bmux?
+
+bmux is a terminal multiplexer: persistent sessions, split into windows and
+panes, that keep running when you detach. The things you would add to tmux with
+plugins are built in.
+
+<div class="home-features">
+
+- **Session picker** List-first, fuzzy-filtered, with a live preview of the running terminal
+- **Agent sidebar** Every coding agent across sessions, marked working, waiting or blocked
+- **Modeless selection** Drag, double- or triple-click to copy; the wheel scrolls history, no copy mode
+- **Restored layouts** Sessions, splits, directories and agent conversations come back after a restart or reboot
+- **Project picker** Ctrl-a f opens any git repository or zoxide folder as a session
+- **Layout files** A `.bmux.toml` declares a folder's windows, splits and pane commands
+- **Vim and Neovim aware** Ctrl-h/j/k/l crosses editor splits and bmux panes
+- **Scripting** List agent panes, read them, type into them and wait for them from any script
+- **Configurable** Works without a config file; every key can be rebound
+
+</div>
+
+<a class="home-button" href="/bmux/guides/sessions/">Read docs</a>
+<a class="home-button home-button-quiet" href="/bmux/start/coming-from-tmux/">Coming from tmux</a>
+
+</div>
+
+<div class="home-section">
+
+## FAQ
+
+<details>
+<summary>What is bmux?</summary>
+
+A terminal multiplexer for macOS and Linux: sessions that survive closing your
+terminal, split into windows and panes, with a fast session picker, a sidebar
+for coding agents and mouse selection that needs no copy mode.
+
+</details>
+
+<details>
+<summary>How do I install it?</summary>
+
+Run the install script, which downloads a release for your platform, checks it
+against the release's checksums and puts `bmux` in `~/.local/bin` without
+`sudo`. With Go 1.26 or newer, `go install github.com/josephferrero/bmux/cmd/bmux@latest`
+works too. Then run `bmux`. See [Install and start](/bmux/start/installation/).
+
+</details>
+
+<details>
+<summary>I use tmux. Do I have to relearn everything?</summary>
+
+Not much. The prefix is Ctrl-a, and `prefix = "C-b"` in the config file gives
+you tmux's. Splits use `|` and `-`, and every key can be rebound. See
+[Coming from tmux](/bmux/start/coming-from-tmux/) for what replaces each plugin.
+
+</details>
+
+<details>
+<summary>How do I update?</summary>
+
+A small ↑ appears in the status bar when a newer release is out. Run
+`bmux update`, which checks the download against its checksums, then
+`bmux restart` when you're ready to switch the server. See
+[Updates](/bmux/start/installation/#updates).
+
+</details>
+
+<details>
+<summary>Does it restore my sessions after a reboot?</summary>
+
+It restores the layout: sessions, windows, splits, each pane's directory, and
+agents reopening their last conversation. It does not restore other running
+programs, scrollback, editors or servers; each pane gets a fresh login shell.
+See [Restarts and reboots](/bmux/guides/restarts/).
+
+</details>
+
+<details>
+<summary>Which coding agents does it work with?</summary>
+
+The sidebar recognizes agents running in a pane. Installable integrations make
+Claude Code, Codex, omp, opencode and pi report their exact state, and any
+other program can report with `bmux agent`. See
+[Agent integrations](/bmux/agents/integrations/).
+
+</details>
+
+<details>
+<summary>Do I have to use copy mode to copy text?</summary>
+
+No. Drag to select; the text is copied when you release the mouse. Over SSH
+bmux uses OSC 52. A keyboard scrollback view with vi keys and search exists if
+you want it. See [Clipboard and paste](/bmux/guides/clipboard/).
+
+</details>
+
+<details>
+<summary>Do I need a plugin manager?</summary>
+
+No. The goal is to make plugins unnecessary, and scripting covers custom glue.
+See the [roadmap](/bmux/project/roadmap/).
+
+</details>
+
+<details>
+<summary>Is bmux open source?</summary>
+
+Yes, under the MIT license. The source is on
+[GitHub](https://github.com/bmux-dev/bmux); issues and pull requests are welcome.
+
+</details>
+
+</div>
+
+</div>
