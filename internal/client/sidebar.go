@@ -199,8 +199,13 @@ func (u *ui) moveSidebar(delta int) {
 }
 
 // sidebarKey handles every key while the sidebar has focus; none reach panes.
-// Keys bound to navigate move through it; right opens the selected row.
+// Keys bound to navigate move through it; right opens the selected row. While
+// a delete confirmation is open, it gets the key instead.
 func (u *ui) sidebarKey(e *tcell.EventKey) {
+	if u.prompt == "delete" {
+		u.answerDelete(e)
+		return
+	}
 	if kind, direction := actionDirection(u.rootAction(e)); kind == "navigate" {
 		switch direction {
 		case "down":
@@ -237,11 +242,27 @@ func (u *ui) sidebarKey(e *tcell.EventKey) {
 			u.moveSidebar(-1)
 		case 'l':
 			u.openSidebarRow()
+		case 'd':
+			u.deleteSidebarRow()
 		case 'n':
 			u.sidebarFocus = false
 			u.openPicker()
 			u.beginCreate()
 		}
+	}
+}
+
+// deleteSidebarRow asks to delete the selected session row, like d in the
+// picker. Agent rows stand for one pane, so they never delete a session.
+func (u *ui) deleteSidebarRow() {
+	rows, sessions := u.sidebarRows()
+	if len(rows) == 0 {
+		return
+	}
+	if i := u.sidebarIndex(rows); i < sessions {
+		u.beginDelete(rows[i].session)
+	} else {
+		u.notice("Select a session row to delete it")
 	}
 }
 

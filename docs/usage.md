@@ -29,9 +29,9 @@ again; set it to `true` to see it on the next attach.
 
 | Command | Behavior |
 | --- | --- |
-| `bmux` | Create and attach to a fresh session in the current directory |
+| `bmux` | Create and attach to a fresh session in the current directory; `bmux attach` returns to an existing one |
 | `bmux new [--dir PATH] [--detach] NAME` | Create a named session; attach unless `--detach` is set |
-| `bmux attach [NAME]` | Attach by name, or to the first session in `bmux list` |
+| `bmux attach [NAME]` | Attach by name, or to the most recently used session (the first in `bmux list`) |
 | `bmux list` | Show sessions, state, pane/client counts, and starting directories, most recently used first |
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
@@ -85,7 +85,8 @@ Bare `bmux` derives a name from the current directory:
 - Add a numeric suffix when needed: `api`, `api-2`, `api-3`.
 - Shorten long names to fit 80 bytes, including the suffix.
 
-Bare `bmux` always creates fresh work. It never reattaches to a matching name.
+Bare `bmux` always creates fresh work. It never reattaches to a matching name,
+not even after `bmux restart`: use `bmux attach` to return to a session.
 
 ## Session picker
 
@@ -251,6 +252,7 @@ own sound files.
 | Open the selected row | Enter, l, Ctrl-l, Right, or click a row |
 | Back to the panes without switching | Esc, or click a pane |
 | Create a session | n |
+| Delete the selected session | d on a session row, then y; n, Esc, any other key, a paste or a click keeps it |
 | Prefix command | Ctrl-a, as usual |
 
 Opening an agent row attaches its session if needed and focuses that pane.
@@ -411,7 +413,8 @@ conversation, not the processes that were running.
 
 `bmux restart` from inside a pane finishes in the background, because stopping
 the server ends that pane's jobs. Attached clients reconnect to the session
-they showed once the new server is up.
+they showed once the new server is up. Run `bmux attach`, not bare `bmux`, to
+return to a restored session from a new terminal: bare `bmux` creates another.
 
 New panes inherit the server's environment. A restart from inside a pane
 keeps the running server's environment, so variables that the pane's shell or

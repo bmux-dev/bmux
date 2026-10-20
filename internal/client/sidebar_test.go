@@ -3,6 +3,8 @@ package client
 import (
 	"encoding/json"
 	"net"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -235,6 +237,105 @@ func TestSidebarClickOpensRow(t *testing.T) {
 	u.mouse(tcell.NewEventMouse(3, paneOriginY+1, tcell.Button1, tcell.ModNone))
 	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
 		t.Fatalf("session row click: %+v", r)
+	}
+	noRequest(t, requests)
+}
+
+func TestSidebarDeleteAsksAndOnlyYTerminates(t *testing.T) {
+	// A short private socket path avoids Darwin's sockaddr_un path limit.
+	dir, err := os.MkdirTemp("", "hv-side-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	socket := filepath.Join(dir, "rpc")
+	l, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	rpcs := make(chan protocol.Request, 4)
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+			var r protocol.Request
+			_ = json.NewDecoder(c).Decode(&r)
+			rpcs <- r
+			_ = json.NewEncoder(c).Encode(protocol.Response{Version: protocol.Version})
+			c.Close()
+		}
+	}()
+	u, requests := sidebarUI(t)
+	u.socket = socket
+	u.focusSidebar()
+	u.key(runeKey('j')) // api → web, in creation order
+	web := u.sessions[0]
+	ask := func() {
+		t.Helper()
+		u.key(runeKey('d'))
+		if u.prompt != "delete" || u.deleteTarget.Name != "web" || !u.deleteTarget.Created.Equal(web.Created) {
+			t.Fatalf("d on a session row did not ask about it: prompt %q target %+v", u.prompt, u.deleteTarget)
+		}
+	}
+	ask()
+	u.draw()
+	if text := pickerScreenText(u); !strings.Contains(text, "Delete \"web\"?") || !strings.Contains(text, "Yes (y)") || !strings.Contains(pickerScreenLine(u, 19), "y yes") {
+		t.Fatalf("confirmation not shown over the attached view:\n%s", text)
+	}
+
+	// Anything but a plain y keeps the session and reaches neither the
+	// application nor the server; the sidebar keeps focus and its selection.
+	for _, cancel := range []func(){
+		func() { u.key(runeKey('n')) },
+		func() { u.key(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)) },
+		func() { u.key(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModCtrl)) },
+		func() { u.key(runeKey('j')) },
+		func() { u.handleRawPaste(&rawPasteEvent{Text: "y"}) },
+		func() { u.mouse(tcell.NewEventMouse(3, paneOriginY+1, tcell.Button1, tcell.ModNone)) },
+	} {
+		cancel()
+		if u.prompt != "" || u.deleteBusy || !u.sidebarFocus || u.sidebarSelected != (sidebarTarget{"web", 0}) {
+			t.Fatalf("cancel left prompt %q busy %v focus %v selection %+v", u.prompt, u.deleteBusy, u.sidebarFocus, u.sidebarSelected)
+		}
+		ask()
+	}
+	noRequest(t, requests)
+	select {
+	case r := <-rpcs:
+		t.Fatalf("termination sent before confirmation: %+v", r)
+	default:
+	}
+
+	u.key(runeKey('y'))
+	if u.prompt != "" || !u.deleteBusy {
+		t.Fatal("y did not start the termination")
+	}
+	select {
+	case r := <-rpcs:
+		if r.Op != "kill" || r.Name != "web" || r.Generation != protocol.SessionGeneration(web.Created) {
+			t.Fatalf("wrong termination: %+v", r)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no termination")
+	}
+	select {
+	case result := <-u.deletions:
+		u.finishDelete(result)
+	case <-time.After(time.Second):
+		t.Fatal("no termination result")
+	}
+	if u.message != "Deleted session web" {
+		t.Fatalf("message %q", u.message)
+	}
+
+	// An agent row stands for one pane: d never deletes its whole session.
+	u.sidebarSelected = sidebarTarget{"api", 2}
+	u.key(runeKey('d'))
+	if u.prompt != "" || u.message != "Select a session row to delete it" {
+		t.Fatalf("d on an agent row: prompt %q message %q", u.prompt, u.message)
 	}
 	noRequest(t, requests)
 }

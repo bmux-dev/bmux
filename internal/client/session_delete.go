@@ -1,10 +1,35 @@
 package client
 
-import "github.com/josephferrero/bmux/internal/protocol"
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/josephferrero/bmux/internal/protocol"
+)
 
 type deleteResult struct {
 	target protocol.Session
 	err    error
+}
+
+// beginDelete asks to delete s, from d in the picker or on a sidebar session
+// row. The target is captured now, so a refresh can't retarget the question.
+func (u *ui) beginDelete(s protocol.Session) {
+	if u.deleteBusy {
+		u.notice("Already terminating session " + u.deletePending.Name)
+		return
+	}
+	u.deleteTarget = s
+	u.promptError = ""
+	u.newName, u.prompt = s.Name, "delete"
+}
+
+// answerDelete terminates the captured session on a plain y; any other key
+// keeps it.
+func (u *ui) answerDelete(e *tcell.EventKey) {
+	if e.Key() == tcell.KeyRune && e.Rune() == 'y' && e.Modifiers() == tcell.ModNone {
+		u.deleteSelectedSession()
+	} else {
+		u.prompt, u.promptError = "", ""
+	}
 }
 
 // Capture immutable identity before leaving the modal. Process cleanup is a
@@ -48,6 +73,8 @@ func (u *ui) finishDelete(result deleteResult) {
 	// action here: a newly attached replacement might reuse the deleted name.
 	if u.picker && u.prompt == "" {
 		u.refresh()
+	} else if !u.picker {
+		u.refreshSidebar()
 	}
 	u.notice("Deleted session " + result.target.Name)
 }

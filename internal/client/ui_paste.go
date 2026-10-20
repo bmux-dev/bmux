@@ -21,6 +21,9 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 		} else {
 			u.notice("Paste into a name, directory, or / filter")
 		}
+	} else if u.prompt == "delete" {
+		// Pasted text never confirms deleting a session from the sidebar.
+		u.prompt, u.promptError = "", ""
 	} else if u.closeConfirm != 0 {
 		// Pasted text never confirms closing a pane.
 		u.closeConfirm, u.closeCommand = 0, ""
