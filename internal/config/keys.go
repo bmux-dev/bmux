@@ -72,6 +72,7 @@ var Actions = []struct{ Name, Help string }{
 	{"select-window-8", "window 8"},
 	{"select-window-9", "window 9"},
 	{"scrollback", "keyboard scrollback view: move, select, copy"},
+	{"search-scrollback", "search scrollback, newest first"},
 	{"sessions", "session picker"},
 	{"projects", "project picker: open or create a project's session"},
 	{"new-session", "new session"},
@@ -116,7 +117,7 @@ var DefaultPrefixKeys = map[string]string{
 	"c": "new-window", "&": "close-window", ",": "rename-window", "]": "next-window", "[": "previous-window", "tab": "last-window",
 	"1": "select-window-1", "2": "select-window-2", "3": "select-window-3", "4": "select-window-4", "5": "select-window-5",
 	"6": "select-window-6", "7": "select-window-7", "8": "select-window-8", "9": "select-window-9",
-	"d": "detach", "y": "copy", "v": "scrollback", "b": "toggle-sidebar", "r": "reload-config", "?": "help", "i": "integrations",
+	"d": "detach", "y": "copy", "v": "scrollback", "/": "search-scrollback", "b": "toggle-sidebar", "r": "reload-config", "?": "help", "i": "integrations",
 }
 
 var namedKeys = map[string]string{

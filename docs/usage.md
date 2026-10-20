@@ -270,6 +270,7 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Send Ctrl-a to the application | Ctrl-a Ctrl-a |
 | Copy the selection again | Ctrl-a y |
 | Select and copy from the keyboard | Ctrl-a v, see [Keyboard scrollback](#keyboard-scrollback) |
+| Search history, newest first | Ctrl-a / |
 | Copy the selection, if the terminal delivers this shortcut | Ctrl-Shift-c |
 | Clear the selection | Esc, typing, or pasting |
 | Scroll history up / down ten lines | Shift-PageUp / Shift-PageDown |
@@ -619,6 +620,7 @@ go to the view, never to the pane's program, and the status line lists them.
 | Move further | Ctrl-u/Ctrl-d half a screen, PageUp/PageDown (Ctrl-b/Ctrl-f) a screen; H/M/L the top, middle and bottom of the view; g/G the oldest and newest rows |
 | Select | v by character, V by line, Ctrl-v a block; the same key again ends it, another switches kind |
 | Copy and leave | y or Enter |
+| Search down / up | / or ?, type, Enter; n repeats, N goes the other way |
 | End the selection, then leave | Esc |
 | Leave | q or Ctrl-c |
 
@@ -628,6 +630,15 @@ from the server's history, so a selection can reach rows that were never on
 screen, and text the terminal wrapped is copied as one line. Full-screen
 programs have no scrollback, so the view doesn't open over them; a resize
 that reflows the pane closes it.
+
+**Search** with **Ctrl-a /**, which opens the view with a prompt searching up
+from the bottom, newest first, or with / (down) and ? (up) in the view, like
+vi. Enter searches, Esc cancels. The cursor lands on the match and every
+match on screen is highlighted; n finds the next one in the same direction, N
+in the other, and searches wrap around at the ends of history. A query in
+lowercase ignores case; any capital letter makes it exact. The whole retained
+history is searched on the server, a printed line at a time, so text the
+terminal wrapped onto two rows is still found.
 
 ## Clipboard and paste
 
@@ -763,7 +774,7 @@ letters are the same as Ctrl letters in most terminals.
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |
 | `sessions`, `projects`, `new-session`, `last-session` | prefix `s`, `f`, `n`, `p` | |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
-| `detach`, `copy`, `scrollback` | prefix `d`, `y`, `v` | `scrollback` opens the [keyboard scrollback](#keyboard-scrollback) view |
+| `detach`, `copy`, `scrollback`, `search-scrollback` | prefix `d`, `y`, `v`, `/` | `scrollback` opens the [keyboard scrollback](#keyboard-scrollback) view; `search-scrollback` opens it with a search prompt |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
 | `toggle-sidebar`, `reload-config`, `help`, `integrations` | prefix `b`, `r`, `?`, `i` | `help` lists the bindings in effect; `integrations` opens the integrations panel |
 | `send-prefix` | the prefix again | Send the prefix key to the application |

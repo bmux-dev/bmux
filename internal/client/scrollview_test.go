@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -158,5 +159,85 @@ func TestScrollbackViewCopiesFromServerHistory(t *testing.T) {
 	u.applyFrame(&f)
 	if u.view.active {
 		t.Fatal("an epoch change kept the view")
+	}
+}
+
+func TestScrollbackSearchAsksTheServerAndHighlightsMatches(t *testing.T) {
+	u, _ := viewUI(t)
+	answers := map[string]*protocol.TextRange{
+		"up":   {FromX: 4, FromY: 101, ToX: 7, ToY: 101},
+		"down": {FromX: 0, FromY: 104, ToX: 1, ToY: 104},
+	}
+	socket, rpcs := rpcServer(t, func(r protocol.Request) protocol.Response {
+		if r.Text == "nothing" {
+			return protocol.Response{Error: `no match for "nothing"`}
+		}
+		return protocol.Response{Range: answers[r.Direction]}
+	})
+	u.socket = socket
+	// Ctrl-a / searches up from the bottom.
+	prefixed(u, runeKey('/'))
+	if !u.view.active || !u.view.searching || !u.view.up {
+		t.Fatalf("view %+v", u.view)
+	}
+	for _, r := range "fiv" {
+		u.key(runeKey(r))
+	}
+	u.handleRawPaste(&rawPasteEvent{Text: "e\n"})
+	u.draw()
+	if footer := pickerScreenLine(u, 19); !strings.Contains(footer, "Search up") || !strings.Contains(footer, ": five") {
+		t.Fatalf("prompt %q", footer)
+	}
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	r := <-rpcs
+	if r.Op != "search-history" || r.Text != "five" || r.Direction != "up" || r.Range == nil || r.Range.FromY != 104 || r.Range.FromX != 2 || r.Range.Epoch != 3 {
+		t.Fatalf("search %+v %+v", r, r.Range)
+	}
+	if u.view.cursor != (point{4, 101}) || u.view.searching {
+		t.Fatalf("cursor %+v searching %v", u.view.cursor, u.view.searching)
+	}
+	// Matches on screen are highlighted: "five" in "four five".
+	u.draw()
+	x := u.paneOriginX(100)
+	if _, style, _ := u.screen.Get(x+5, paneOriginY+1); func() bool { _, bg, _ := style.Decompose(); return bg != accentColor }() {
+		t.Fatal("match not highlighted")
+	}
+	// n continues up from the match, N goes down.
+	u.key(runeKey('n'))
+	if r := <-rpcs; r.Direction != "up" || r.Range.FromY != 101 || r.Range.FromX != 4 {
+		t.Fatalf("n %+v", r.Range)
+	}
+	u.key(runeKey('N'))
+	if r := <-rpcs; r.Direction != "down" {
+		t.Fatalf("N %+v", r)
+	}
+	if u.view.cursor != (point{0, 104}) {
+		t.Fatalf("after N: %+v", u.view.cursor)
+	}
+	// No match leaves the cursor and says so.
+	u.key(runeKey('?'))
+	for _, r := range "nothing" {
+		u.key(runeKey(r))
+	}
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	<-rpcs
+	if u.view.cursor != (point{0, 104}) || !strings.Contains(u.message, "no match") {
+		t.Fatalf("no match: cursor %+v message %q", u.view.cursor, u.message)
+	}
+	// Esc in the prompt cancels the search and stays in the view.
+	u.key(runeKey('/'))
+	u.key(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if !u.view.active || u.view.searching {
+		t.Fatal("Esc in the prompt left the view")
+	}
+}
+
+func TestSearchMatchesMarksEveryCellOfEachMatch(t *testing.T) {
+	row := []protocol.Cell{{Text: "a", Width: 1}, {Text: "界", Width: 2}, {}, {Text: "B", Width: 1}, {Text: "界", Width: 2}, {}, {Text: "b", Width: 1}}
+	if got := searchMatches(row, "界b"); fmt.Sprint(got) != "[false true true true true true true]" {
+		t.Fatalf("smartcase %v", got)
+	}
+	if got := searchMatches(row, "界B"); fmt.Sprint(got) != "[false true true true false false false]" {
+		t.Fatalf("exact case %v", got)
 	}
 }

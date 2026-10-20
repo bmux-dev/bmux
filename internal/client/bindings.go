@@ -193,6 +193,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.quitting = true
 	case "scrollback":
 		u.openScrollView()
+	case "search-scrollback":
+		u.openSearch()
 	case "copy":
 		u.copy()
 	case "scroll-up":

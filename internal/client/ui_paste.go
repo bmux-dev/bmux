@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"time"
 
 	"github.com/josephferrero/bmux/internal/protocol"
@@ -24,6 +25,13 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 		} else {
 			u.notice("Paste into a name, directory, or / filter")
 		}
+	} else if u.view.active && u.view.searching {
+		u.view.input += strings.Map(func(r rune) rune {
+			if r < 0x20 || r == 0x7f {
+				return -1
+			}
+			return r
+		}, e.Text)
 	} else if u.view.active {
 		u.notice("Paste goes to the pane: leave the scrollback view with Esc first")
 	} else if u.prompt == "rename-window" {

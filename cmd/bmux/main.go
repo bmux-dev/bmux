@@ -386,6 +386,7 @@ Inside a session:
   Ctrl-a ,   Rename window        Ctrl-a &   Close window
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a v   Scrollback view: move with hjkl, v/V/Ctrl-v select, y copy, Esc back
+  Ctrl-a /   Search history, newest first; in the view / and ? search, n/N repeat
   Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
   Ctrl-a ;   Last pane            Ctrl-a { / }   Swap with previous / next pane
   Ctrl-a Ctrl-o   Rotate panes    Ctrl-a ! / @   Pane to new window / into last window
