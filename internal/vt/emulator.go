@@ -212,38 +212,47 @@ func (e *Emulator) CursorPosition() uv.Position {
 	return uv.Pos(x, y)
 }
 
-// Resize resizes the terminal.
+// Resize resizes the terminal. bmux: the main screen reflows, whether or not
+// it is showing; the alternate screen is cropped, since full-screen programs
+// redraw at the new size.
 func (e *Emulator) Resize(width int, height int) {
-	x, y := e.scr.CursorPosition()
-	if e.atPhantom {
-		if x < width-1 {
-			e.atPhantom = false
-			x++
+	main := &e.scrs[0]
+	phantom := main.reflow(width, height, e.atPhantom && e.scr == main)
+	if e.scr == main {
+		e.atPhantom = phantom
+	} else {
+		x, y := e.scr.CursorPosition()
+		if e.atPhantom {
+			if x < width-1 {
+				e.atPhantom = false
+				x++
+			}
 		}
+		y = max(0, min(y, height-1))
+		x = max(0, min(x, width-1))
+		e.scrs[1].Resize(width, height)
+		e.setCursor(x, y)
 	}
-
-	if y < 0 {
-		y = 0
+	if e.scr == main {
+		e.scrs[1].Resize(width, height)
 	}
-	if y >= height {
-		y = height - 1
-	}
-	if x < 0 {
-		x = 0
-	}
-	if x >= width {
-		x = width - 1
-	}
-
-	e.scrs[0].Resize(width, height)
-	e.scrs[1].Resize(width, height)
 	e.tabstops = uv.DefaultTabStops(width)
-
-	e.setCursor(x, y)
 
 	if e.isModeSet(ansi.ModeInBandResize) {
 		_, _ = io.WriteString(e.pw, ansi.InBandResize(e.Height(), e.Width(), 0, 0))
 	}
+}
+
+// LineWrapped reports whether row y of the showing screen continues onto the
+// next row because the terminal wrapped it. bmux: added for reflow.
+func (e *Emulator) LineWrapped(y int) bool {
+	return e.scr.LineWrapped(y)
+}
+
+// ScrollbackWrapped reports whether scrollback line y (0 = oldest) continues
+// onto the next one. bmux: added for reflow.
+func (e *Emulator) ScrollbackWrapped(y int) bool {
+	return e.Scrollback().Wrapped(y)
 }
 
 // Read reads data from the terminal input buffer.

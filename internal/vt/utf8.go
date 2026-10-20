@@ -82,6 +82,8 @@ func (e *Emulator) handleGrapheme(content string, width int) {
 
 	x, y := e.scr.CursorPosition()
 	if e.atPhantom && awm {
+		// bmux: the row the cursor leaves continues onto the next one.
+		e.scr.setWrapped(y, true)
 		// moves cursor down similar to [Terminal.linefeed] except it doesn't
 		// respects [ansi.LNM] mode.
 		// This will reset the phantom state i.e. pending wrap state.

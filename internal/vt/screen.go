@@ -17,6 +17,9 @@ type Screen struct {
 	scroll uv.Rectangle
 	// scrollback is the scrollback buffer for lines scrolled off the top.
 	scrollback *Scrollback
+	// bmux: wrapped[y] reports that row y continues onto row y+1 because the
+	// terminal wrapped it. Reflow joins such rows; copies join them too.
+	wrapped []bool
 }
 
 // NewScreen creates a new screen.
@@ -24,6 +27,7 @@ func NewScreen(w, h int) *Screen {
 	s := Screen{
 		buf:        uv.NewRenderBuffer(w, h),
 		scrollback: NewScrollback(DefaultScrollbackSize),
+		wrapped:    make([]bool, h),
 	}
 	s.scroll = s.buf.Bounds()
 	return &s
@@ -38,6 +42,7 @@ func (s *Screen) Reset() {
 	s.saved = Cursor{}
 	s.scroll = s.buf.Bounds()
 	s.buf.Touched = nil
+	clear(s.wrapped)
 }
 
 // Bounds returns the bounds of the screen.
@@ -70,15 +75,53 @@ func (s *Screen) Height() int {
 	return s.buf.Height()
 }
 
-// Resize resizes the screen.
+// Resize resizes the screen, cropping or extending rows without rewrapping.
 func (s *Screen) Resize(width int, height int) {
+	oldWidth := 0
 	if s.buf == nil {
 		s.buf = uv.NewRenderBuffer(width, height)
 	} else {
+		oldWidth = s.buf.Width()
 		s.buf.Resize(width, height)
 		s.buf.Touched = nil
 	}
+	s.wrapped = resizeWrapped(s.wrapped, height)
+	if width != oldWidth {
+		clear(s.wrapped) // cropped or padded rows no longer end where they wrapped
+	}
 	s.scroll = s.buf.Bounds()
+}
+
+// resizeWrapped keeps the first height flags, adding unwrapped rows.
+func resizeWrapped(wrapped []bool, height int) []bool {
+	if height <= len(wrapped) {
+		return wrapped[:height]
+	}
+	return append(wrapped, make([]bool, height-len(wrapped))...)
+}
+
+// LineWrapped reports whether row y continues onto the next row.
+// bmux: added for reflow.
+func (s *Screen) LineWrapped(y int) bool {
+	return y >= 0 && y < len(s.wrapped) && s.wrapped[y]
+}
+
+// setWrapped records whether row y continues onto the next row.
+func (s *Screen) setWrapped(y int, wrapped bool) {
+	if y >= 0 && y < len(s.wrapped) {
+		s.wrapped[y] = wrapped
+	}
+}
+
+// clearWrapped forgets wraps in rows erased through their last column: they
+// end where they end now.
+func (s *Screen) clearWrapped(area uv.Rectangle) {
+	if area.Max.X < s.buf.Width() {
+		return
+	}
+	for y := max(0, area.Min.Y); y < min(area.Max.Y, len(s.wrapped)); y++ {
+		s.wrapped[y] = false
+	}
 }
 
 // Width returns the width of the screen.
@@ -97,10 +140,10 @@ func (s *Screen) Clear() {
 func (s *Screen) ClearWithScrollback() {
 	if s.scrollback != nil {
 		// Save all lines that have content before clearing
-		for y := 0; y < s.buf.Height(); y++ {
+		for y := range s.buf.Height() {
 			line := s.buf.Line(y)
 			if line != nil && !s.isLineEmpty(line) {
-				s.scrollback.Push(line)
+				s.scrollback.PushWrapped(line, s.LineWrapped(y))
 			}
 		}
 	}
@@ -121,6 +164,7 @@ func (s *Screen) isLineEmpty(line uv.Line) bool {
 func (s *Screen) ClearArea(area uv.Rectangle) {
 	s.buf.ClearArea(area)
 	s.touchArea(area)
+	s.clearWrapped(area)
 }
 
 // Fill fills the screen or part of it.
@@ -132,6 +176,7 @@ func (s *Screen) Fill(c *uv.Cell) {
 func (s *Screen) FillArea(c *uv.Cell, area uv.Rectangle) {
 	s.buf.FillArea(c, area)
 	s.touchArea(area)
+	s.clearWrapped(area)
 }
 
 // setHorizontalMargins sets the horizontal margins.
@@ -332,6 +377,7 @@ func (s *Screen) InsertLine(n int) bool {
 	}
 
 	s.buf.InsertLineArea(y, n, s.blankCell(), s.scroll)
+	s.shiftWrapped(y, n)
 
 	return true
 }
@@ -363,10 +409,11 @@ func (s *Screen) DeleteLine(n int) bool {
 		scroll.Min.X == 0 && scroll.Max.X == s.buf.Width() {
 		// Save lines that will be deleted
 		linesToSave := min(n, scroll.Max.Y-y)
-		s.scrollback.PushN(s.buf, y, linesToSave)
+		s.scrollback.PushN(s.buf, s.wrapped, y, linesToSave)
 	}
 
 	s.buf.DeleteLineArea(y, n, s.blankCell(), scroll)
+	s.shiftWrapped(y, -n)
 
 	return true
 }
@@ -388,6 +435,31 @@ func (s *Screen) blankCell() *uv.Cell {
 func (s *Screen) touchArea(area uv.Rectangle) {
 	for y := area.Min.Y; y < area.Max.Y; y++ {
 		s.buf.TouchLine(area.Min.X, y, area.Max.X-area.Min.X)
+	}
+}
+
+// shiftWrapped moves wrap flags along with rows inserted (n > 0) or deleted
+// (n < 0) at row y inside the scroll region. A region narrower than the
+// screen moves only part of each row, so those rows' wraps are forgotten.
+// bmux: added for reflow.
+func (s *Screen) shiftWrapped(y, n int) {
+	top, bottom := y, min(s.scroll.Max.Y, len(s.wrapped))
+	if top >= bottom {
+		return
+	}
+	region := s.wrapped[top:bottom]
+	if s.scroll.Min.X != 0 || s.scroll.Max.X != s.buf.Width() {
+		clear(region)
+		return
+	}
+	if n > 0 {
+		n = min(n, len(region))
+		copy(region[n:], region[:len(region)-n])
+		clear(region[:n])
+	} else {
+		n = min(-n, len(region))
+		copy(region, region[n:])
+		clear(region[len(region)-n:])
 	}
 }
 
