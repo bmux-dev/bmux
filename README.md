@@ -54,7 +54,7 @@ bmux
 ```
 
 The script checks the download against the release's checksums and never uses
-`sudo`; see [installing](docs/usage.md#install-and-start) for its options. With
+`sudo`; see [installing](https://bmux-dev.github.io/bmux/start/installation/) for its options. With
 **Go 1.26+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
 too (put `$(go env GOPATH)/bin` on your `PATH`).
 
@@ -304,7 +304,8 @@ before changing terminal or session behavior.
 Releases are built by [GoReleaser](.goreleaser.yaml). Pushing a `vX.Y.Z` tag
 runs CI, then uploads the archives and `checksums.txt` to a draft release;
 write the notes and publish it. The version comes from the tag, so a release
-commit only updates the README and ROADMAP. `goreleaser release --snapshot
+commit only updates the README and the roadmap page
+(`site/src/content/docs/project/roadmap.md`). `goreleaser release --snapshot
 --clean` builds the same archives locally into `dist/`.
 
 ## License
