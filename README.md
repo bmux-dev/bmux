@@ -43,13 +43,18 @@ modeless mouse selection.
 
 ## Quick start
 
-Requires **Go 1.26+** and an interactive terminal. Put Go's binary directory on
-your `PATH`: `GOBIN` if set, otherwise `$(go env GOPATH)/bin` (usually `~/go/bin`).
+Requires macOS or Linux and an interactive terminal. Install the latest release
+into `~/.local/bin`:
 
 ```sh
-go install github.com/josephferrero/bmux/cmd/bmux@latest
+curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
 bmux
 ```
+
+The script checks the download against the release's checksums and never uses
+`sudo`; see [installing](docs/usage.md#install-and-start) for its options. With
+**Go 1.26+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
+too (put `$(go env GOPATH)/bin` on your `PATH`).
 
 `bmux` creates a fresh session in the current directory, named after that
 directory. The server starts automatically. Existing sessions keep running.
