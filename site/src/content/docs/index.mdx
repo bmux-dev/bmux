@@ -17,15 +17,15 @@ sessions with live previews, watch your coding agents from a sidebar, copy text
 with the mouse, and keep your layout across restarts.
 
 <div class="home-install">
-<span class="home-install-label">go install</span>
+<span class="home-install-label">install script</span>
 
 ```sh frame="none"
-go install github.com/josephferrero/bmux/cmd/bmux@latest
+curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
 ```
 
 </div>
 
-<p class="home-note">Requires Go 1.26+ on macOS or Linux. v0.5.0 pre-release. <a href="/bmux/start/installation/">Full install steps</a></p>
+<p class="home-note">macOS or Linux. Checks the download against the release checksums and never uses sudo. Or <code>go install github.com/josephferrero/bmux/cmd/bmux@latest</code> with Go 1.26+. <a href="/bmux/start/installation/">Full install steps</a></p>
 
 </div>
 
@@ -74,9 +74,10 @@ for coding agents and mouse selection that needs no copy mode.
 <details>
 <summary>How do I install it?</summary>
 
-With Go 1.26 or newer: `go install github.com/josephferrero/bmux/cmd/bmux@latest`,
-then run `bmux`. Put Go's binary directory on your `PATH`. See
-[Install and start](/bmux/start/installation/).
+Run the install script, which downloads a release for your platform, checks it
+against the release's checksums and puts `bmux` in `~/.local/bin` without
+`sudo`. With Go 1.26 or newer, `go install github.com/josephferrero/bmux/cmd/bmux@latest`
+works too. Then run `bmux`. See [Install and start](/bmux/start/installation/).
 
 </details>
 
@@ -86,6 +87,16 @@ then run `bmux`. Put Go's binary directory on your `PATH`. See
 Not much. The prefix is Ctrl-a, and `prefix = "C-b"` in the config file gives
 you tmux's. Splits use `|` and `-`, and every key can be rebound. See
 [Coming from tmux](/bmux/start/coming-from-tmux/) for what replaces each plugin.
+
+</details>
+
+<details>
+<summary>How do I update?</summary>
+
+A small ↑ appears in the status bar when a newer release is out. Run
+`bmux update`, which checks the download against its checksums, then
+`bmux restart` when you're ready to switch the server. See
+[Updates](/bmux/start/installation/#updates).
 
 </details>
 

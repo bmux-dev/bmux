@@ -32,6 +32,7 @@ type Config struct {
 	Restore    Restore    `toml:"restore"`
 	Projects   Projects   `toml:"projects"`
 	Scrollback Scrollback `toml:"scrollback"`
+	Update     Update     `toml:"update"`
 	Keys       Keys       `toml:"keys"`
 }
 
@@ -91,6 +92,12 @@ type Scrollback struct {
 	Lines int `toml:"lines"`
 }
 
+// Update controls the daily check for new bmux releases; bmux update
+// installs one.
+type Update struct {
+	Check bool `toml:"check"`
+}
+
 // Bounds for scrollback.lines; each line holds a row of cells.
 const (
 	MinScrollbackLines = 100
@@ -120,6 +127,7 @@ func Default() Config {
 		Restore:    Restore{Enabled: true},
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3, Zoxide: true},
 		Scrollback: Scrollback{Lines: 10000},
+		Update:     Update{Check: true},
 	}
 }
 
@@ -187,6 +195,9 @@ func applyEnv(cfg *Config, env func(string) string) {
 	}
 	if v := env("BMUX_SOUND"); v != "" {
 		cfg.Sound.Enabled = v != "0"
+	}
+	if env("BMUX_NO_UPDATE_CHECK") == "1" {
+		cfg.Update.Check = false
 	}
 }
 
@@ -381,6 +392,9 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 [scrollback]
 # lines = 10000             # history kept per pane, 100-200000; bmux reload applies it
+
+[update]
+# check = true              # look for a new release once a day; bmux update installs it
 
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
