@@ -4,24 +4,44 @@
 
 ## Install and start
 
-Requires Go 1.26+ and an interactive terminal on macOS or Linux.
+Requires an interactive terminal on macOS or Linux. The install script
+downloads the newest release for your platform (Linux or macOS, amd64 or
+arm64), checks it against the release's `checksums.txt`, and puts `bmux` in
+`~/.local/bin`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
+bmux
+```
+
+| Variable | Effect |
+| --- | --- |
+| `BMUX_VERSION=v0.6.0` | Install that release instead of the newest |
+| `BMUX_INSTALL_DIR=DIR` | Install into `DIR` instead of `~/.local/bin` |
+| `BMUX_RELEASE_URL=URL` | Download `URL/TAG/ASSET` from a mirror; needs `BMUX_VERSION` |
+
+Set them on the `sh` side: `curl -fsSL … | BMUX_VERSION=v0.6.0 sh`. The script
+never uses `sudo` and writes nothing outside the install directory. It tells
+you if that directory isn't on your `PATH`, or if another `bmux` comes first.
+Run it again to upgrade; if a server is running, `bmux restart` switches it to
+the new version.
+
+**With Go 1.26+** instead:
 
 ```sh
 go install github.com/josephferrero/bmux/cmd/bmux@latest
-bmux
 ```
 
 Go's binary directory must be on `PATH`. Check `go env GOBIN`; when empty, use
 `$(go env GOPATH)/bin`, usually `~/go/bin`.
 
-Releases after v0.5.0 also carry prebuilt binaries for Linux and macOS on
-amd64 and arm64, so Go isn't needed: download `bmux_<os>_<arch>.tar.gz` and
-`checksums.txt` from the [releases page](https://github.com/bmux-dev/bmux/releases),
-check that `sha256sum bmux_<os>_<arch>.tar.gz` (`shasum -a 256` on macOS)
+**By hand:** releases after v0.5.0 carry `bmux_<os>_<arch>.tar.gz` and
+`checksums.txt` on the [releases page](https://github.com/bmux-dev/bmux/releases).
+Check that `sha256sum bmux_<os>_<arch>.tar.gz` (`shasum -a 256` on macOS)
 matches its line in `checksums.txt`, and put the `bmux` inside on your `PATH`.
 The macOS binaries aren't signed: one downloaded with a browser is blocked
-until you run `xattr -d com.apple.quarantine bmux`; `curl` downloads aren't
-affected.
+until you run `xattr -d com.apple.quarantine bmux`; `curl` downloads, including
+the script's, aren't affected.
 
 The server starts automatically. Sessions survive detach and client exit. When
 the server stops or the machine reboots, the next server restores them: see

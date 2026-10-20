@@ -34,3 +34,42 @@ jobs:
 
       - name: test
         run: go test -race ./...
+
+  # install.sh against this commit's own archives, served as a release mirror.
+  # ubuntu's /bin/sh is dash; macOS's is bash in POSIX mode.
+  install-script:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: shellcheck
+        if: runner.os == 'Linux'
+        run: shellcheck -s sh install.sh
+
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+
+      - name: install from the snapshot
+        run: |
+          mkdir -p mirror/v0.0.0
+          cp dist/*.tar.gz dist/checksums.txt mirror/v0.0.0/
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory mirror &
+          for _ in 1 2 3 4 5 6 7 8 9 10; do curl -fs http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
+          export BMUX_RELEASE_URL=http://127.0.0.1:8765 BMUX_VERSION=v0.0.0
+          BMUX_INSTALL_DIR="$RUNNER_TEMP/bin" sh install.sh
+          "$RUNNER_TEMP/bin/bmux" --version | grep SNAPSHOT
+          for f in mirror/v0.0.0/*.tar.gz; do printf x >> "$f"; done
+          if BMUX_INSTALL_DIR="$RUNNER_TEMP/tampered" sh install.sh; then echo "installed a tampered archive"; exit 1; fi
+          test ! -e "$RUNNER_TEMP/tampered/bmux"

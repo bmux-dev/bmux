@@ -62,7 +62,7 @@ shows when a newer release is out and updates itself with `bmux update`.
 | Item | Size | Status |
 | --- | --- | --- |
 | Prebuilt binaries and checksums ([#49](https://github.com/bmux-dev/bmux/issues/49)) | S | Done: GoReleaser builds Linux and macOS on amd64 and arm64 for every `v*` tag, with `checksums.txt` |
-| Install script ([#50](https://github.com/bmux-dev/bmux/issues/50)) | S | Planned: `curl … \| sh`, checksum-verified, no root |
+| Install script ([#50](https://github.com/bmux-dev/bmux/issues/50)) | S | Done: `curl -fsSL …/install.sh \| sh`, checksum-verified, into `~/.local/bin` without root |
 | Update hint and `bmux update` ([#51](https://github.com/bmux-dev/bmux/issues/51)) | M | Planned: a small `↑` in the status bar when a release is out; `bmux update` replaces the binary after checking its checksum |
 
 ## v0.4: windows and layouts
