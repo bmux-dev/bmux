@@ -25,3 +25,68 @@
 	color: var(--sl-color-gray-3);
 	text-align: center;
 }
+
+/* Home page */
+:root:has(.home) { --sl-content-width: 54rem; }
+.home { font-family: var(--sl-font-mono); }
+.home h1, .home h2 { font-family: var(--sl-font-mono); letter-spacing: -0.02em; }
+.home-hero { padding-block: 2rem 1.5rem; }
+.home-hero h1 { font-size: clamp(1.75rem, 4.5vw, 2.5rem); line-height: 1.15; margin-bottom: 1rem; }
+.home-hero p, .home-section p { font-size: var(--sl-text-base); color: var(--sl-color-gray-2); }
+.home-install {
+	margin-top: 1.5rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	overflow: hidden;
+	background: var(--sl-color-gray-6);
+}
+.home-install-label {
+	display: block;
+	padding: 0.6rem 1rem;
+	font-size: var(--sl-text-sm);
+	color: var(--sl-color-white);
+	border-bottom: 1px solid var(--sl-color-gray-5);
+}
+.home-install .expressive-code { margin-top: 0; }
+.home-install .expressive-code .frame { --ec-brdWd: 0px; box-shadow: none; }
+.home-hero p.home-note { margin-top: 0.75rem; font-size: var(--sl-text-sm); color: var(--sl-color-gray-3); }
+.home-demo {
+	margin: 1.5rem 0 2.5rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	overflow: hidden;
+	background: #1e1e2e; /* the terminal window in the recording */
+}
+.home-demo video { display: block; width: 100%; height: auto; }
+.home-section { margin-block: 2.5rem; border-top: 1px solid var(--sl-color-gray-5); padding-top: 0.5rem; }
+.home-section h2 { font-size: var(--sl-text-xl); }
+.home-features ul { list-style: none; padding: 0; margin: 1.25rem 0; }
+.home-features li { display: flex; gap: 0.75rem; margin-block: 0.6rem; color: var(--sl-color-gray-2); }
+.home-features li::before { content: '›'; color: var(--sl-color-accent); font-weight: 700; }
+.home-features strong { color: var(--sl-color-white); }
+.home-button {
+	display: inline-block;
+	margin: 0.5rem 0.75rem 0.5rem 0;
+	padding: 0.5rem 1.1rem;
+	border-radius: 0.4rem;
+	background: var(--sl-color-white);
+	color: var(--sl-color-black);
+	font-size: var(--sl-text-sm);
+	text-decoration: none;
+}
+.home-button:hover { opacity: 0.85; }
+.home-button-quiet { background: transparent; color: var(--sl-color-white); border: 1px solid var(--sl-color-gray-4); }
+.home details { border-bottom: 1px solid var(--sl-color-gray-5); }
+.home summary {
+	cursor: pointer;
+	padding: 0.9rem 0;
+	list-style: none;
+	color: var(--sl-color-white);
+	font-weight: 600;
+}
+.home summary::-webkit-details-marker { display: none; }
+.home summary::before { content: '+'; display: inline-block; width: 1.5rem; color: var(--sl-color-accent); }
+.home details[open] > summary::before { content: '–'; }
+.home details > :not(summary) { margin: 0 0 1rem 1.5rem; }
+/* The home page has its own heading; the page title (for <title>) stays out of the way. */
+:root:has(.home) h1#_top { display: none; }

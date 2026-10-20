@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Renders the documentation screenshots into site/src/assets/screenshots,
-# once with bmux's dark theme and once with its light theme. Every render uses
-# a throwaway HOME, runtime directory and server, so your own sessions are
-# never touched. Usage: render.sh [SCENE...]  (default: every scenes/*.tape)
+# once with bmux's dark theme and once with its light theme, and the demo
+# video (a scene whose tape mentions @VIDEO@, dark only) into
+# site/public/demo. Every render uses a throwaway HOME, runtime directory and
+# server, so your own sessions are never touched.
+# Usage: render.sh [SCENE...]  (default: every scenes/*.tape)
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 out="$repo/site/src/assets/screenshots"
+video_out="$repo/site/public/demo"
+
+is_video() { grep -q '@VIDEO@' "$here/scenes/$1.tape"; }
 
 for tool in vhs ttyd ffmpeg go git; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -47,7 +52,7 @@ stop_server() { # stops the current render's server, if one is running
 cleanup() { stop_server; rm -rf "$work"; }
 trap cleanup EXIT
 
-mkdir -p "$work/bin" "$work/home/projects" "$out"
+mkdir -p "$work/bin" "$work/home/projects" "$out" "$video_out"
 (cd "$repo" && go build -o "$work/bin/bmux" ./cmd/bmux)
 cp "$here/bin/fake-agent" "$here/bin/demo-shell" "$work/bin/"
 chmod +x "$work/bin/fake-agent" "$work/bin/demo-shell"
@@ -209,9 +214,14 @@ EOF
     done
     wait_for_agents
   )
+  extra_outputs=""
+  if is_video "$scene"; then
+    extra_outputs=$'Output "'"$video_out/$scene.mp4"$'"\nOutput "'"$video_out/$scene.webm"$'"'
+  fi
   {
     cat <<EOF
 Output "$work/$scene-$theme.gif"
+$extra_outputs
 Set Shell "bash"
 Set FontSize 16
 Set Width 920
@@ -229,12 +239,25 @@ Type "PS1='$ ' && source $run/env.sh && clear"
 Enter
 Sleep 500ms
 EOF
-    sed "s|@OUT@|$out/$scene-$theme.png|g" "$here/scenes/$scene.tape"
+    sed -e "s|@OUT@|$out/$scene-$theme.png|g" \
+      -e "s|@VIDEO@|$video_out/$scene|g" -e "s|@POSTER@|$video_out/$scene-poster.png|g" \
+      "$here/scenes/$scene.tape"
     echo "Sleep 1s" # vhs writes the screenshot asynchronously; let it finish
   } >"$work/$scene-$theme.tape"
-  rm -f "$out/$scene-$theme.png"
+  if is_video "$scene"; then
+    rm -f "$video_out/$scene".{mp4,webm} "$video_out/$scene-poster.png"
+  else
+    rm -f "$out/$scene-$theme.png"
+  fi
   vhs "$work/$scene-$theme.tape"
-  if [[ ! -s "$out/$scene-$theme.png" ]]; then
+  if is_video "$scene"; then
+    for f in "$video_out/$scene.mp4" "$video_out/$scene.webm" "$video_out/$scene-poster.png"; do
+      if [[ ! -s "$f" ]]; then
+        echo "render.sh: vhs wrote no $f" >&2
+        return 1
+      fi
+    done
+  elif [[ ! -s "$out/$scene-$theme.png" ]]; then
     echo "render.sh: vhs wrote no screenshot for $scene ($theme)" >&2
     return 1
   fi
@@ -243,9 +266,14 @@ EOF
 }
 
 for scene in "${scenes[@]}"; do
+  if is_video "$scene"; then
+    echo "render.sh: $scene (video, dark)"
+    render "$scene" dark
+    continue
+  fi
   for theme in dark light; do
     echo "render.sh: $scene ($theme)"
     render "$scene" "$theme"
   done
 done
-echo "render.sh: wrote ${#scenes[@]} scenes x 2 themes to $out"
+echo "render.sh: done: screenshots in $out, videos in $video_out"
