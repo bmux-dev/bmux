@@ -287,6 +287,12 @@ go vet ./...
 Read [AGENTS.md](AGENTS.md) and the [architecture guide](docs/architecture.md)
 before changing terminal or session behavior.
 
+Releases are built by [GoReleaser](.goreleaser.yaml). Pushing a `vX.Y.Z` tag
+runs CI, then uploads the archives and `checksums.txt` to a draft release;
+write the notes and publish it. The version comes from the tag, so a release
+commit only updates the README and ROADMAP. `goreleaser release --snapshot
+--clean` builds the same archives locally into `dist/`.
+
 ## License
 
 [MIT](LICENSE)

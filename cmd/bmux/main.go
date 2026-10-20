@@ -18,8 +18,6 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
-const version = "0.5.0"
-
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "bmux:", err)
