@@ -64,6 +64,8 @@ type Request struct {
 	// Input is send-input's key presses and pastes, written in order as one
 	// batch.
 	Input []Input `json:"input,omitempty"`
+	// Range is history-text's selection.
+	Range *TextRange `json:"range,omitempty"`
 }
 
 // Input is one key press or one paste for send-input. Paste, when set, is
@@ -73,6 +75,20 @@ type Input struct {
 	Code  rune   `json:"code,omitempty"`
 	Mod   int    `json:"mod,omitempty"`
 	Paste string `json:"paste,omitempty"`
+}
+
+// TextRange selects text in a pane's history for history-text. Rows are
+// absolute row IDs as frames number them (TerminalFrame.Base + y) within
+// Epoch; a different epoch means the rows moved and the request fails.
+// Mode is "char" (from From to To), "line" (whole rows) or "block" (the
+// same columns of every row).
+type TextRange struct {
+	Epoch uint64 `json:"epoch"`
+	FromX int    `json:"from_x"`
+	FromY int    `json:"from_y"`
+	ToX   int    `json:"to_x"`
+	ToY   int    `json:"to_y"`
+	Mode  string `json:"mode"`
 }
 
 type Session struct {

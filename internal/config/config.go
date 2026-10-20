@@ -391,7 +391,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # layout-even-vertical, layout-main-horizontal, layout-main-vertical,
 # layout-tiled, equalize-layout, new-window, close-window, rename-window,
 # next-window, previous-window, last-window, select-window-1 to
-# select-window-9, sessions, projects, new-session, last-session, previous-session,
+# select-window-9, scrollback, sessions, projects, new-session, last-session, previous-session,
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
 # reload-config, help, integrations, send-prefix.
 
@@ -439,6 +439,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "1" = "select-window-1"   # through "9"
 # "d" = "detach"
 # "y" = "copy"
+# "v" = "scrollback"        # keyboard view of history: move, select, copy
 # "b" = "toggle-sidebar"
 # "r" = "reload-config"
 # "?" = "help"
