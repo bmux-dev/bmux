@@ -112,13 +112,7 @@ func (u *ui) listKey(e *tcell.EventKey) {
 			u.beginCreate()
 		case 'd':
 			if selected {
-				if u.deleteBusy {
-					u.notice("Already terminating session " + u.deletePending.Name)
-					return
-				}
-				u.deleteTarget = s
-				u.promptError = ""
-				u.newName, u.prompt = s.Name, "delete"
+				u.beginDelete(s)
 			}
 		case 'r':
 			if selected {

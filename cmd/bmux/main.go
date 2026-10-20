@@ -305,6 +305,9 @@ func restartServer(socket string) error {
 	default:
 		fmt.Printf("Started the bmux server; %d sessions restored\n", len(r.Sessions))
 	}
+	if len(r.Sessions) > 0 {
+		fmt.Println("Return to them with bmux attach [NAME]; bare bmux creates another session")
+	}
 	return nil
 }
 
@@ -366,6 +369,7 @@ Settings: ~/.config/bmux/config.toml (see bmux default-config).
 Sidebar (Ctrl-h from the leftmost pane):
   j/k   Select session or agent  Enter/l   Open it
   Esc   Back to panes            n         New session
+  d     Delete session (confirmation required)
   ● working (yellow) · ● waiting or rang while unseen (teal) · ● blocked (red) · ○ idle (green)
   A sound plays when a background agent becomes ready or blocked (BMUX_SOUND=0 mutes)
 
