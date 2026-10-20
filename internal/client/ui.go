@@ -453,7 +453,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 		u.welcomeKey(e)
 		return
 	}
-	if u.sidebarFocus {
+	if u.sidebarFocus || u.prompt == "delete" {
 		u.resizeUntil = time.Time{}
 		u.sidebarKey(e)
 		return
@@ -519,12 +519,7 @@ func (u *ui) beginCreate() {
 func (u *ui) pickerKey(e *tcell.EventKey) {
 	defer u.requestPreview()
 	if u.prompt == "delete" {
-		if e.Key() == tcell.KeyRune && e.Rune() == 'y' && e.Modifiers() == tcell.ModNone {
-			u.deleteSelectedSession()
-		} else {
-			u.prompt = ""
-			u.promptError = ""
-		}
+		u.answerDelete(e)
 		return
 	}
 	if u.prompt != "" {
@@ -662,6 +657,13 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	screenY := y
 	if u.picker {
 		u.pickerMouse(e, x, y)
+		return
+	}
+	if u.prompt == "delete" {
+		// The sidebar's delete question is modal: a click keeps the session.
+		if e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
+			u.prompt, u.promptError = "", ""
+		}
 		return
 	}
 	if u.help || u.integrations.open || u.welcome {
@@ -864,6 +866,9 @@ func (u *ui) draw() {
 		} else if u.welcome {
 			u.drawWelcome(w, h)
 		}
+		if u.prompt == "delete" {
+			u.drawDeleteModal(w, h)
+		}
 		u.drawPowerline(w, time.Now())
 	}
 	root, _ := u.keyTables()
@@ -882,8 +887,10 @@ func (u *ui) draw() {
 		footer = u.prefixHelp()
 	} else if u.closeConfirm != 0 {
 		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
+	} else if u.prompt == "delete" {
+		footer = "Delete session: y yes · n/Esc no"
 	} else if u.sidebarFocus {
-		footer = "Sidebar: j/k select · Enter/l open · Esc back · n new session"
+		footer = "Sidebar: j/k select · Enter/l open · d delete · Esc back · n new session"
 	} else if u.help {
 		footer = "Keys: j/k or arrows scroll · any other key closes"
 	} else if u.integrations.open {

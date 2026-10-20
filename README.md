@@ -59,9 +59,10 @@ Press **Ctrl-a d** to detach. Return with:
 bmux attach
 ```
 
-This attaches to the most recently used session. Use `bmux list` to see sessions,
-or `bmux attach NAME` to choose one. `bmux kill NAME` terminates a session and
-all its panes.
+This attaches to the most recently used session, including after
+`bmux restart`. Running bare `bmux` again always creates another session. Use
+`bmux list` to see sessions, or `bmux attach NAME` to choose one.
+`bmux kill NAME` terminates a session and all its panes.
 
 **Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "C-b"` in the
 [config file](#configuration) for tmux's. Splits use **|** and **-**, as in many
@@ -82,7 +83,7 @@ including giving Ctrl-l back to the shell.
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
 | Close pane | Ctrl-a x (asks first if a program is running) |
 | Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
-| Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, Esc returns |
+| Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, d deletes a session, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
 | Reload config | Ctrl-a r |
 | List key bindings | Ctrl-a ? |
