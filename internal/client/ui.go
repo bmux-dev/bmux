@@ -86,6 +86,8 @@ type ui struct {
 	closeCommand                    string
 	renameWindow                    int         // window the rename-window prompt names
 	windowTabs                      []windowTab // top-bar window labels, for clicks
+	projects                        projectPicker
+	projectResults                  chan projectResult
 	settings                        config.Config
 	configPath                      string
 	configEdge                      uint64 // last seen Frame.Config for this attachment
@@ -98,7 +100,27 @@ type ui struct {
 	welcome, welcomed               bool // welcome screen open; already shown by this client
 }
 
+// Run attaches to session name, or opens the session picker when name is "".
 func Run(socket, name, cwd string) error {
+	return run(socket, cwd, func(u *ui) error {
+		if name == "" {
+			u.openPicker()
+			return nil
+		}
+		return u.switchTo(name)
+	})
+}
+
+// RunProjects opens the project picker without attaching first; leaving it
+// without choosing a project exits.
+func RunProjects(socket, cwd string) error {
+	return run(socket, cwd, func(u *ui) error {
+		u.openProjects()
+		return nil
+	})
+}
+
+func run(socket, cwd string, start func(*ui) error) error {
 	path, pathErr := config.Path()
 	settings, configErr := config.Load(path, os.Getenv)
 	if pathErr != nil {
@@ -115,7 +137,7 @@ func Run(socket, name, cwd string) error {
 	screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
 	screen.EnablePaste()
 	screen.EnableFocus()
-	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), reconnects: make(chan string, 1), done: make(chan struct{})}
+	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), projectResults: make(chan projectResult, 1), reconnects: make(chan string, 1), done: make(chan struct{})}
 	u.configPath = path
 	u.applySettings(settings)
 	u.clipboard = newClipboardWorker()
@@ -128,12 +150,8 @@ func Run(socket, name, cwd string) error {
 			_ = u.conn.Close()
 		}
 	}()
-	if name != "" {
-		if err := u.switchTo(name); err != nil {
-			return err
-		}
-	} else {
-		u.openPicker()
+	if err := start(u); err != nil {
+		return err
 	}
 	if configErr != nil {
 		u.notice("Config: " + configErr.Error())
@@ -215,9 +233,11 @@ func Run(socket, name, cwd string) error {
 			u.finishClipboard(result)
 		case result := <-u.sidebarResults:
 			u.finishSidebarRefresh(result)
+		case result := <-u.projectResults:
+			u.finishProjects(result)
 		case name := <-u.reconnects:
 			// Only if nothing else was chosen while the server was away.
-			if u.conn == nil && u.picker && u.prompt == "" {
+			if u.conn == nil && u.picker && u.prompt == "" && !u.projects.open {
 				if err := u.switchTo(name); err != nil {
 					u.notice(err.Error())
 				} else {
@@ -437,6 +457,11 @@ func (u *ui) key(e *tcell.EventKey) {
 }
 
 func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
+	if u.projects.open {
+		u.resizeUntil = time.Time{}
+		u.projectsKey(e)
+		return
+	}
 	if u.picker {
 		u.resizeUntil = time.Time{}
 		u.pickerKey(e)
@@ -665,6 +690,9 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	}
 	x, y := e.Position()
 	screenY := y
+	if u.projects.open {
+		return // keyboard only
+	}
 	if u.picker {
 		u.pickerMouse(e, x, y)
 		return
@@ -857,6 +885,20 @@ func (u *ui) draw() {
 	}
 	u.screen.Clear()
 	u.screen.HideCursor()
+	if u.projects.open {
+		u.screen.Fill(' ', uiBaseStyle)
+		u.drawProjects(w, h)
+		footer := "Projects: type to filter · Up/Down select · Enter opens its session, or creates one · Esc back"
+		if time.Now().Before(u.messageUntil) {
+			footer = u.message
+		}
+		if h > 1 {
+			u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
+		}
+		u.updateTitle()
+		u.screen.Show()
+		return
+	}
 	if u.picker {
 		u.screen.Fill(' ', uiBaseStyle)
 		u.drawPicker(w, h)

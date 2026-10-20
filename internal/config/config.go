@@ -24,13 +24,14 @@ type Config struct {
 	Prefix string `toml:"prefix"`
 	// Onboarding shows the welcome screen on the next attach; bmux sets it
 	// to false once the screen has been seen.
-	Onboarding bool    `toml:"onboarding"`
-	UI         UI      `toml:"ui"`
-	Sidebar    Sidebar `toml:"sidebar"`
-	Sound      Sound   `toml:"sound"`
-	Agents     Agents  `toml:"agents"`
-	Restore    Restore `toml:"restore"`
-	Keys       Keys    `toml:"keys"`
+	Onboarding bool     `toml:"onboarding"`
+	UI         UI       `toml:"ui"`
+	Sidebar    Sidebar  `toml:"sidebar"`
+	Sound      Sound    `toml:"sound"`
+	Agents     Agents   `toml:"agents"`
+	Restore    Restore  `toml:"restore"`
+	Projects   Projects `toml:"projects"`
+	Keys       Keys     `toml:"keys"`
 }
 
 type UI struct {
@@ -75,6 +76,15 @@ type Restore struct {
 	Resume map[string][]string `toml:"resume"`
 }
 
+// Projects configures the project picker (Ctrl-a f, bmux project). Roots are
+// searched for git repositories down to Depth levels; paths may start with
+// ~/. Zoxide adds the directories zoxide knows, when it's installed.
+type Projects struct {
+	Roots  []string `toml:"roots"`
+	Depth  int      `toml:"depth"`
+	Zoxide bool     `toml:"zoxide"`
+}
+
 // Duration reads TOML strings such as "2s" or "1500ms".
 type Duration struct{ time.Duration }
 
@@ -96,6 +106,7 @@ func Default() Config {
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
 		Restore:    Restore{Enabled: true},
+		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3, Zoxide: true},
 	}
 }
 
@@ -273,6 +284,19 @@ func (c *Config) repair() []string {
 			delete(c.Restore.Resume, agent)
 		}
 	}
+	roots := c.Projects.Roots[:0]
+	for _, root := range c.Projects.Roots {
+		if expanded, err := expandHome(root); err != nil || !filepath.IsAbs(expanded) {
+			bad("projects.roots %q must be an absolute path or start with ~/", root)
+			continue
+		}
+		roots = append(roots, root)
+	}
+	c.Projects.Roots = roots
+	if c.Projects.Depth < 1 || c.Projects.Depth > 6 {
+		bad("projects.depth %d must be between 1 and 6", c.Projects.Depth)
+		c.Projects.Depth = d.Projects.Depth
+	}
 	c.repairKeys(bad)
 	return problems
 }
@@ -333,6 +357,11 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # claude = ["claude", "--continue"]
 # codex = ["codex", "resume", "--last"]
 
+[projects]                  # the project picker, Ctrl-a f and bmux project
+# roots = ["~/code", "~/src", "~/projects", "~/dev"]  # searched for git repositories
+# depth = 3                 # how many levels down each root to look
+# zoxide = true             # also list zoxide's directories, when installed
+
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
 # navigate-left/down/up/right (Vim/Neovim-aware), focus-left/down/up/right,
@@ -342,7 +371,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # layout-even-vertical, layout-main-horizontal, layout-main-vertical,
 # layout-tiled, equalize-layout, new-window, close-window, rename-window,
 # next-window, previous-window, last-window, select-window-1 to
-# select-window-9, sessions, new-session, last-session, previous-session,
+# select-window-9, sessions, projects, new-session, last-session, previous-session,
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
 # reload-config, help, integrations, send-prefix.
 
@@ -376,6 +405,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "left" = "focus-left"     # and down, up, right
 # "h" = "resize-left"       # j down, k up, l right; repeat without the prefix
 # "s" = "sessions"
+# "f" = "projects"
 # "n" = "new-session"
 # "p" = "last-session"
 # "(" = "previous-session"

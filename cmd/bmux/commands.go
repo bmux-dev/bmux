@@ -41,6 +41,7 @@ func init() {
 		{"", "", "Create and attach a fresh session in this directory (bmux attach returns to one)", startServer, runDefault},
 		{"new", "[--dir PATH] [--detach] NAME", "Create a shell session", startServer, runNew},
 		{"attach", "[NAME]", "Attach by name, or to the most recently used session", startServer, runAttach},
+		{"project", "[DIR]", "Open DIR's session, creating it if needed; without DIR, pick a project", startServer, runProject},
 		{"list", "", "List sessions", startServer, runList},
 		{"rename", "OLD NEW", "Rename a session", startServer, runRename},
 		{"kill", "NAME", "Terminate a session and all its panes", startServer, runKill},

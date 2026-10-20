@@ -79,7 +79,7 @@ func TestClientsRefuseToStartInsideAPane(t *testing.T) {
 	defer os.RemoveAll(dir)
 	t.Setenv("BMUX_RUNTIME_DIR", dir)
 	t.Setenv("BMUX_SESSION", "api")
-	for _, args := range [][]string{nil, {"attach"}, {"attach", "web"}, {"new", "web"}, {"new", "--dir", dir, "web"}} {
+	for _, args := range [][]string{nil, {"attach"}, {"attach", "web"}, {"new", "web"}, {"new", "--dir", dir, "web"}, {"project"}, {"project", dir}} {
 		if err := run(args); err == nil || !strings.Contains(err.Error(), "already inside bmux session api") {
 			t.Errorf("bmux %v inside a pane: %v", args, err)
 		}
