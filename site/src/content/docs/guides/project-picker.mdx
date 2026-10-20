@@ -1,0 +1,28 @@
+---
+title: "Project picker"
+description: "Open any project folder or git repository as a session with Ctrl-a f or bmux project."
+sidebar:
+  order: 2
+---
+
+import Screenshot from '../../../components/Screenshot.astro';
+
+**Ctrl-a f**, or `bmux project` from a shell, lists project folders, like
+sesh and tmux-sessionizer:
+
+1. folders a session started in, most recently used first, with the session's
+   name;
+2. the directories zoxide knows, in its order, when zoxide is installed;
+3. git repositories under `projects.roots` (`~/code`, `~/src`, `~/projects`
+   and `~/dev` by default, when they exist), up to `projects.depth` levels
+   down (3). Hidden folders, `node_modules`, `vendor` and folders inside a
+   repository aren't searched.
+
+<Screenshot name="project-picker" alt="The project picker listing session folders and git repositories" />
+
+Typing filters the list; Up/Down (or Ctrl-j/k, Ctrl-n/p) select, Backspace
+and Ctrl-u edit the filter. **Enter** attaches to the most recent session
+started in that folder, or creates one named after it, the way bare `bmux`
+names sessions. **Esc** goes back; when `bmux project` opened the picker, it
+exits. `bmux project DIR` does the same for one folder without the list.
+Folders reached through a symlink are the same folder.

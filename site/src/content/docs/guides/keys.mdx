@@ -1,0 +1,121 @@
+---
+title: "Keys and panes"
+description: "The prefix key and every binding for sessions, windows, panes and resizing."
+sidebar:
+  order: 4
+---
+
+import Screenshot from '../../../components/Screenshot.astro';
+
+The prefix is **Ctrl-a** (`prefix` in the [config file](/bmux/configuration/config-file/)
+changes it; these docs say Ctrl-a). Release it before pressing the next key.
+
+<Screenshot name="key-help" alt="The key bindings list opened with Ctrl-a ?" />
+
+| Action | Control |
+| --- | --- |
+| Open picker | Ctrl-a s, or click the bottom status line |
+| Open the [project picker](/bmux/guides/project-picker/) | Ctrl-a f |
+| Detach, leaving sessions running | Ctrl-a d |
+| Create a session | Ctrl-a n |
+| Toggle to the last session you came from | Ctrl-a p |
+| Next / previous session, in sidebar order | Ctrl-a ) / Ctrl-a ( |
+| Close the focused pane | Ctrl-a x |
+| New window, in the focused pane's directory | Ctrl-a c |
+| Select window 1–9 | Ctrl-a 1 … Ctrl-a 9, or click its tab on the top bar |
+| Next / previous window | Ctrl-a ] / Ctrl-a [ |
+| Toggle to the last window | Ctrl-a Tab |
+| Rename the window | Ctrl-a , |
+| Close the window and all its panes | Ctrl-a & |
+| Split side by side | Ctrl-a \| |
+| Split stacked | Ctrl-a - |
+| Focus left/down/up/right | Ctrl-h/j/k/l outside Vim/Neovim |
+| Focus the sidebar | Ctrl-h from the leftmost pane |
+| Show / hide the sidebar | Ctrl-a b |
+| Reload the config file | Ctrl-a r |
+| List key bindings | Ctrl-a ?; j/k or arrows scroll, any other key closes |
+| Agent integrations | Ctrl-a i; Enter installs, Esc closes |
+| Focus a neighboring pane directly | Ctrl-a arrow keys |
+| Cycle visible panes | Ctrl-a o |
+| Focus a pane | Click it |
+| Move the nearest divider five cells | Ctrl-a h/j/k/l |
+| Zoom / unzoom the focused pane | Ctrl-a m |
+| Back to the previously focused pane | Ctrl-a ; |
+| Swap the pane with the previous / next one | Ctrl-a \{ / Ctrl-a \} |
+| Rotate the window's panes | Ctrl-a Ctrl-o |
+| Move the pane to a new window / into the last window | Ctrl-a ! / Ctrl-a @ |
+| Next preset layout | Ctrl-a Space |
+| Even horizontal, even vertical, main horizontal, main vertical, tiled | Ctrl-a Alt-1 … Alt-5 |
+| Spread the splits evenly | Ctrl-a E |
+| Send Ctrl-a to the application | Ctrl-a Ctrl-a |
+| Copy the selection again | Ctrl-a y |
+| Select and copy from the keyboard | Ctrl-a v, see [Keyboard scrollback](/bmux/guides/selection-scrollback/#keyboard-scrollback) |
+| Search history, newest first | Ctrl-a / |
+| Copy the selection, if the terminal delivers this shortcut | Ctrl-Shift-c |
+| Clear the selection | Esc, typing, or pasting |
+| Scroll history up / down ten lines | Shift-PageUp / Shift-PageDown |
+| Paste | Your terminal's paste shortcut, such as Cmd-V |
+
+Ctrl-a p is a last-session toggle for this client, not previous-in-list
+navigation. It does nothing until you have switched from another session.
+Ctrl-a ) and ( step through sessions in the sidebar's order (creation order)
+and wrap around.
+
+Outside Vim/Neovim, bmux takes Ctrl-h/j/k/l, including in other programs such
+as fzf, so by default Ctrl-l doesn't clear a shell. Inside Vim/Neovim they are
+forwarded. See [editor navigation](/bmux/guides/editor-navigation/) for mappings that
+cross editor edges. To forward them to other programs too, list them in
+`keys.pass-through` (like vim-tmux-navigator's `is_vim` pattern); to give a
+key back everywhere, [unbind it](/bmux/configuration/rebinding-keys/).
+
+## Windows
+
+A session holds numbered windows, like tmux's, and each window has its own
+splits, focused pane and zoom. The top bar lists them after the session and
+pane: the active one in the accent color, and a `!` on a background window
+with a pane that needs you (a bell, a notification or a blocked agent).
+A window shows its name, or until you rename it the focused pane's title, or
+`shell`. Renaming to an empty name goes back to the title. Names are at most
+40 bytes.
+
+Background windows keep running at the session's size, so switching is
+instant and never resizes anything. Their agents still show in the sidebar,
+and opening one there switches to its window. Pane numbers are unique across
+a session's windows, so `SESSION:PANE` targets and `BMUX_PANE` keep working
+wherever a pane is; a bare `SESSION` target means the active window's
+focused pane.
+
+Ctrl-a & asks first when any pane in the window has a program in front of its
+shell; only a lowercase y closes it. Closing a window's last pane closes the
+window, and the windows after it move down a number. Leaving the active window
+returns to the last window you were in. Closing the last window ends the
+session. A session holds at most 32 panes across all its windows.
+
+## Arranging panes
+
+These follow tmux. Moving a pane never restarts it: its program, scrollback
+and number go with it.
+
+- **Ctrl-a ;** returns to the pane you were in before, in this window; press
+  it again to toggle back. If that pane has closed, it does nothing.
+- **Ctrl-a \{** and **\}** swap the focused pane with the previous or next pane
+  (left to right, top to bottom, wrapping around), and focus stays on it.
+  **Ctrl-a Ctrl-o** moves every pane one place forward. The splits stay where
+  they are; only the panes trade places. Unzoom first.
+- **Ctrl-a !** moves the focused pane into a new window of its own.
+  **Ctrl-a @** moves it into the last window, beside that window's focused
+  pane. A window left empty closes.
+- **Ctrl-a Space** steps through the preset layouts: even horizontal (side by
+  side), even vertical (stacked), main horizontal (the first pane across the
+  top 60%, the rest below), main vertical (the first pane on the left 60%,
+  the rest beside it) and tiled (a grid). **Ctrl-a Alt-1** to **Alt-5** pick
+  one directly. **Ctrl-a E** keeps your splits but spreads each row or column
+  evenly. Presets keep the pane order and focus, and unzoom.
+
+## Repeat resizing
+
+After **Ctrl-a h/j/k/l**, plain **h/j/k/l** continue resizing in any direction.
+Each press renews a **one-second** window. A one-second pause, another key,
+a mouse click or wheel event, paste, opening the picker, or losing terminal
+focus ends repetition. The footer shows when resizing is active. Unzoom
+before resizing dividers.

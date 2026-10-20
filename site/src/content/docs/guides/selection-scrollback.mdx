@@ -1,0 +1,95 @@
+---
+title: "Selection and scrollback"
+description: "Select and copy with the mouse, scroll history without copy mode, and search scrollback from the keyboard."
+sidebar:
+  order: 5
+---
+
+import Screenshot from '../../../components/Screenshot.astro';
+
+## Mouse selection and scrollback
+
+| Action | Mouse |
+| --- | --- |
+| Select and copy | Drag, then release; drag past the pane's top or bottom to scroll |
+| Select a word and copy | Double-click |
+| Select a line and copy | Triple-click |
+| Scroll history | Wheel up/down, three lines per event |
+| Select or scroll history in a mouse-aware application | Hold Alt |
+| Resize panes | Drag a divider between them |
+
+Dragging a divider moves it as you go, down to each pane's minimum size,
+without changing which pane is focused. Where dividers meet, the one running
+through the junction moves. A zoomed pane has no dividers to drag.
+
+Mouse-aware applications receive mouse events by default. **Alt** gives the
+gesture to bmux instead. If your terminal reserves Shift-drag, it performs
+the terminal's own selection; if it passes Shift through, bmux handles selection.
+
+Typing or pasting returns to live output. Each pane keeps **10,000 lines** of
+scrollback by default; `scrollback.lines` in the [config file](/bmux/configuration/config-file/)
+changes it (100 to 200,000), and `bmux reload` applies it to running panes at
+their next output, dropping the oldest lines if it shrank. Full-screen
+alternate-screen applications use their own scrolling; bmux history scrolling
+is unavailable there.
+
+Dragging a selection above or below the pane scrolls history toward the
+pointer, faster the further out it is, and keeps scrolling while you hold
+still; moving back into the pane stops it. Rows scrolled past too fast to
+draw are still copied, from the server's history.
+
+Selections survive pane focus changes. Resizing a pane, repainting selected
+text, or removing it from history clears the selection. Wide, busy
+histories use more memory.
+
+Panes reflow when their width changes, like tmux: lines the terminal wrapped
+join back up and wrap again at the new width, on screen and in scrollback,
+and the cursor stays on the same character. Lines a program ended with a
+newline stay separate. When a pane gets shorter, rows above the cursor move
+into scrollback instead of being cut off. Full-screen programs on the
+alternate screen redraw themselves instead. Copying text the terminal wrapped
+gives one line, without a newline where it wrapped.
+
+## Keyboard scrollback
+
+**Ctrl-a v** opens a view of the focused pane's history with a cursor, for
+selecting and copying without the mouse. It's optional: nothing needs it, and
+the mouse works as usual, with a click leaving the view. While it's open, keys
+go to the view, never to the pane's program, and the status line lists them.
+
+| In the view | Keys |
+| --- | --- |
+| Move | h/j/k/l or arrows; w/b/e by word; 0, ^ and $ (or Home/End) for the row |
+| Move further | Ctrl-u/Ctrl-d half a screen, PageUp/PageDown (Ctrl-b/Ctrl-f) a screen; H/M/L the top, middle and bottom of the view; g/G the oldest and newest rows |
+| Select | v by character, V by line, Ctrl-v a block; the same key again ends it, another switches kind |
+| Copy and leave | y or Enter |
+| Search down / up | / or ?, type, Enter; n repeats, N goes the other way |
+| Previous / next shell prompt | [ / ] |
+| End the selection, then leave | Esc |
+| Leave | q or Ctrl-c |
+
+The cursor starts where the pane's cursor is, and moving past the top or
+bottom scrolls history. Leaving returns the pane to live output. The copy comes
+from the server's history, so a selection can reach rows that were never on
+screen, and text the terminal wrapped is copied as one line. Full-screen
+programs have no scrollback, so the view doesn't open over them; a resize
+that reflows the pane closes it.
+
+**Search** with **Ctrl-a /**, which opens the view with a prompt searching up
+from the bottom, newest first, or with / (down) and ? (up) in the view, like
+vi. Enter searches, Esc cancels. The cursor lands on the match and every
+match on screen is highlighted; n finds the next one in the same direction, N
+in the other, and searches wrap around at the ends of history. A query in
+lowercase ignores case; any capital letter makes it exact. The whole retained
+history is searched on the server, a printed line at a time, so text the
+terminal wrapped onto two rows is still found.
+
+<Screenshot name="scrollback-search" alt="Searching scrollback for timeout, with every match highlighted" />
+
+**[** and **]** jump to the previous and next shell prompt, so you can go
+back to where a command's output starts. They need your shell to mark its
+prompts with OSC 133 (FinalTerm shell integration): fish, zsh and bash
+integrations, starship, and Ghostty's and iTerm's shell scripts do. For a
+plain bash prompt, put `\[\e]133;A\a\]` at the start of `PS1`. Marks stay on
+their line through scrolling and reflow; erasing the line drops its mark.
+Without marks, the keys say so.
