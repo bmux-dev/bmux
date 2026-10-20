@@ -76,6 +76,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	}
 	for _, p := range f.Panes {
 		if p.ID == u.focused {
+			u.extendToEdge(p.Terminal)
 			u.selection.remember(p.Terminal)
 			u.selections[p.ID] = u.selection
 		} else {
