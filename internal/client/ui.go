@@ -87,6 +87,7 @@ type ui struct {
 	closeCommand                    string
 	renameWindow                    int         // window the rename-window prompt names
 	windowTabs                      []windowTab // top-bar window labels, for clicks
+	updateHintFrom                  int         // bottom-bar column of the update hint; 0 when hidden
 	projects                        projectPicker
 	projectResults                  chan projectResult
 	view                            scrollView // the keyboard scrollback view, when open
@@ -751,6 +752,10 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	}
 	screenWidth, screenHeight := u.screen.Size()
 	if y == screenHeight-1 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
+		if hint := u.updateHint(); hint != nil && u.updateHintFrom > 0 && x >= u.updateHintFrom {
+			u.notice(updateHintMessage(hint))
+			return
+		}
 		u.openPicker()
 		return
 	}
@@ -1032,6 +1037,7 @@ func (u *ui) draw() {
 	}
 	if h > 1 {
 		u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
+		u.drawUpdateHint(w, h, 1+displayWidth(footer))
 	}
 	u.updateTitle()
 	u.screen.Show()

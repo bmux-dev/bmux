@@ -16,6 +16,10 @@ func String() string {
 	return resolve(stamped, info, ok)
 }
 
+// Stamped reports whether this is a release binary, as opposed to a
+// go install or checkout build.
+func Stamped() bool { return stamped != "" }
+
 // resolve prefers the release stamp, then the module version that
 // go install records (v0.6.0), and otherwise reports a dev build.
 func resolve(stamped string, info *debug.BuildInfo, ok bool) string {
