@@ -10,6 +10,9 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 	u.resizeUntil = time.Time{}
 	if e.Err != nil {
 		u.notice(e.Err.Error())
+	} else if u.projects.open {
+		u.projects.query += e.Text
+		u.projects.chosen = 0
 	} else if u.picker {
 		if u.prompt == "name" || u.prompt == "rename" || u.prompt == "directory" {
 			u.input += e.Text

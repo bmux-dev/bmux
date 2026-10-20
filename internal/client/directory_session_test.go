@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"encoding/json"
@@ -10,7 +10,6 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/josephferrero/bmux/internal/client"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/josephferrero/bmux/internal/server"
 )
@@ -96,7 +95,7 @@ func TestDirectoryStartupCreatesFreshSessionInRequestedDirectory(t *testing.T) {
 				return protocol.Response{}
 			})
 			cwd := "/projects/api"
-			name, err := createDirectorySession(socket, cwd)
+			name, err := CreateDirectorySession(socket, cwd)
 			want := "api-3"
 			if collision {
 				want = "api-2"
@@ -128,7 +127,7 @@ func TestDirectoryStartupPropagatesErrorsWithoutRetryingUnrelatedFailures(t *tes
 				}
 				return protocol.Response{}
 			})
-			name, err := createDirectorySession(socket, "/projects/api")
+			name, err := CreateDirectorySession(socket, "/projects/api")
 			if name != "" || err == nil || !strings.Contains(err.Error(), "shutting down") {
 				t.Fatalf("failure suppressed: %q %v", name, err)
 			}
@@ -173,7 +172,7 @@ func TestConcurrentDirectoryStartupCreatesDistinctPersistentSessions(t *testing.
 	// An existing session with this name belongs to another directory and must
 	// not be attached, overwritten, or terminated by automatic startup.
 	other := t.TempDir()
-	if _, err := client.Request(socket, protocol.Request{Op: "create", Name: "api", Dir: other}); err != nil {
+	if _, err := Request(socket, protocol.Request{Op: "create", Name: "api", Dir: other}); err != nil {
 		t.Fatal(err)
 	}
 	type result struct {
@@ -186,7 +185,7 @@ func TestConcurrentDirectoryStartupCreatesDistinctPersistentSessions(t *testing.
 		launches.Add(1)
 		go func() {
 			defer launches.Done()
-			name, err := createDirectorySession(socket, cwd)
+			name, err := CreateDirectorySession(socket, cwd)
 			results <- result{name, err}
 		}()
 	}
@@ -199,7 +198,7 @@ func TestConcurrentDirectoryStartupCreatesDistinctPersistentSessions(t *testing.
 		}
 		names[r.name] = true
 	}
-	r, err := client.Request(socket, protocol.Request{Op: "list"})
+	r, err := Request(socket, protocol.Request{Op: "list"})
 	if err != nil {
 		t.Fatal(err)
 	}
