@@ -89,6 +89,20 @@ func editorNavigationSession(t *testing.T) *session {
 	if err := s.input(protocol.Request{Op: "split", Direction: "horizontal"}); err != nil {
 		t.Fatal(err)
 	}
+	// Navigation forwards the key to the app when bmux can't read a pane's
+	// foreground job, as while a starting shell forks and execs its startup
+	// helpers. Tests move focus, so wait until both shells have started and
+	// sit idle at a prompt: each prints a marker only its output contains.
+	s.mu.Lock()
+	panes := map[int]*pane{1: s.panes[1], 2: s.panes[2]}
+	s.mu.Unlock()
+	for id, p := range panes {
+		if err := s.input(protocol.Request{Op: "paste", PaneID: id, Text: "echo IDLE_$((40+2))\n"}); err != nil {
+			t.Fatal(err)
+		}
+		awaitFrame(t, p, func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "IDLE_42") })
+		waitEditorForeground(t, p, false)
+	}
 	return s
 }
 
