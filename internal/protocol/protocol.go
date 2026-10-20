@@ -170,8 +170,11 @@ type Frame struct {
 	Config uint64 `json:"config,omitempty"`
 	// Clipboard is text an app in this session copied with OSC 52 since the
 	// previous frame of this attachment; the client copies it like a selection.
-	Clipboard string      `json:"clipboard,omitempty"`
-	Panes     []PaneFrame `json:"panes"`
+	Clipboard string `json:"clipboard,omitempty"`
+	// Notice is something the client should show once, such as a layout
+	// file that couldn't be used; only the session's first attachment gets it.
+	Notice string      `json:"notice,omitempty"`
+	Panes  []PaneFrame `json:"panes"`
 	// Windows lists the session's windows in order; the panes above are the
 	// active one's.
 	Windows []Window `json:"windows,omitempty"`
@@ -198,9 +201,11 @@ type Response struct {
 	// "" when the shell itself is in front.
 	Command string `json:"command,omitempty"`
 	// Pane is the target pane's activity after capture-pane or send-input,
-	// including a refused send; Text is capture-pane's visible screen.
+	// including a refused send; Text is capture-pane's visible screen, or the
+	// layout op's layout file for directory Dir.
 	Pane *PaneActivity `json:"pane,omitempty"`
 	Text string        `json:"text,omitempty"`
+	Dir  string        `json:"dir,omitempty"`
 	// Env is the server's own environment (environment), which a restart
 	// started from inside a pane gives the new server.
 	Env []string `json:"env,omitempty"`

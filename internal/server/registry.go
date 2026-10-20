@@ -71,7 +71,7 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 			result.Error = "working directory is not a directory"
 			return result
 		}
-		created, err := newSession(r.Name, dir, s.shell, r.Width, r.Height)
+		created, err := s.createSession(r.Name, dir, r.Width, r.Height)
 		if err != nil {
 			result.Error = err.Error()
 			return result

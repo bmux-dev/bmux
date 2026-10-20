@@ -64,6 +64,10 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	u.noteEdge(f)
 	u.noteConfig(f)
 	u.noteFirstAttach()
+	if f.Notice != "" {
+		// Longer than other notices: it can name a file and what to do.
+		u.message, u.messageUntil = f.Notice, time.Now().Add(15*time.Second)
+	}
 	if !alive[u.focused] {
 		u.frame = nil
 		if len(f.Panes) > 0 {
