@@ -15,11 +15,11 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/charmbracelet/x/vt"
 	"github.com/creack/pty"
 	"golang.org/x/sys/unix"
 
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 type pane struct {

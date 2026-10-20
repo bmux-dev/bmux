@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/x/vt"
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 func awaitBridgeAccounting(t *testing.T, b *inputBridge, user, reply int) {
