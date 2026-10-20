@@ -269,6 +269,7 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Spread the splits evenly | Ctrl-a E |
 | Send Ctrl-a to the application | Ctrl-a Ctrl-a |
 | Copy the selection again | Ctrl-a y |
+| Select and copy from the keyboard | Ctrl-a v, see [Keyboard scrollback](#keyboard-scrollback) |
 | Copy the selection, if the terminal delivers this shortcut | Ctrl-Shift-c |
 | Clear the selection | Esc, typing, or pasting |
 | Scroll history up / down ten lines | Shift-PageUp / Shift-PageDown |
@@ -595,8 +596,7 @@ is unavailable there.
 
 Selections survive pane focus changes. Resizing a pane, repainting selected
 text, or removing it from history clears the selection. Dragging beyond the
-view does not auto-scroll yet. Wide, busy histories use more memory. Keyboard
-selection and history search are planned.
+view does not auto-scroll yet. Wide, busy histories use more memory.
 
 Panes reflow when their width changes, like tmux: lines the terminal wrapped
 join back up and wrap again at the new width, on screen and in scrollback,
@@ -605,6 +605,29 @@ newline stay separate. When a pane gets shorter, rows above the cursor move
 into scrollback instead of being cut off. Full-screen programs on the
 alternate screen redraw themselves instead. Copying text the terminal wrapped
 gives one line, without a newline where it wrapped.
+
+## Keyboard scrollback
+
+**Ctrl-a v** opens a view of the focused pane's history with a cursor, for
+selecting and copying without the mouse. It's optional: nothing needs it, and
+the mouse works as usual, with a click leaving the view. While it's open, keys
+go to the view, never to the pane's program, and the status line lists them.
+
+| In the view | Keys |
+| --- | --- |
+| Move | h/j/k/l or arrows; w/b/e by word; 0, ^ and $ (or Home/End) for the row |
+| Move further | Ctrl-u/Ctrl-d half a screen, PageUp/PageDown (Ctrl-b/Ctrl-f) a screen; H/M/L the top, middle and bottom of the view; g/G the oldest and newest rows |
+| Select | v by character, V by line, Ctrl-v a block; the same key again ends it, another switches kind |
+| Copy and leave | y or Enter |
+| End the selection, then leave | Esc |
+| Leave | q or Ctrl-c |
+
+The cursor starts where the pane's cursor is, and moving past the top or
+bottom scrolls history. Leaving returns the pane to live output. The copy comes
+from the server's history, so a selection can reach rows that were never on
+screen, and text the terminal wrapped is copied as one line. Full-screen
+programs have no scrollback, so the view doesn't open over them; a resize
+that reflows the pane closes it.
 
 ## Clipboard and paste
 
@@ -740,7 +763,7 @@ letters are the same as Ctrl letters in most terminals.
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |
 | `sessions`, `projects`, `new-session`, `last-session` | prefix `s`, `f`, `n`, `p` | |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
-| `detach`, `copy` | prefix `d`, `y` | |
+| `detach`, `copy`, `scrollback` | prefix `d`, `y`, `v` | `scrollback` opens the [keyboard scrollback](#keyboard-scrollback) view |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
 | `toggle-sidebar`, `reload-config`, `help`, `integrations` | prefix `b`, `r`, `?`, `i` | `help` lists the bindings in effect; `integrations` opens the integrations panel |
 | `send-prefix` | the prefix again | Send the prefix key to the application |

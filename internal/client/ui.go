@@ -88,6 +88,7 @@ type ui struct {
 	windowTabs                      []windowTab // top-bar window labels, for clicks
 	projects                        projectPicker
 	projectResults                  chan projectResult
+	view                            scrollView // the keyboard scrollback view, when open
 	settings                        config.Config
 	configPath                      string
 	configEdge                      uint64 // last seen Frame.Config for this attachment
@@ -275,6 +276,7 @@ func (u *ui) endSession(name string) {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
+	u.view = scrollView{}
 	u.help, u.integrations.open, u.welcome = false, false, false
 	u.selections = nil
 	u.paneSizes = nil
@@ -364,6 +366,7 @@ func (u *ui) switchTo(name string) error {
 	u.edgeKnown, u.configKnown = false, false
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
+	u.view = scrollView{}
 	u.help, u.integrations.open, u.welcome = false, false, false
 	u.generation++
 	generation := u.generation
@@ -416,6 +419,7 @@ func (u *ui) openPicker() {
 	u.stopPreview()
 	u.resizeUntil = time.Time{}
 	u.picker, u.query, u.chosen, u.prefix = true, "", 0, false
+	u.view = scrollView{} // the picker shows another session's preview
 	u.searching = false
 	if u.prompt == "rename-window" {
 		u.prompt, u.promptError = "", "" // names the attached session's window
@@ -486,6 +490,11 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	}
 	if u.welcome {
 		u.welcomeKey(e)
+		return
+	}
+	if u.view.active {
+		u.resizeUntil = time.Time{}
+		u.viewKey(e)
 		return
 	}
 	if u.sidebarFocus || u.prompt == "delete" {
@@ -635,6 +644,11 @@ func (u *ui) copy() {
 		u.notice("Select text by dragging first")
 		return
 	}
+	u.copyText(text)
+}
+
+// copyText puts text on the clipboard of the machine running this client.
+func (u *ui) copyText(text string) {
 	u.clipboardSeq++
 	if u.clipboard == nil {
 		u.finishClipboard(clipboardResult{Seq: u.clipboardSeq, Text: text})
@@ -692,6 +706,10 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	screenY := y
 	if u.projects.open {
 		return // keyboard only
+	}
+	if u.view.active && e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
+		// The mouse works as always: a click leaves the keyboard view.
+		u.closeScrollView()
 	}
 	if u.picker {
 		u.pickerMouse(e, x, y)
@@ -947,6 +965,8 @@ func (u *ui) draw() {
 		footer = fmt.Sprintf("Close window %d, which runs %s? y closes it · any other key keeps it", u.closeWindow, u.closeCommand)
 	} else if u.prompt == "delete" {
 		footer = "Delete session: y yes · n/Esc no"
+	} else if u.view.active {
+		footer = "Scrollback: hjkl/arrows w b 0 $ g G move · v V Ctrl-v select · y copy · Esc back"
 	} else if u.sidebarFocus {
 		footer = "Sidebar: j/k select · Enter/l open · d delete · Esc back · n new session"
 	} else if u.help {

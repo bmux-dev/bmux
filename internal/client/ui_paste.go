@@ -24,6 +24,8 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 		} else {
 			u.notice("Paste into a name, directory, or / filter")
 		}
+	} else if u.view.active {
+		u.notice("Paste goes to the pane: leave the scrollback view with Esc first")
 	} else if u.prompt == "rename-window" {
 		u.appendWindowName(e.Text)
 	} else if u.prompt == "delete" {
