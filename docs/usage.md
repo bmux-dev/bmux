@@ -179,6 +179,13 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Focus a pane | Click it |
 | Move the nearest divider five cells | Ctrl-a h/j/k/l |
 | Zoom / unzoom the focused pane | Ctrl-a m |
+| Back to the previously focused pane | Ctrl-a ; |
+| Swap the pane with the previous / next one | Ctrl-a { / Ctrl-a } |
+| Rotate the window's panes | Ctrl-a Ctrl-o |
+| Move the pane to a new window / into the last window | Ctrl-a ! / Ctrl-a @ |
+| Next preset layout | Ctrl-a Space |
+| Even horizontal, even vertical, main horizontal, main vertical, tiled | Ctrl-a Alt-1 … Alt-5 |
+| Spread the splits evenly | Ctrl-a E |
 | Send Ctrl-a to the application | Ctrl-a Ctrl-a |
 | Copy the selection again | Ctrl-a y |
 | Copy the selection, if the terminal delivers this shortcut | Ctrl-Shift-c |
@@ -220,6 +227,27 @@ shell; only a lowercase y closes it. Closing a window's last pane closes the
 window, and the windows after it move down a number. Leaving the active window
 returns to the last window you were in. Closing the last window ends the
 session. A session holds at most 32 panes across all its windows.
+
+### Arranging panes
+
+These follow tmux. Moving a pane never restarts it: its program, scrollback
+and number go with it.
+
+- **Ctrl-a ;** returns to the pane you were in before, in this window; press
+  it again to toggle back. If that pane has closed, it does nothing.
+- **Ctrl-a {** and **}** swap the focused pane with the previous or next pane
+  (left to right, top to bottom, wrapping around), and focus stays on it.
+  **Ctrl-a Ctrl-o** moves every pane one place forward. The splits stay where
+  they are; only the panes trade places. Unzoom first.
+- **Ctrl-a !** moves the focused pane into a new window of its own.
+  **Ctrl-a @** moves it into the last window, beside that window's focused
+  pane. A window left empty closes.
+- **Ctrl-a Space** steps through the preset layouts: even horizontal (side by
+  side), even vertical (stacked), main horizontal (the first pane across the
+  top 60%, the rest below), main vertical (the first pane on the left 60%,
+  the rest beside it) and tiled (a grid). **Ctrl-a Alt-1** to **Alt-5** pick
+  one directly. **Ctrl-a E** keeps your splits but spreads each row or column
+  evenly. Presets keep the pane order and focus, and unzoom.
 
 ### Repeat resizing
 
@@ -608,6 +636,10 @@ letters are the same as Ctrl letters in most terminals.
 | `resize-left` / `-down` / `-up` / `-right` | prefix `h/j/k/l` | Move a divider five cells; prefix keys bound to resize repeat without the prefix for a second |
 | `split-right` / `split-down` | prefix `\|` / `-` | Split side by side / stacked |
 | `zoom`, `close-pane` | prefix `m`, `x` | |
+| `last-pane`, `swap-pane-previous` / `swap-pane-next`, `rotate-window` | prefix `;`, `{` / `}`, `C-o` | |
+| `break-pane`, `join-pane` | prefix `!`, `@` | Join goes into the last window, beside its focused pane |
+| `next-layout`, `equalize-layout` | prefix `space`, `E` | |
+| `layout-even-horizontal`, `layout-even-vertical`, `layout-main-horizontal`, `layout-main-vertical`, `layout-tiled` | prefix `A-1` … `A-5` | |
 | `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `,` | New window in the focused pane's directory; close asks first if a program is running |
 | `next-window` / `previous-window`, `last-window` | prefix `]` / `[`, `tab` | |
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |

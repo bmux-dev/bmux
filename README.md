@@ -85,6 +85,9 @@ including giving Ctrl-l back to the shell.
 | Rename / close window | Ctrl-a , / Ctrl-a & (asks first if a program is running) |
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
 | Close pane | Ctrl-a x (asks first if a program is running) |
+| Last pane / swap / rotate | Ctrl-a ; / Ctrl-a { } / Ctrl-a Ctrl-o |
+| Pane to new window / into last window | Ctrl-a ! / Ctrl-a @ |
+| Preset layouts / even out splits | Ctrl-a Space (or Alt-1…5) / Ctrl-a E |
 | Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
 | Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, d deletes a session, Esc returns |
 | Show / hide sidebar | Ctrl-a b |
