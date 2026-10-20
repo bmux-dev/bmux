@@ -59,6 +59,14 @@ total increasing so an attachment can't mistake the new window's frame for
 one it already has. Background attention for the top bar's `!` comes from the
 sidebar's `list` poll, which lists activity for every window.
 
+Arranging panes (`arrange.go`) rewrites trees only, never panes: swap and
+rotate reassign leaf IDs in layout order (`setLeaves`), keeping every split;
+presets rebuild the tree from the leaf order (`presetLayout`); equalize sets
+each split's ratio from how many panes line up on either side of it.
+Break and join move a leaf between windows and carry the active revision
+first, since the active window's pane set changes. `window.focus` records the
+pane it leaves, which `last-pane` returns to while it is still in the tree.
+
 ## Input admission
 
 `protocol.MaxPasteBytes` is the decoded logical payload maximum: 4 MiB.

@@ -37,7 +37,7 @@ func TestKeyHelpListsBindingsInEffectAndKeepsKeysFromApps(t *testing.T) {
 		t.Fatalf("help lists an unbound key:\n%s", text)
 	}
 	// More bindings than rows: scrolling reaches the end of the list.
-	for range 40 {
+	for range len(u.helpLines()) {
 		u.key(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
 	}
 	u.draw()

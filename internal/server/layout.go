@@ -1,5 +1,7 @@
 package server
 
+import "fmt"
+
 // A binary layout tree keeps nested splits and their proportions independent
 // from PTY lifetime. Every divider consumes exactly one screen cell.
 type layout struct {
@@ -85,6 +87,94 @@ func (n *layout) leaves(out *[]int) {
 	}
 	n.first.leaves(out)
 	n.second.leaves(out)
+}
+
+// setLeaves gives the tree's panes the IDs in ids, in layout order, keeping
+// every split where it is. ids holds one ID per pane.
+func (n *layout) setLeaves(ids []int) []int {
+	if n.id != 0 {
+		n.id = ids[0]
+		return ids[1:]
+	}
+	return n.second.setLeaves(n.first.setLeaves(ids))
+}
+
+// share is the ratio giving the first of two parts a of total equal shares,
+// rounded up so place() never gives it a cell less.
+func share(a, total int) int {
+	return (a*10000 + total - 1) / total
+}
+
+// chain lines nodes up side by side (horizontal) or stacked (vertical), each
+// getting an equal share.
+func chain(nodes []*layout, direction string) *layout {
+	if len(nodes) == 1 {
+		return nodes[0]
+	}
+	return &layout{direction: direction, ratio: share(1, len(nodes)), first: nodes[0], second: chain(nodes[1:], direction)}
+}
+
+func leafNodes(ids []int) []*layout {
+	nodes := make([]*layout, len(ids))
+	for i, id := range ids {
+		nodes[i] = &layout{id: id}
+	}
+	return nodes
+}
+
+// Preset layouts, as tmux names them, in the order next-layout cycles.
+var layoutPresets = []string{"even-horizontal", "even-vertical", "main-horizontal", "main-vertical", "tiled"}
+
+// mainShare is the main pane's share in the main-* presets.
+const mainShare = 6000
+
+// presetLayout arranges ids, in order, as a tmux preset. The main-* presets
+// give the first pane the main area.
+func presetLayout(name string, ids []int) (*layout, error) {
+	if len(ids) == 1 {
+		return &layout{id: ids[0]}, nil
+	}
+	switch name {
+	case "even-horizontal":
+		return chain(leafNodes(ids), "horizontal"), nil
+	case "even-vertical":
+		return chain(leafNodes(ids), "vertical"), nil
+	case "main-horizontal":
+		return &layout{direction: "vertical", ratio: mainShare, first: &layout{id: ids[0]}, second: chain(leafNodes(ids[1:]), "horizontal")}, nil
+	case "main-vertical":
+		return &layout{direction: "horizontal", ratio: mainShare, first: &layout{id: ids[0]}, second: chain(leafNodes(ids[1:]), "vertical")}, nil
+	case "tiled":
+		columns := 1
+		for columns*columns < len(ids) {
+			columns++
+		}
+		var rows []*layout
+		for start := 0; start < len(ids); start += columns {
+			rows = append(rows, chain(leafNodes(ids[start:min(start+columns, len(ids))]), "horizontal"))
+		}
+		return chain(rows, "vertical"), nil
+	}
+	return nil, fmt.Errorf("unknown layout %q", name)
+}
+
+// weight counts the panes a subtree lines up along direction.
+func (n *layout) weight(direction string) int {
+	if n.id != 0 || n.direction != direction {
+		return 1
+	}
+	return n.first.weight(direction) + n.second.weight(direction)
+}
+
+// equalize keeps every split but spreads each run of same-direction splits
+// evenly, like tmux's select-layout -E.
+func (n *layout) equalize() {
+	if n.id != 0 {
+		return
+	}
+	a, b := n.first.weight(n.direction), n.second.weight(n.direction)
+	n.ratio = share(a, a+b)
+	n.first.equalize()
+	n.second.equalize()
 }
 
 func (n *layout) firstPane() int {

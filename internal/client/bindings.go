@@ -144,6 +144,22 @@ func (u *ui) run(action string, now time.Time) {
 		}
 	case "close-pane":
 		u.beginClosePane()
+	case "last-pane":
+		u.send(protocol.Request{Op: "last-pane"})
+	case "swap-pane-previous":
+		u.send(protocol.Request{Op: "swap-pane", Direction: "previous"})
+	case "swap-pane-next":
+		u.send(protocol.Request{Op: "swap-pane", Direction: "next"})
+	case "rotate-window":
+		u.send(protocol.Request{Op: "rotate-window"})
+	case "break-pane":
+		u.send(protocol.Request{Op: "break-pane"})
+	case "join-pane":
+		u.send(protocol.Request{Op: "join-pane"})
+	case "next-layout":
+		u.send(protocol.Request{Op: "select-layout", Kind: "next"})
+	case "equalize-layout":
+		u.send(protocol.Request{Op: "select-layout", Kind: "equalize"})
 	case "new-window":
 		u.send(protocol.Request{Op: "new-window"})
 	case "close-window":
@@ -188,7 +204,9 @@ func (u *ui) run(action string, now time.Time) {
 	case "integrations":
 		u.openIntegrations()
 	default:
-		if n, ok := strings.CutPrefix(action, "select-window-"); ok {
+		if name, ok := strings.CutPrefix(action, "layout-"); ok {
+			u.send(protocol.Request{Op: "select-layout", Kind: name})
+		} else if n, ok := strings.CutPrefix(action, "select-window-"); ok {
 			if number, err := strconv.Atoi(n); err == nil {
 				u.send(protocol.Request{Op: "select-window", Window: number})
 			}
