@@ -165,7 +165,7 @@ func startNavigationHelper(t *testing.T, s *session, id int, program string) *pa
 	return p
 }
 
-func focusedPaneID(s *session) int { s.mu.Lock(); defer s.mu.Unlock(); return s.focused }
+func focusedPaneID(s *session) int { s.mu.Lock(); defer s.mu.Unlock(); return s.focusedLocked() }
 
 func TestEditorNavigationForwardsAllFourKeysAndResumesAfterExit(t *testing.T) {
 	s := editorNavigationSession(t)

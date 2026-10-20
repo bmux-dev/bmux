@@ -33,7 +33,7 @@ func TestSendInputTargetsOnePaneWithoutResizingOrFocusing(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.mu.Lock()
-	focused := s.focused
+	focused := s.focusedLocked()
 	s.mu.Unlock()
 	if focused != 2 {
 		t.Fatalf("split focused pane %d", focused)
@@ -52,7 +52,7 @@ func TestSendInputTargetsOnePaneWithoutResizingOrFocusing(t *testing.T) {
 		t.Fatal("input for pane 1 reached the focused pane")
 	}
 	s.mu.Lock()
-	focused = s.focused
+	focused = s.focusedLocked()
 	s.mu.Unlock()
 	if focused != 2 {
 		t.Fatal("send-input moved focus")

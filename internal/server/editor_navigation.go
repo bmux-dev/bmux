@@ -67,7 +67,7 @@ func (s *session) navigatePane(direction string) error {
 			s.mu.Unlock()
 			return fmt.Errorf("session has been terminated")
 		}
-		id := s.focused
+		id := s.focusedLocked()
 		p := s.panes[id]
 		s.mu.Unlock()
 		if p == nil {
@@ -79,7 +79,7 @@ func (s *session) navigatePane(direction string) error {
 			s.mu.Unlock()
 			return fmt.Errorf("session has been terminated")
 		}
-		if s.focused != id || s.panes[id] != p {
+		if s.focusedLocked() != id || s.panes[id] != p {
 			s.mu.Unlock()
 			continue
 		}
@@ -89,7 +89,7 @@ func (s *session) navigatePane(direction string) error {
 			s.mu.Unlock()
 			return p.input(key)
 		}
-		err := s.selectPaneDirectionLocked(direction, s.focused)
+		err := s.selectPaneDirectionLocked(s.activeLocked(), direction, id)
 		if err == nil {
 			err = s.finishLayoutLocked()
 		}

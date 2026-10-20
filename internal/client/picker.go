@@ -199,6 +199,9 @@ func (u *ui) drawPicker(w, h int) {
 		}
 		prefix := fmt.Sprintf("(%d) + ", i)
 		suffix := fmt.Sprintf(": %d panes%s", s.Panes, attachment)
+		if s.Windows > 1 {
+			suffix = fmt.Sprintf(": %d windows, %d panes%s", s.Windows, s.Panes, attachment)
+		}
 		name := strings.TrimSpace(fit(s.Name, max(0, list.w-displayWidth(prefix)-displayWidth(suffix))))
 		line := prefix + name + suffix
 		u.screen.PutStrStyled(list.x, list.y+i-start, fit(line, list.w), style)

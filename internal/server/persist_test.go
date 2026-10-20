@@ -83,6 +83,13 @@ func TestSessionsSurviveRestartAsLayoutsDirectoriesAndResumedAgents(t *testing.T
 		t.Fatal(err)
 	}
 	awaitCwd(t, api.panes[3], work)
+	// A second window, named, opened from pane 3, so it starts in work; then
+	// back to the first, which restores as the active one.
+	for _, r := range []protocol.Request{{Op: "new-window", NewName: "logs"}, {Op: "select-window", Window: 1}} {
+		if err := api.input(r); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := api.reportAgent(3, protocol.AgentWorking, "reviewer", []string{"printf", "EXACT_%s\\n", "RESUMED"}); err != nil {
 		t.Fatal(err)
 	}
@@ -102,12 +109,17 @@ func TestSessionsSurviveRestartAsLayoutsDirectoriesAndResumedAgents(t *testing.T
 		{ID: 1, Dir: root},
 		{ID: 2, Dir: root, Agent: "fake", Resume: []string{"printf", "AUTO_%s\\n", "RESUMED"}},
 		{ID: 3, Dir: work, Agent: "reviewer", Resume: []string{"printf", "EXACT_%s\\n", "RESUMED"}, Reported: true},
+		{ID: 4, Dir: work},
 	}
 	if got := state.Sessions[0].Panes; !reflect.DeepEqual(got, want) {
 		t.Fatalf("saved panes:\n got %+v\nwant %+v", got, want)
 	}
-	if state.Sessions[0].Focused != 3 {
-		t.Fatalf("saved focus = %d", state.Sessions[0].Focused)
+	windows := state.Sessions[0].Windows
+	if len(windows) != 2 || windows[0].Focused != 3 || windows[1].Name != "logs" || !reflect.DeepEqual(windows[1].Layout, &layoutSnapshot{Pane: 4}) || state.Sessions[0].Active != 0 {
+		t.Fatalf("saved windows %+v active %d", windows, state.Sessions[0].Active)
+	}
+	if state.Sessions[0].Layout != nil {
+		t.Fatal("wrote the pre-window layout field")
 	}
 
 	second := persistentServer(t, path)
@@ -117,11 +129,16 @@ func TestSessionsSurviveRestartAsLayoutsDirectoriesAndResumedAgents(t *testing.T
 		t.Fatal("sessions were not restored")
 	}
 	restored.mu.Lock()
-	gotLayout, focused, nextID := snapshotLayout(restored.root), restored.focused, restored.nextID
+	gotLayout, focused, nextID := snapshotLayout(restored.windows[0].root), restored.focusedLocked(), restored.nextID
+	count, active, name := len(restored.windows), restored.active, restored.windows[len(restored.windows)-1].name
 	restored.mu.Unlock()
-	if !reflect.DeepEqual(gotLayout, state.Sessions[0].Layout) || focused != 3 || nextID != 4 {
+	if !reflect.DeepEqual(gotLayout, windows[0].Layout) || focused != 3 || nextID != 5 {
 		t.Fatalf("restored layout %+v focus %d next %d", gotLayout, focused, nextID)
 	}
+	if count != 2 || active != 0 || name != "logs" {
+		t.Fatalf("restored %d windows, active %d, last named %q", count, active, name)
+	}
+	awaitCwd(t, restored.panes[4], work)
 	awaitCwd(t, restored.panes[3], work)
 	awaitCwd(t, restored.panes[1], root)
 	awaitFrame(t, restored.panes[3], func(f *protocol.TerminalFrame) bool { return strings.Contains(frameText(f), "EXACT_RESUMED") })
@@ -191,7 +208,7 @@ func TestUnreadableOrInvalidStateNeverBlocksStartup(t *testing.T) {
 	if len(s.sessions) != 2 || s.sessions["broken"] == nil || s.sessions["missing-dirs"] == nil {
 		t.Fatalf("restored: %v", s.sessions)
 	}
-	if b := s.sessions["broken"]; len(b.panes) != 1 || b.root.id != 1 {
+	if b := s.sessions["broken"]; len(b.panes) != 1 || b.windows[0].root.id != 1 {
 		t.Fatal("broken layout did not fall back to one pane")
 	}
 	if m := s.sessions["missing-dirs"]; m.info.Dir != os.Getenv("HOME") || m.panes[7] == nil {

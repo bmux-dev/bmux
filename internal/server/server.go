@@ -191,11 +191,19 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		// a restart from inside a pane never leaks that pane's variables.
 		result.Env = os.Environ()
 	case "pane-command":
+		// Kind "window" asks about every pane in window Window (0 for the
+		// active one), before closing it.
 		if item == nil {
 			result.Error = "session not found"
 			break
 		}
-		command, err := item.paneCommand(r.PaneID)
+		var command string
+		var err error
+		if r.Kind == "window" {
+			command, err = item.windowCommand(r.Window)
+		} else {
+			command, err = item.paneCommand(r.PaneID)
+		}
 		if err != nil {
 			result.Error = err.Error()
 		}
@@ -368,7 +376,7 @@ func (s *Server) handle(conn net.Conn) {
 				item.mu.Lock()
 				id := next.PaneID
 				if id == 0 {
-					id = item.focused
+					id = item.focusedLocked()
 				}
 				exists := item.panes[id] != nil
 				item.mu.Unlock()

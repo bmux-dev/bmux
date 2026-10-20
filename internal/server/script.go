@@ -23,7 +23,7 @@ var errStale = errors.New("stale")
 func (s *session) capturePane(id int) (protocol.PaneActivity, string, error) {
 	if id == 0 {
 		s.mu.Lock()
-		id = s.focused
+		id = s.focusedLocked()
 		s.mu.Unlock()
 	}
 	p, err := s.livePane(id)

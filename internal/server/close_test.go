@@ -29,7 +29,7 @@ func TestClosePaneNamesTheJobInFrontAndEndsIt(t *testing.T) {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		s.mu.Lock()
-		gone, focused := s.panes[1] == nil, s.focused
+		gone, focused := s.panes[1] == nil, s.focusedLocked()
 		s.mu.Unlock()
 		if gone && focused == 2 {
 			break

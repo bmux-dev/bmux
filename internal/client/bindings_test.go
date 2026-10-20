@@ -111,7 +111,7 @@ func TestStatusLineHelpFollowsBindings(t *testing.T) {
 	if footer := pickerScreenLine(u, 19); !strings.Contains(footer, "Ctrl-a s sessions · Ctrl-h/j/k/l navigate · Ctrl-a d detach") {
 		t.Fatalf("default footer: %q", footer)
 	}
-	if got := u.prefixHelp(); got != "Ctrl-a: ? keys · | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · b sidebar · r reload · s picker" {
+	if got := u.prefixHelp(); got != "Ctrl-a: ? keys · | / - split · x close · arrows focus · hjkl resize · m zoom · ( ) sessions · c [ ] windows · b sidebar · r reload · s picker" {
 		t.Fatalf("default prefix help: %q", got)
 	}
 	u.applySettings(rebound(t, `[keys.root]

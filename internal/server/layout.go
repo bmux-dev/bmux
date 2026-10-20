@@ -77,6 +77,16 @@ func (n *layout) find(id int) *layout {
 
 func (n *layout) contains(id int) bool { return n.find(id) != nil }
 
+// leaves appends the tree's panes in layout order.
+func (n *layout) leaves(out *[]int) {
+	if n.id != 0 {
+		*out = append(*out, n.id)
+		return
+	}
+	n.first.leaves(out)
+	n.second.leaves(out)
+}
+
 func (n *layout) firstPane() int {
 	if n.id != 0 {
 		return n.id

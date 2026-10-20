@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,14 +30,25 @@ type stateFile struct {
 }
 
 type sessionSnapshot struct {
-	Name    string          `json:"name"`
-	Dir     string          `json:"dir"`
-	Created time.Time       `json:"created"`
-	Used    time.Time       `json:"used"`
+	Name    string           `json:"name"`
+	Dir     string           `json:"dir"`
+	Created time.Time        `json:"created"`
+	Used    time.Time        `json:"used"`
+	Windows []windowSnapshot `json:"windows"`
+	Active  int              `json:"active,omitempty"` // index into Windows
+	Panes   []paneSnapshot   `json:"panes"`
+	// Before windows (v0.3 and earlier) a session saved one layout. These are
+	// read as its only window and never written.
+	Focused int             `json:"focused,omitempty"`
+	Zoomed  bool            `json:"zoomed,omitempty"`
+	Layout  *layoutSnapshot `json:"layout,omitempty"`
+}
+
+type windowSnapshot struct {
+	Name    string          `json:"name,omitempty"`
 	Focused int             `json:"focused"`
 	Zoomed  bool            `json:"zoomed,omitempty"`
 	Layout  *layoutSnapshot `json:"layout"`
-	Panes   []paneSnapshot  `json:"panes"`
 }
 
 // A leaf names a pane; an inner node has a direction, ratio and two children.
@@ -108,21 +120,23 @@ func (l *layoutSnapshot) build(panes map[int]paneSnapshot, seen map[int]bool) (*
 // while the OS is queried.
 func (s *session) persistentState() (sessionSnapshot, bool) {
 	s.mu.Lock()
-	if s.stopped || s.stopping.Load() || s.root == nil {
+	if s.stopped || s.stopping.Load() || len(s.windows) == 0 {
 		s.mu.Unlock()
 		return sessionSnapshot{}, false
 	}
-	snap := sessionSnapshot{Name: s.info.Name, Dir: s.info.Dir, Created: s.info.Created, Used: s.info.Used,
-		Focused: s.focused, Zoomed: s.zoomed, Layout: snapshotLayout(s.root)}
-	var positions []placement
-	s.root.place(rect{0, 0, s.width, s.height}, &positions)
-	panes := make([]*pane, len(positions))
-	for i, pos := range positions {
-		panes[i] = s.panes[pos.id]
+	snap := sessionSnapshot{Name: s.info.Name, Dir: s.info.Dir, Created: s.info.Created, Used: s.info.Used, Active: s.active}
+	var ids []int
+	for _, w := range s.windows {
+		snap.Windows = append(snap.Windows, windowSnapshot{Name: w.name, Focused: w.focused, Zoomed: w.zoomed, Layout: snapshotLayout(w.root)})
+		w.root.leaves(&ids)
+	}
+	panes := make([]*pane, len(ids))
+	for i, id := range ids {
+		panes[i] = s.panes[id]
 	}
 	s.mu.Unlock()
 	for i, p := range panes {
-		entry := paneSnapshot{ID: positions[i].id, Dir: snap.Dir}
+		entry := paneSnapshot{ID: ids[i], Dir: snap.Dir}
 		if p == nil {
 			snap.Panes = append(snap.Panes, entry)
 			continue
@@ -201,10 +215,41 @@ func existingDir(dir, fallback string) string {
 	return fallback
 }
 
-// restoreSession rebuilds a saved layout with fresh shells. An invalid tree
-// falls back to one pane in the session directory. resumed tracks built-in
-// "continue latest" commands per directory so two panes never reopen the
-// same conversation; reported commands are exact and always run.
+// restoreWindows validates saved windows against the saved panes. Each pane
+// may appear in only one window; a window whose tree is invalid is dropped
+// whole, and the active index follows the windows that remain.
+func restoreWindows(saved []windowSnapshot, active int, panes map[int]paneSnapshot) ([]*window, int) {
+	seen := make(map[int]bool)
+	var windows []*window
+	restoredActive := 0
+	for i, snap := range saved {
+		local := maps.Clone(seen)
+		root, err := snap.Layout.build(panes, local)
+		if err != nil {
+			continue
+		}
+		seen = local
+		w := &window{root: root, focused: snap.Focused}
+		if validateWindowName(snap.Name) == nil {
+			w.name = snap.Name
+		}
+		if !root.contains(w.focused) {
+			w.focused = root.firstPane()
+		}
+		w.zoomed = snap.Zoomed && root.id == 0
+		if i == active {
+			restoredActive = len(windows)
+		}
+		windows = append(windows, w)
+	}
+	return windows, restoredActive
+}
+
+// restoreSession rebuilds saved windows with fresh shells. A window with an
+// invalid tree is dropped; if none is left, the session gets one pane in its
+// directory. resumed tracks built-in "continue latest" commands per directory
+// so two panes never reopen the same conversation; reported commands are
+// exact and always run.
 func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool) (*session, error) {
 	home, _ := os.UserHomeDir()
 	dir := existingDir(snap.Dir, home)
@@ -212,9 +257,13 @@ func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool)
 	for _, p := range snap.Panes {
 		panes[p.ID] = p
 	}
-	root, err := snap.Layout.build(panes, make(map[int]bool))
-	if err != nil {
-		root, panes = &layout{id: 1}, map[int]paneSnapshot{1: {ID: 1, Dir: dir}}
+	saved := snap.Windows
+	if len(saved) == 0 && snap.Layout != nil {
+		saved = []windowSnapshot{{Focused: snap.Focused, Zoomed: snap.Zoomed, Layout: snap.Layout}}
+	}
+	windows, active := restoreWindows(saved, snap.Active, panes)
+	if len(windows) == 0 {
+		windows, active, panes = []*window{{root: &layout{id: 1}, focused: 1}}, 0, map[int]paneSnapshot{1: {ID: 1, Dir: dir}}
 	}
 	w, h := dimensions(0, 0)
 	used := snap.Used
@@ -224,38 +273,36 @@ func restoreSession(snap sessionSnapshot, shell string, resumed map[string]bool)
 	s := &session{
 		id:    sessionIDs.Add(1),
 		info:  protocol.Session{Name: snap.Name, Dir: dir, Created: time.Now(), Used: used},
-		panes: make(map[int]*pane), root: root, width: w, height: h, shell: shell,
+		panes: make(map[int]*pane), windows: windows, active: active, width: w, height: h, shell: shell,
 		revision: 1, done: make(chan struct{}), owned: make(map[*pane]struct{}),
 	}
-	var positions []placement
-	root.place(rect{0, 0, w, h}, &positions)
 	type started struct {
 		p    *pane
 		snap paneSnapshot
 		dir  string
 	}
 	var created []started
-	for _, pos := range positions {
-		saved := panes[pos.id]
-		paneDir := existingDir(saved.Dir, dir)
-		p, err := newPane(s.id, snap.Name, paneDir, shell, w, h, pos.id)
-		if err != nil {
-			for _, c := range created {
-				c.p.stop()
+	for _, win := range windows {
+		// Every pane, even under a zoom; resizePanes fits them afterwards.
+		var positions []placement
+		win.root.place(rect{0, 0, w, h}, &positions)
+		for _, pos := range positions {
+			saved := panes[pos.id]
+			paneDir := existingDir(saved.Dir, dir)
+			p, err := newPane(s.id, snap.Name, paneDir, shell, max(2, pos.w), max(1, pos.h), pos.id)
+			if err != nil {
+				for _, c := range created {
+					c.p.stop()
+				}
+				return nil, err
 			}
-			return nil, err
+			s.panes[pos.id] = p
+			s.owned[p] = struct{}{}
+			s.nextID = max(s.nextID, pos.id+1)
+			created = append(created, started{p, saved, paneDir})
 		}
-		s.panes[pos.id] = p
-		s.owned[p] = struct{}{}
-		s.nextID = max(s.nextID, pos.id+1)
-		created = append(created, started{p, saved, paneDir})
 	}
 	s.info.Panes = len(s.panes)
-	s.focused = snap.Focused
-	if s.panes[s.focused] == nil {
-		s.focused = root.firstPane()
-	}
-	s.zoomed = snap.Zoomed && len(s.panes) > 1
 	for id, p := range s.panes {
 		s.watchPane(id, p)
 	}

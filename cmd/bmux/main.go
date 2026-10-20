@@ -134,13 +134,13 @@ func runList(socket string, args []string) error {
 		return err
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "SESSION\tSTATE\tPANES\tCLIENTS\tDIRECTORY")
+	fmt.Fprintln(w, "SESSION\tSTATE\tWINDOWS\tPANES\tCLIENTS\tDIRECTORY")
 	for _, s := range r.Sessions {
 		state := "running"
 		if s.Exited {
 			state = "exited"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%s\n", s.Name, state, s.Panes, s.Clients, s.Dir)
+		fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%d\t%s\n", s.Name, state, s.Windows, s.Panes, s.Clients, s.Dir)
 	}
 	return w.Flush()
 }
@@ -352,6 +352,9 @@ Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
   Ctrl-a n   New session          Ctrl-a p   Last session
   Ctrl-a ( / )   Previous / next session
+  Ctrl-a c   New window           Ctrl-a 1-9   Select window
+  Ctrl-a [ / ]   Previous / next window      Ctrl-a Tab   Last window
+  Ctrl-a ,   Rename window        Ctrl-a &   Close window
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
   Ctrl-a h/j/k/l   Resize divider by five cells

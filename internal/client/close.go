@@ -24,10 +24,16 @@ func (u *ui) beginClosePane() {
 	}
 }
 
-func (u *ui) answerClosePane(e *tcell.EventKey) {
-	pane := u.closeConfirm
-	u.closeConfirm, u.closeCommand = 0, ""
-	if e.Key() == tcell.KeyRune && e.Rune() == 'y' && e.Modifiers() == tcell.ModNone {
+// answerClose answers the pending close-pane or close-window question.
+func (u *ui) answerClose(e *tcell.EventKey) {
+	pane, window := u.closeConfirm, u.closeWindow
+	u.closeConfirm, u.closeWindow, u.closeCommand = 0, 0, ""
+	if e.Key() != tcell.KeyRune || e.Rune() != 'y' || e.Modifiers() != tcell.ModNone {
+		return
+	}
+	if window != 0 {
+		u.send(protocol.Request{Op: "close-window", Window: window})
+	} else {
 		u.send(protocol.Request{Op: "close-pane", PaneID: pane})
 	}
 }

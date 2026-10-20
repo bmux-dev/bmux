@@ -32,7 +32,7 @@ again; set it to `true` to see it on the next attach.
 | `bmux` | Create and attach to a fresh session in the current directory; `bmux attach` returns to an existing one |
 | `bmux new [--dir PATH] [--detach] NAME` | Create a named session; attach unless `--detach` is set |
 | `bmux attach [NAME]` | Attach by name, or to the most recently used session (the first in `bmux list`) |
-| `bmux list` | Show sessions, state, pane/client counts, and starting directories, most recently used first |
+| `bmux list` | Show sessions, state, window/pane/client counts, and starting directories, most recently used first |
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
@@ -160,6 +160,12 @@ changes it; these docs say Ctrl-a). Release it before pressing the next key.
 | Toggle to the last session you came from | Ctrl-a p |
 | Next / previous session, in sidebar order | Ctrl-a ) / Ctrl-a ( |
 | Close the focused pane | Ctrl-a x |
+| New window, in the focused pane's directory | Ctrl-a c |
+| Select window 1–9 | Ctrl-a 1 … Ctrl-a 9, or click its tab on the top bar |
+| Next / previous window | Ctrl-a ] / Ctrl-a [ |
+| Toggle to the last window | Ctrl-a Tab |
+| Rename the window | Ctrl-a , |
+| Close the window and all its panes | Ctrl-a & |
 | Split side by side | Ctrl-a \| |
 | Split stacked | Ctrl-a - |
 | Focus left/down/up/right | Ctrl-h/j/k/l outside Vim/Neovim |
@@ -191,6 +197,29 @@ forwarded. See [editor navigation](editor-navigation.md) for mappings that
 cross editor edges. To forward them to other programs too, list them in
 `keys.pass-through` (like vim-tmux-navigator's `is_vim` pattern); to give a
 key back everywhere, [unbind it](#rebinding-keys).
+
+### Windows
+
+A session holds numbered windows, like tmux's, and each window has its own
+splits, focused pane and zoom. The top bar lists them after the session and
+pane: the active one in the accent color, and a `!` on a background window
+with a pane that needs you (a bell, a notification or a blocked agent).
+A window shows its name, or until you rename it the focused pane's title, or
+`shell`. Renaming to an empty name goes back to the title. Names are at most
+40 bytes.
+
+Background windows keep running at the session's size, so switching is
+instant and never resizes anything. Their agents still show in the sidebar,
+and opening one there switches to its window. Pane numbers are unique across
+a session's windows, so `SESSION:PANE` targets and `BMUX_PANE` keep working
+wherever a pane is; a bare `SESSION` target means the active window's
+focused pane.
+
+Ctrl-a & asks first when any pane in the window has a program in front of its
+shell; only a lowercase y closes it. Closing a window's last pane closes the
+window, and the windows after it move down a number. Leaving the active window
+returns to the last window you were in. Closing the last window ends the
+session. A session holds at most 32 panes across all its windows.
 
 ### Repeat resizing
 
@@ -398,7 +427,8 @@ The server saves every session every few seconds and when it stops cleanly
 (`bmux restart`, SIGTERM or SIGINT). The next server, whether after an upgrade,
 a crash or a reboot, restores them before accepting clients:
 
-- the same sessions and names, split layout, focused pane and zoom;
+- the same sessions and names, windows and their names, the active window,
+  and each window's split layout, focused pane and zoom;
 - a fresh login shell in each pane, in the directory that pane's shell was in;
 - agents, by typing a resume command into the restored shell. Reported
   commands run as given. Otherwise recognized agents continue their latest
@@ -578,6 +608,9 @@ letters are the same as Ctrl letters in most terminals.
 | `resize-left` / `-down` / `-up` / `-right` | prefix `h/j/k/l` | Move a divider five cells; prefix keys bound to resize repeat without the prefix for a second |
 | `split-right` / `split-down` | prefix `\|` / `-` | Split side by side / stacked |
 | `zoom`, `close-pane` | prefix `m`, `x` | |
+| `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `,` | New window in the focused pane's directory; close asks first if a program is running |
+| `next-window` / `previous-window`, `last-window` | prefix `]` / `[`, `tab` | |
+| `select-window-1` … `select-window-9` | prefix `1` … `9` | |
 | `sessions`, `new-session`, `last-session` | prefix `s`, `n`, `p` | |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy` | prefix `d`, `y` | |
