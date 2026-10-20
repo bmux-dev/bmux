@@ -10,6 +10,7 @@ import (
 	"github.com/josephferrero/bmux/docs"
 	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/version"
 )
 
 // command is one `bmux NAME` subcommand. This table drives dispatch, --help,
@@ -65,7 +66,7 @@ func init() {
 			return nil
 		}},
 		{"version", "", "Print the version", noSocket, func(string, []string) error {
-			fmt.Println("bmux", version)
+			fmt.Println("bmux", version.String())
 			return nil
 		}},
 		{"help", "", "Print this help", noSocket, func(string, []string) error {
@@ -131,7 +132,7 @@ func runCapabilities(_ string, args []string) error {
 		return fmt.Errorf("usage: bmux capabilities")
 	}
 	result := capabilities{
-		Version: version, Protocol: protocol.Version, Guide: "bmux guide",
+		Version: version.String(), Protocol: protocol.Version, Guide: "bmux guide",
 		AgentStates: []string{protocol.AgentWorking, protocol.AgentBlocked, protocol.AgentIdle},
 	}
 	for _, c := range commands {
