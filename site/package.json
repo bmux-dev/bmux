@@ -10,7 +10,8 @@
     "astro": "astro",
     "predev": "node scripts/sync-agent-guide.mjs",
     "prebuild": "node scripts/sync-agent-guide.mjs",
-    "screenshots": "bash screenshots/render.sh"
+    "screenshots": "bash screenshots/render.sh",
+    "social-card": "node scripts/render-social-card.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.42.6",

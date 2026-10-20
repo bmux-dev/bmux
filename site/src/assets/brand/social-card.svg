@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">bmux — A terminal workspace. Already equipped.</title>
+  <desc id="desc">A modern terminal-inspired card for a batteries-included terminal multiplexer.</desc>
+  <rect width="1200" height="630" fill="#0B0B0B"/>
+  <path d="M64 64h1072v502H64z" fill="none" stroke="#343A3D" stroke-width="2"/>
+  <path d="M64 112h1072" stroke="#343A3D" stroke-width="2"/>
+  <circle cx="91" cy="88" r="5" fill="#83C8DC"/>
+  <circle cx="111" cy="88" r="5" fill="#555B5E"/>
+  <circle cx="131" cy="88" r="5" fill="#555B5E"/>
+  <text x="166" y="94" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">bmux — ready</text>
+  <text x="96" y="174" fill="#83C8DC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" letter-spacing="2">THE BATTERIES-INCLUDED TERMINAL MULTIPLEXER</text>
+  <text x="92" y="260" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="56" font-weight="600" letter-spacing="-2">A terminal workspace.</text>
+  <text x="92" y="328" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="56" font-weight="600" letter-spacing="-2">Already equipped.</text>
+  <text x="96" y="383" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21">Simple to start. Comfortable to use.</text>
+  <g transform="translate(96 430)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">
+    <text x="0" y="24" fill="#83C8DC">›</text><text x="22" y="24" fill="#E7E7E7">live session picker</text>
+    <text x="245" y="24" fill="#83C8DC">›</text><text x="267" y="24" fill="#E7E7E7">mouse copy</text>
+    <text x="422" y="24" fill="#83C8DC">›</text><text x="444" y="24" fill="#E7E7E7">saved layouts</text>
+    <text x="0" y="62" fill="#83C8DC">›</text><text x="22" y="62" fill="#E7E7E7">agent status</text>
+    <text x="245" y="62" fill="#83C8DC">›</text><text x="267" y="62" fill="#E7E7E7">project picker</text>
+  </g>
+  <path d="M96 526h1008" stroke="#343A3D" stroke-width="2"/>
+  <text x="96" y="554" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24" font-weight="700">bmux</text>
+  <text x="1086" y="553" text-anchor="end" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">macOS · Linux</text>
+  <path d="M1096 538v18" stroke="#83C8DC" stroke-width="3"/>
+</svg>
