@@ -1,0 +1,41 @@
+# Release builds, run by .github/workflows/release.yml on a v* tag.
+# Check locally with: goreleaser release --snapshot --clean
+version: 2
+
+project_name: bmux
+
+builds:
+  - id: bmux
+    main: ./cmd/bmux
+    binary: bmux
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/josephferrero/bmux/internal/version.stamped={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  # bmux_linux_amd64.tar.gz: the names install.sh and bmux update look for.
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+release:
+  # The maintainer writes the notes and publishes the draft. 0.x releases
+  # are pre-releases.
+  draft: true
+  prerelease: "true"
+  mode: keep-existing
+
+changelog:
+  disable: true

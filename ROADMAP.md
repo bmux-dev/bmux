@@ -8,7 +8,7 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.5.0 | Keyboard scrollback: [scrollback view, search, prompt jumps, reflow](#already-built) |
-| **Now** | [v0.6](#v06-scripting) | Scripting and automation |
+| **Now** | [Install and updates](#install-and-updates), [v0.6](#v06-scripting) | Prebuilt binaries, an install script and `bmux update`; scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -52,6 +52,18 @@ changes and reconnects clients. With an [agent integration](#already-built)
 | Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
 | Mark restored sessions | S | In the picker and sidebar. |
+
+## Install and updates
+
+**Goal:** install and stay current without Go.
+**Done when:** a one-line script installs a verified release binary, and bmux
+shows when a newer release is out and updates itself with `bmux update`.
+
+| Item | Size | Status |
+| --- | --- | --- |
+| Prebuilt binaries and checksums ([#49](https://github.com/bmux-dev/bmux/issues/49)) | S | Done: GoReleaser builds Linux and macOS on amd64 and arm64 for every `v*` tag, with `checksums.txt` |
+| Install script ([#50](https://github.com/bmux-dev/bmux/issues/50)) | S | Planned: `curl … \| sh`, checksum-verified, no root |
+| Update hint and `bmux update` ([#51](https://github.com/bmux-dev/bmux/issues/51)) | M | Planned: a small `↑` in the status bar when a release is out; `bmux update` replaces the binary after checking its checksum |
 
 ## v0.4: windows and layouts
 
@@ -117,7 +129,7 @@ existing sessions without warning.
 | Terminal support | Extended keys (CSI u / kitty keyboard), hyperlinks (OSC 8), activity alerts, opt-in graphics passthrough. |
 | Quality | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux. |
 | Linux | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked. |
-| Distribution | Prebuilt macOS/Linux binaries (GoReleaser), Homebrew tap, checksums. |
+| Distribution | Homebrew tap, signed and notarized macOS binaries, release signatures. |
 | Docs | Demo GIF, tmux migration guide (config and plugin equivalents), CHANGELOG. |
 | Project | CONTRIBUTING.md, issue and PR templates. |
 
