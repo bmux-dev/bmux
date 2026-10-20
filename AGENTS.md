@@ -10,5 +10,6 @@ Do not introduce mandatory copy mode. Keep protocol and session lifecycle change
 covered by tests. Do not spawn subagents unless requested by the user.
 
 File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
-`enhancement`, with Problem, Cause, Expected and Done when sections. Reference
-it from the fixing commit with `Fixes #N`.
+`enhancement`, with Problem, Cause, Expected and Done when sections. Never
+commit to `main`: work on a `feat/`, `fix/` or `docs/` branch and open a pull
+request that closes its issues with `Fixes #N`.
