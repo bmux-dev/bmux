@@ -58,7 +58,7 @@ func TestSessionPreviewIsReadOnlyBoundedAndCursorFramed(t *testing.T) {
 			t.Fatalf("preview resized pane %d", id)
 		}
 	}
-	if s.focused != 3 || s.zoomed {
+	if s.focusedLocked() != 3 || s.activeLocked().zoomed {
 		t.Fatal("preview changed focus/zoom")
 	}
 	full := server.request(protocol.Request{Op: "preview", Kind: "overview", Name: "preview", Width: 10, Height: 4})
@@ -109,7 +109,7 @@ func TestSessionPreviewIsReadOnlyBoundedAndCursorFramed(t *testing.T) {
 		t.Fatal(err)
 	}
 	r = server.request(protocol.Request{Op: "preview", Name: "preview", Width: 41, Height: 9})
-	if !r.Frame.Zoomed || len(r.Frame.Panes) != 1 || r.Frame.Panes[0].ID != 3 || !s.zoomed {
+	if !r.Frame.Zoomed || len(r.Frame.Panes) != 1 || r.Frame.Panes[0].ID != 3 || !s.activeLocked().zoomed {
 		t.Fatal("preview didn't preserve zoomed workspace")
 	}
 	if r := server.request(protocol.Request{Op: "preview", Name: "missing"}); r.Error == "" {

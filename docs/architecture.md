@@ -35,6 +35,30 @@ directory of the PTY's foreground group, then the shell's, from the OS
 (`pane.currentDir`), and reacquires it to split that sampled pane. A missing
 or removed directory falls back to the session's.
 
+## Windows
+
+A session owns the pane map, so pane IDs are unique across its windows and
+`BMUX_PANE`, agent reports and `SESSION:PANE` targets never depend on which
+window shows a pane. Each `window` owns a layout tree, its focused pane, the
+previously focused one and zoom; `session.windows` is ordered, `active`
+indexes it and `lastWindow` is a pointer, so renumbering never retargets it.
+Every window is laid out at the session size (`resizePanes` walks them all),
+so switching never resizes a PTY. Pane operations act in the window whose
+tree holds the pane; `select-pane` with an ID in a background window also
+activates that window, which is how sidebar rows reach background agents.
+Removing a window's last pane removes the window; the active one then falls
+back to `lastWindow`, else the window now at its index. The session ends
+with its last window.
+
+Snapshots carry only the active window's panes plus `Frame.Windows` (names,
+pane IDs, the focused pane's title for unnamed windows). Their revision sums
+the session revision and the active window's pane revisions only, so output
+in a background window sends no frames. Before the active set changes,
+`carryActiveLocked` adds the outgoing sum to the session revision, keeping the
+total increasing so an attachment can't mistake the new window's frame for
+one it already has. Background attention for the top bar's `!` comes from the
+sidebar's `list` poll, which lists activity for every window.
+
 ## Input admission
 
 `protocol.MaxPasteBytes` is the decoded logical payload maximum: 4 MiB.
@@ -262,8 +286,11 @@ rename) only when the JSON changed. `Close` saves first and marks the saver
 final, so pane shutdown can never overwrite what will be restored.
 
 Restore creates new sessions (new IDs and creation times, saved recency) with
-pane IDs and the layout tree kept, validating the tree; an invalid tree falls
-back to one pane. Resume commands are typed into the new shell with the `type`
+pane IDs, windows, their names, the active window and each layout tree kept,
+validating every tree; a window whose tree is invalid or reuses another
+window's pane is dropped, and a session left with none gets one pane. State
+files from before windows hold one `layout`, read as the only window; it's
+never written. Resume commands are typed into the new shell with the `type`
 pane operation, which bypasses bracketed paste so the shell runs it. Built-in
 "continue latest" commands are deduplicated per directory; reported ones are
 exact. Only layouts, directories and agent conversations return.

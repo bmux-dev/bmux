@@ -18,7 +18,9 @@ and, under `pane`, where you are (`null` outside bmux).
 
 ## Targets
 
-Commands take a target: `SESSION` (its focused pane) or `SESSION:PANE`.
+Commands take a target: `SESSION` (the focused pane of its active window) or
+`SESSION:PANE`. Pane numbers are unique across a session's windows, so a
+`SESSION:PANE` target reaches a pane in a background window too.
 `bmux agents` lists every pane running a coding agent:
 
 ```

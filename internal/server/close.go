@@ -38,7 +38,7 @@ func (s *session) livePane(id int) (*pane, error) {
 		return nil, fmt.Errorf("session has been terminated")
 	}
 	if id == 0 {
-		id = s.focused
+		id = s.focusedLocked()
 	}
 	p := s.panes[id]
 	if p == nil {
@@ -65,5 +65,55 @@ func (s *session) closePane(id int) error {
 		return err
 	}
 	go p.stop()
+	return nil
+}
+
+// windowPanes returns the live panes of window number (0 for the active one).
+func (s *session) windowPanes(number int) ([]*pane, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped || s.stopping.Load() {
+		return nil, fmt.Errorf("session has been terminated")
+	}
+	i, err := s.windowNumberLocked(number)
+	if err != nil {
+		return nil, err
+	}
+	var ids []int
+	s.windows[i].root.leaves(&ids)
+	panes := make([]*pane, 0, len(ids))
+	for _, id := range ids {
+		if p := s.panes[id]; p != nil {
+			panes = append(panes, p)
+		}
+	}
+	return panes, nil
+}
+
+// windowCommand names a program in front of any shell in the window, or ""
+// when every pane is at its prompt, so closing the window can ask first.
+func (s *session) windowCommand(number int) (string, error) {
+	panes, err := s.windowPanes(number)
+	if err != nil {
+		return "", err
+	}
+	for _, p := range panes {
+		if name, err := p.foregroundJob(); name != "" || err != nil {
+			return name, err
+		}
+	}
+	return "", nil
+}
+
+// closeWindow closes every pane in a window, like tmux's kill-window; the
+// pane watchers remove the window once its last pane is gone.
+func (s *session) closeWindow(number int) error {
+	panes, err := s.windowPanes(number)
+	if err != nil {
+		return err
+	}
+	for _, p := range panes {
+		go p.stop()
+	}
 	return nil
 }

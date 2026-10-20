@@ -80,6 +80,9 @@ func (u *ui) drawPowerline(width int, now time.Time) {
 			x++
 		}
 	}
+	if !u.picker {
+		u.drawWindowTabs(x+1, leftWidth)
+	}
 	if rightWidth > 0 {
 		start := width - rightWidth
 		u.screen.Put(start, 0, back, tcell.StyleDefault.Foreground(chrome.selection).Background(chrome.bar))

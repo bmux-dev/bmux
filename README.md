@@ -80,6 +80,9 @@ including giving Ctrl-l back to the shell.
 | Create session | Ctrl-a n |
 | Last session | Ctrl-a p |
 | Next / previous session | Ctrl-a ) / Ctrl-a ( |
+| New window / select 1–9 | Ctrl-a c / Ctrl-a 1…9, or click its tab on the top bar |
+| Next / previous / last window | Ctrl-a ] / Ctrl-a [ / Ctrl-a Tab |
+| Rename / close window | Ctrl-a , / Ctrl-a & (asks first if a program is running) |
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
 | Close pane | Ctrl-a x (asks first if a program is running) |
 | Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |

@@ -144,6 +144,18 @@ func (u *ui) run(action string, now time.Time) {
 		}
 	case "close-pane":
 		u.beginClosePane()
+	case "new-window":
+		u.send(protocol.Request{Op: "new-window"})
+	case "close-window":
+		u.beginCloseWindow()
+	case "rename-window":
+		u.beginRenameWindow()
+	case "next-window":
+		u.send(protocol.Request{Op: "select-window", Direction: "next"})
+	case "previous-window":
+		u.send(protocol.Request{Op: "select-window", Direction: "previous"})
+	case "last-window":
+		u.send(protocol.Request{Op: "select-window", Direction: "last"})
 	case "sessions":
 		u.openPicker()
 	case "new-session":
@@ -175,6 +187,12 @@ func (u *ui) run(action string, now time.Time) {
 		u.help, u.helpOffset = true, 0
 	case "integrations":
 		u.openIntegrations()
+	default:
+		if n, ok := strings.CutPrefix(action, "select-window-"); ok {
+			if number, err := strconv.Atoi(n); err == nil {
+				u.send(protocol.Request{Op: "select-window", Window: number})
+			}
+		}
 	}
 }
 
@@ -297,6 +315,7 @@ func (u *ui) prefixHelp() string {
 	add(directionKeys(prefix, "resize"), "resize")
 	add(join("zoom"), "zoom")
 	add(strings.ReplaceAll(join("previous-session", "next-session"), " / ", " "), "sessions")
+	add(strings.ReplaceAll(join("new-window", "previous-window", "next-window"), " / ", " "), "windows")
 	add(join("toggle-sidebar"), "sidebar")
 	add(join("reload-config"), "reload")
 	add(join("sessions"), "picker")
