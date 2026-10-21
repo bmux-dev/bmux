@@ -48,8 +48,9 @@ type projectPicker struct {
 	sessions   []protocol.Session // every session, for unique name suggestions
 	err        string             // loading/opening error; hides the list
 	creating   bool               // Create tab shown instead of Projects
-	field      int                // focused form field: 0 name, 1 directory
+	field      int                // focused form field: 0 name, 1 directory, 2 create-directory toggle
 	name, dir  string             // form inputs
+	makeDir    bool               // build the directory when it doesn't exist
 	formErr    string             // create validation/RPC error, shown in the form
 	candidates []string           // directories Tab could not choose between
 }
@@ -231,11 +232,22 @@ func (u *ui) closeProjects() {
 	}
 }
 
+// formBase is what the Create tab's relative paths are relative to and where
+// it starts when no project is highlighted: projects.start-dir, else the
+// directory bmux was started in.
+func (u *ui) formBase() string {
+	if dir := u.settings.Projects.StartDir; dir != "" {
+		return startDirectory(dir, u.cwd)
+	}
+	return u.cwd
+}
+
 // beginProjectForm switches to the Create tab, prefilled from the
-// highlighted project, or from the filter and the working directory when
+// highlighted project, or from the filter and the start directory when
 // nothing matches.
 func (u *ui) beginProjectForm() {
 	u.projects.creating, u.projects.field, u.projects.formErr, u.projects.candidates = true, 0, "", nil
+	u.projects.makeDir = true
 	matches := u.filteredProjects()
 	if u.projects.chosen < len(matches) {
 		dir := matches[u.projects.chosen].dir
@@ -243,10 +255,11 @@ func (u *ui) beginProjectForm() {
 		u.projects.name = freeDirectorySessionName(dir, u.projects.sessions)
 		return
 	}
-	u.projects.dir = projectLabel(u.cwd)
+	base := u.formBase()
+	u.projects.dir = projectLabel(base)
 	u.projects.name = strings.TrimSpace(u.projects.query)
 	if u.projects.name == "" {
-		u.projects.name = freeDirectorySessionName(u.cwd, u.projects.sessions)
+		u.projects.name = freeDirectorySessionName(base, u.projects.sessions)
 	}
 }
 
@@ -258,9 +271,9 @@ func (u *ui) createFromForm() {
 		u.projects.formErr, u.projects.field = err.Error(), 0
 		return
 	}
-	dir := startDirectory(u.projects.dir, u.cwd)
+	dir := startDirectory(u.projects.dir, u.formBase())
 	w, h := u.screen.Size()
-	if _, err := Request(u.socket, protocol.Request{Op: "create", Name: name, Dir: dir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)}); err != nil {
+	if _, err := Request(u.socket, protocol.Request{Op: "create", Name: name, Dir: dir, MakeDir: u.projects.makeDir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)}); err != nil {
 		u.projects.formErr = err.Error()
 		return
 	}
@@ -325,9 +338,13 @@ func (u *ui) projectsKey(e *tcell.EventKey) {
 }
 
 func (u *ui) projectFormKey(e *tcell.EventKey) {
-	field := &u.projects.name
-	if u.projects.field == 1 {
-		field = &u.projects.dir
+	// text is the focused field's input; nil on the toggle.
+	var text *string
+	switch u.projects.field {
+	case 0:
+		text = &u.projects.name
+	case 1:
+		text = &u.projects.dir
 	}
 	if e.Key() != tcell.KeyTab {
 		u.projects.candidates = nil // the list belongs to the Tab that showed it
@@ -344,19 +361,33 @@ func (u *ui) projectFormKey(e *tcell.EventKey) {
 	case tcell.KeyCtrlC:
 		u.quitting = true
 	case tcell.KeyDown, tcell.KeyCtrlJ:
-		u.projects.field = 1
+		u.projects.field = min(u.projects.field+1, 2)
 	case tcell.KeyUp, tcell.KeyCtrlK:
-		u.projects.field = 0
+		u.projects.field = max(u.projects.field-1, 0)
+	case tcell.KeyLeft, tcell.KeyRight:
+		if text == nil {
+			u.projects.makeDir = !u.projects.makeDir
+		}
 	case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyCtrlH:
-		*field, u.projects.formErr = dropRune(*field), ""
+		if text != nil {
+			*text, u.projects.formErr = dropRune(*text), ""
+		}
 	case tcell.KeyCtrlU:
-		*field, u.projects.formErr = "", ""
+		if text != nil {
+			*text, u.projects.formErr = "", ""
+		}
 	case tcell.KeyEnter:
 		u.createFromForm()
 	case tcell.KeyRune:
-		if e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0 {
-			*field += string(e.Rune())
+		if e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) != 0 {
+			break
+		}
+		switch {
+		case text != nil:
+			*text += string(e.Rune())
 			u.projects.formErr = ""
+		case e.Rune() == ' ':
+			u.projects.makeDir = !u.projects.makeDir
 		}
 	}
 }
@@ -377,8 +408,11 @@ func (u *ui) openProject(dir string) {
 // projectsFooter is the key hint line for the popup's current tab.
 func (u *ui) projectsFooter() string {
 	if u.projects.creating {
-		if u.projects.field == 1 {
+		switch u.projects.field {
+		case 1:
 			return "New session: ↑↓ field · Tab completes directory · Enter create · Esc back to projects"
+		case 2:
+			return "New session: ↑↓ field · Space toggles · Enter create · Tab/Esc back to projects"
 		}
 		return "New session: ↑↓ field · Enter create · Ctrl-u clear · Tab/Esc back to projects"
 	}
@@ -482,10 +516,15 @@ func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
 	put(1, name, uiBaseStyle)
 	put(3, "Start directory", labelStyle(1))
 	put(4, dir, uiBaseStyle)
-	next := 6
+	box := "[ ]"
+	if u.projects.makeDir {
+		box = "[x]"
+	}
+	put(6, box+" Create directory if it doesn't exist", labelStyle(2))
+	next := 8
 	if u.projects.formErr != "" {
-		put(6, "Error: "+u.projects.formErr, uiBaseStyle.Bold(true))
-		next = 7
+		put(8, "Error: "+u.projects.formErr, uiBaseStyle.Bold(true))
+		next = 9
 	}
 	if lines := wrapNames(u.projects.candidates, iw); len(lines) > 0 {
 		rows := max(0, ih-next)
@@ -495,6 +534,10 @@ func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
 		for i, line := range lines {
 			put(next+i, line, uiMutedStyle)
 		}
+	}
+	if u.projects.field == 2 {
+		u.screen.HideCursor()
+		return
 	}
 	row, value := 1, name
 	if u.projects.field == 1 {

@@ -63,7 +63,7 @@ func completeDir(input, cwd string) (completed string, candidates []string) {
 // Tab extends the text as far as the matches agree, and a Tab that can't
 // extend it lists the candidates.
 func (u *ui) completeProjectDir() {
-	completed, candidates := completeDir(u.projects.dir, u.cwd)
+	completed, candidates := completeDir(u.projects.dir, u.formBase())
 	u.projects.formErr = ""
 	if completed != u.projects.dir {
 		u.projects.dir, u.projects.candidates = completed, nil
