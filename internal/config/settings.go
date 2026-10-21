@@ -114,6 +114,7 @@ var SettingTabs = []SettingTab{
 		listSetting("projects.roots", "Roots", "Folders searched for git repositories, comma separated", func(c *Config) *[]string { return &c.Projects.Roots }),
 		intSetting("projects.depth", "Depth", "Levels to search below each root, 1-6", func(c *Config) *int { return &c.Projects.Depth }),
 		boolSetting("projects.zoxide", "Use zoxide", "Also list zoxide's directories, when installed", func(c *Config) *bool { return &c.Projects.Zoxide }),
+		textSetting("projects.start-dir", "Start directory", "Where the new-session Create tab starts, such as ~; empty uses the current directory", func(c *Config) *string { return &c.Projects.StartDir }),
 	}},
 	{"Sessions", []Setting{
 		boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
