@@ -30,6 +30,20 @@ reach applications. See [editor navigation](/bmux/guides/editor-navigation/) for
 Run `BMUX_POWERLINE_ASCII=1 bmux` to use plain-text separators. This works even
 when the terminal reports glyph support but the font renders the glyphs poorly.
 
+## Shift+Enter inserts no newline
+
+Programs see Shift+Enter, Ctrl+Enter, Shift+arrows and other modified keys only
+if they ask for them. bmux follows the kitty keyboard protocol (`CSI > 1 u`) and
+xterm's `modifyOtherKeys` (`CSI > 4 ; 2 m`) per pane. A program that enabled
+either gets `CSI 13 ; 2 u` or `CSI 27 ; 2 ; 13 ~` for Shift+Enter. Any other
+program gets a plain Enter, as in a legacy terminal; its modified arrows, Home,
+End, Page Up/Down, Insert, Delete and function keys use the xterm `CSI 1 ; mod`
+forms. Your outer terminal must also report the modifier, through the kitty
+keyboard protocol or `modifyOtherKeys`. A terminal that doesn't sends a plain
+Enter for Shift+Enter, and bmux can't tell it apart. If a program that supports
+the protocol still can't tell the keys apart, check its own setting for the
+newline key.
+
 ## Physical terminal needs padding
 
 Run `BMUX_TERMINAL_PADDING=1 bmux`. Modern terminal emulators normally use the

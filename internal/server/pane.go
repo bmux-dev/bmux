@@ -254,7 +254,7 @@ func (s *pane) input(r protocol.Request) error {
 		}
 		reserve = len(r.Text) + protocol.PasteMarkerBytes
 	case "key":
-		reserve = 16
+		reserve = 32 // longest: CSI code;mods;text u with 7-digit runes
 	case "focus":
 		reserve = 3
 	case "mouse":

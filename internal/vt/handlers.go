@@ -215,6 +215,7 @@ func (e *Emulator) registerDefaultHandlers() {
 	e.registerDefaultCcHandlers()
 	e.registerDefaultCsiHandlers()
 	e.registerDefaultEscHandlers()
+	e.registerKeyboardHandlers()
 	e.registerDefaultOscHandlers()
 	e.registerGraphicsHandlers()
 }
