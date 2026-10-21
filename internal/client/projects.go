@@ -233,8 +233,8 @@ func (u *ui) closeProjects() {
 }
 
 // formBase is what the Create tab's relative paths are relative to and where
-// it starts when no project is highlighted: projects.start-dir, else the
-// directory bmux was started in.
+// it starts: projects.start-dir, else the directory bmux was started in (or
+// the highlighted project's, see beginProjectForm).
 func (u *ui) formBase() string {
 	if dir := u.settings.Projects.StartDir; dir != "" {
 		return startDirectory(dir, u.cwd)
@@ -242,14 +242,16 @@ func (u *ui) formBase() string {
 	return u.cwd
 }
 
-// beginProjectForm switches to the Create tab, prefilled from the
-// highlighted project, or from the filter and the start directory when
+// beginProjectForm switches to the Create tab. With projects.start-dir set it
+// starts there, named after the filter: you open the tab for a session that
+// isn't one of the listed projects. Without it, the form is prefilled from
+// the highlighted project, or from the filter and the working directory when
 // nothing matches.
 func (u *ui) beginProjectForm() {
 	u.projects.creating, u.projects.field, u.projects.formErr, u.projects.candidates = true, 0, "", nil
 	u.projects.makeDir = true
 	matches := u.filteredProjects()
-	if u.projects.chosen < len(matches) {
+	if u.settings.Projects.StartDir == "" && u.projects.chosen < len(matches) {
 		dir := matches[u.projects.chosen].dir
 		u.projects.dir = projectLabel(dir)
 		u.projects.name = freeDirectorySessionName(dir, u.projects.sessions)

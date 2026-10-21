@@ -241,6 +241,21 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 			t.Fatalf("request %+v", got)
 		}
 	})
+	t.Run("start-dir wins over the highlighted project", func(t *testing.T) {
+		u, _ := setup(t)
+		u.settings.Projects.StartDir = "/home/me"
+		u.key(special(tcell.KeyDown)) // web is highlighted
+		u.key(special(tcell.KeyTab))
+		if !u.projects.creating || u.projects.dir != "/home/me" || u.projects.name != "me" {
+			t.Fatalf("form: %+v", u.projects)
+		}
+		u.key(special(tcell.KeyTab))
+		typeText(u, "we") // still matches web; the filter names the session
+		u.key(special(tcell.KeyTab))
+		if u.projects.dir != "/home/me" || u.projects.name != "we" {
+			t.Fatalf("form with a filter: %+v", u.projects)
+		}
+	})
 	t.Run("popup is centered at 80 percent", func(t *testing.T) {
 		u, _ := setup(t)
 		u.draw()
