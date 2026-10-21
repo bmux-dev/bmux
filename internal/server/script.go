@@ -36,6 +36,27 @@ func (s *session) capturePane(id int) (protocol.PaneActivity, string, error) {
 	return a, p.textLocked(), nil
 }
 
+// paneZoomed reports whether the window showing pane id is zoomed, which
+// may be a background window. Pane 0 is the focused pane. Read-only.
+func (s *session) paneZoomed(id int) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped || s.stopping.Load() {
+		return false, fmt.Errorf("session has been terminated")
+	}
+	if id == 0 {
+		id = s.focusedLocked()
+	}
+	if s.panes[id] == nil {
+		return false, fmt.Errorf("pane not found")
+	}
+	i := s.windowOfLocked(id)
+	if i < 0 {
+		return false, fmt.Errorf("pane not found")
+	}
+	return s.windows[i].zoomed, nil
+}
+
 // sendInput writes key presses and pastes to one pane. It never falls back
 // to the focused pane: input meant for an agent must not reach a shell.
 func (s *session) sendInput(id int, ifSeq uint64, input []protocol.Input) (protocol.PaneActivity, error) {

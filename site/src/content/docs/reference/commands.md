@@ -17,6 +17,7 @@ sidebar:
 | `bmux rename OLD NEW` | Rename a session |
 | `bmux kill NAME` | Terminate the session and all its panes, without a confirmation prompt |
 | `bmux focus DIRECTION` | Move from the calling pane toward `left`, `right`, `up`, or `down`; used by editor mappings |
+| `bmux zoomed` | Print `true` if the calling pane's window is zoomed, otherwise `false`; used by editor mappings to stay in a zoomed pane |
 | `bmux agent STATE [NAME] [-- COMMAND...]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`, optionally with the command that resumes its conversation; used by agent hooks |
 | `bmux agents [--json]` | List panes running a coding agent as `SESSION:PANE` targets, with state and [seq](/bmux/agents/scripting/) |
 | `bmux capture [--json] TARGET` | Print a pane's visible text; `TARGET` is `SESSION` (its focused pane) or `SESSION:PANE` |

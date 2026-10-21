@@ -129,7 +129,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
-	if (r.Op == "focus-pane" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history" || r.Op == "jump-prompt") && r.SessionID != 0 {
+	if (r.Op == "focus-pane" || r.Op == "zoomed" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history" || r.Op == "jump-prompt") && r.SessionID != 0 {
 		// Never fall back to the name: after a rename it may belong to another session.
 		item = nil
 		for _, candidate := range s.sessions {
@@ -265,6 +265,19 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = err.Error()
 		}
 		result.Text = text
+	case "zoomed":
+		// Same pane-environment trust model as focus-pane, but read-only: it
+		// never changes focus or the session's recent-use order.
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		zoomed, err := item.paneZoomed(r.PaneID)
+		if err != nil {
+			result.Error = err.Error()
+			break
+		}
+		result.Zoomed = zoomed
 	case "capture-pane":
 		if item == nil {
 			result.Error = "session not found"

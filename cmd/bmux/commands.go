@@ -47,6 +47,7 @@ func init() {
 		{"rename", "OLD NEW", "Rename a session", startServer, runRename},
 		{"kill", "NAME", "Terminate a session and all its panes", startServer, runKill},
 		{"focus", "left|right|up|down", "Move pane focus (for editors at an edge)", startServer, runFocus},
+		{"zoomed", "", "Print true if the calling pane's window is zoomed, else false (for editors)", startServer, runZoomed},
 		{"agents", "[--json]", "List agent panes as SESSION:PANE targets, with state and seq", startServer, runAgents},
 		{"capture", "[--json] TARGET", "Print a pane's visible text; TARGET is SESSION or SESSION:PANE", startServer, runCapture},
 		{"send", "TARGET [--if-seq N] (--key KEY | --text TEXT)...", "Type into a pane: keys like enter, down or C-c, and text", startServer, runSend},
