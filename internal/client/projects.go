@@ -48,7 +48,7 @@ type projectPicker struct {
 	sessions   []protocol.Session // every session, for unique name suggestions
 	err        string             // loading/opening error; hides the list
 	creating   bool               // Create tab shown instead of Projects
-	field      int                // focused form field: 0 name, 1 directory, 2 create-directory toggle
+	field      int                // focused form field: 0 directory, 1 name, 2 create-directory toggle
 	name, dir  string             // form inputs
 	makeDir    bool               // build the directory when it doesn't exist
 	formErr    string             // create validation/RPC error, shown in the form
@@ -242,38 +242,38 @@ func (u *ui) formBase() string {
 	return u.cwd
 }
 
-// beginProjectForm switches to the Create tab. With projects.start-dir set it
-// starts there, named after the filter: you open the tab for a session that
-// isn't one of the listed projects. Without it, the form is prefilled from
-// the highlighted project, or from the filter and the working directory when
-// nothing matches.
+// beginProjectForm switches to the Create tab with the directory focused.
+// The directory is projects.start-dir if set, else the highlighted project's,
+// else the working directory. The name starts empty, because it is usually
+// the directory's name and createFromForm fills that in; only text typed as a
+// filter that wasn't used to pick a project becomes the name.
 func (u *ui) beginProjectForm() {
 	u.projects.creating, u.projects.field, u.projects.formErr, u.projects.candidates = true, 0, "", nil
 	u.projects.makeDir = true
 	matches := u.filteredProjects()
-	if u.settings.Projects.StartDir == "" && u.projects.chosen < len(matches) {
-		dir := matches[u.projects.chosen].dir
-		u.projects.dir = projectLabel(dir)
-		u.projects.name = freeDirectorySessionName(dir, u.projects.sessions)
-		return
-	}
 	base := u.formBase()
-	u.projects.dir = projectLabel(base)
-	u.projects.name = strings.TrimSpace(u.projects.query)
-	if u.projects.name == "" {
-		u.projects.name = freeDirectorySessionName(base, u.projects.sessions)
+	name := ""
+	if u.settings.Projects.StartDir == "" && u.projects.chosen < len(matches) {
+		base = matches[u.projects.chosen].dir
+	} else {
+		name = strings.TrimSpace(u.projects.query)
 	}
+	u.projects.dir = projectLabel(base)
+	u.projects.name = name
 }
 
 // createFromForm creates the session the Create tab describes and attaches
 // to it. Failures stay in the form.
 func (u *ui) createFromForm() {
+	dir := startDirectory(u.projects.dir, u.formBase())
 	name := strings.TrimSpace(u.projects.name)
+	if name == "" {
+		name = freeDirectorySessionName(dir, u.projects.sessions)
+	}
 	if err := validatePromptName(name); err != nil {
-		u.projects.formErr, u.projects.field = err.Error(), 0
+		u.projects.formErr, u.projects.field = err.Error(), 1
 		return
 	}
-	dir := startDirectory(u.projects.dir, u.formBase())
 	w, h := u.screen.Size()
 	if _, err := Request(u.socket, protocol.Request{Op: "create", Name: name, Dir: dir, MakeDir: u.projects.makeDir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)}); err != nil {
 		u.projects.formErr = err.Error()
@@ -344,16 +344,16 @@ func (u *ui) projectFormKey(e *tcell.EventKey) {
 	var text *string
 	switch u.projects.field {
 	case 0:
-		text = &u.projects.name
-	case 1:
 		text = &u.projects.dir
+	case 1:
+		text = &u.projects.name
 	}
 	if e.Key() != tcell.KeyTab {
 		u.projects.candidates = nil // the list belongs to the Tab that showed it
 	}
 	switch e.Key() {
 	case tcell.KeyTab:
-		if u.projects.field == 1 {
+		if u.projects.field == 0 {
 			u.completeProjectDir()
 		} else {
 			u.projects.creating, u.projects.formErr = false, ""
@@ -411,12 +411,12 @@ func (u *ui) openProject(dir string) {
 func (u *ui) projectsFooter() string {
 	if u.projects.creating {
 		switch u.projects.field {
-		case 1:
+		case 0:
 			return "New session: ↑↓ field · Tab completes directory · Enter create · Esc back to projects"
 		case 2:
 			return "New session: ↑↓ field · Space toggles · Enter create · Tab/Esc back to projects"
 		}
-		return "New session: ↑↓ field · Enter create · Ctrl-u clear · Tab/Esc back to projects"
+		return "New session: ↑↓ field · Enter create · empty name uses the directory's · Ctrl-u clear · Tab/Esc back to projects"
 	}
 	return "New session: type to find · ↑↓ select · Enter open or create · Tab form · Esc close"
 }
@@ -514,10 +514,14 @@ func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
 		return uiMutedStyle
 	}
 	name, dir := tailFit(u.projects.name, iw-1), tailFit(u.projects.dir, iw-1)
-	put(0, "Session name", labelStyle(0))
-	put(1, name, uiBaseStyle)
-	put(3, "Start directory", labelStyle(1))
-	put(4, dir, uiBaseStyle)
+	put(0, "Start directory", labelStyle(0))
+	put(1, dir, uiBaseStyle)
+	put(3, "Session name", labelStyle(1))
+	if name == "" {
+		put(4, "(named after the directory)", uiMutedStyle)
+	} else {
+		put(4, name, uiBaseStyle)
+	}
 	box := "[ ]"
 	if u.projects.makeDir {
 		box = "[x]"
@@ -541,9 +545,9 @@ func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
 		u.screen.HideCursor()
 		return
 	}
-	row, value := 1, name
+	row, value := 1, dir
 	if u.projects.field == 1 {
-		row, value = 4, dir
+		row, value = 4, name
 	}
 	if row < ih {
 		u.screen.ShowCursor(ix+displayWidth(value), iy+row)

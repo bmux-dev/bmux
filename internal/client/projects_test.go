@@ -129,12 +129,22 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 		u, _ := setup(t)
 		u.key(special(tcell.KeyDown))
 		u.key(special(tcell.KeyTab))
-		if !u.projects.creating || u.projects.field != 0 || u.projects.name != "web-2" || u.projects.dir != "/p/web" {
+		if !u.projects.creating || u.projects.field != 0 || u.projects.name != "" || u.projects.dir != "/p/web" {
 			t.Fatalf("form: %+v", u.projects)
 		}
-		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyEscape)) // Tab in the directory field completes it instead
 		if u.projects.creating || u.projects.query != "" || u.projects.chosen != 1 {
 			t.Fatalf("back on projects: %+v", u.projects)
+		}
+	})
+	t.Run("form lists the directory first and hints at the empty name", func(t *testing.T) {
+		u, _ := setup(t)
+		u.key(special(tcell.KeyTab))
+		u.draw()
+		text := screenText(u)
+		dir, name := strings.Index(text, "Start directory"), strings.Index(text, "Session name")
+		if dir < 0 || name < 0 || dir > name || !strings.Contains(text, "(named after the directory)") {
+			t.Fatalf("form:\n%s", text)
 		}
 	})
 	t.Run("no match creates from the filter", func(t *testing.T) {
@@ -145,12 +155,21 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 			t.Fatalf("form: %+v", u.projects)
 		}
 	})
-	t.Run("empty name is rejected without a request", func(t *testing.T) {
+	t.Run("empty name is named after the directory", func(t *testing.T) {
+		u, requests := setup(t)
+		u.key(special(tcell.KeyTab)) // api is highlighted and its session exists
+		u.key(special(tcell.KeyEnter))
+		if got := <-requests; got.Op != "create" || got.Name != "api-2" || got.Dir != "/p/api" {
+			t.Fatalf("request %+v", got)
+		}
+	})
+	t.Run("invalid name is rejected without a request", func(t *testing.T) {
 		u, requests := setup(t)
 		u.key(special(tcell.KeyTab))
-		u.key(special(tcell.KeyCtrlU))
+		u.key(special(tcell.KeyDown))
+		typeText(u, "a b")
 		u.key(special(tcell.KeyEnter))
-		if u.projects.formErr != "Enter a session name" || !u.projects.open {
+		if u.projects.formErr == "" || u.projects.field != 1 || !u.projects.open {
 			t.Fatalf("form: %+v", u.projects)
 		}
 		select {
@@ -162,9 +181,10 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 	t.Run("submit creates and attaches", func(t *testing.T) {
 		u, requests := setup(t)
 		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyDown))
 		u.key(special(tcell.KeyCtrlU))
 		typeText(u, "scratch")
-		u.key(special(tcell.KeyDown))
+		u.key(special(tcell.KeyUp))
 		u.key(special(tcell.KeyCtrlU))
 		typeText(u, "sub")
 		u.key(special(tcell.KeyEnter))
@@ -233,11 +253,10 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 		if u.projects.dir != "/home/me" || u.projects.name != "zz" {
 			t.Fatalf("form: %+v", u.projects)
 		}
-		u.key(special(tcell.KeyDown))
 		u.key(special(tcell.KeyCtrlU))
 		typeText(u, "sub")
 		u.key(special(tcell.KeyEnter))
-		if got := <-requests; got.Op != "create" || got.Dir != "/home/me/sub" {
+		if got := <-requests; got.Op != "create" || got.Name != "zz" || got.Dir != "/home/me/sub" {
 			t.Fatalf("request %+v", got)
 		}
 	})
@@ -246,10 +265,10 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 		u.settings.Projects.StartDir = "/home/me"
 		u.key(special(tcell.KeyDown)) // web is highlighted
 		u.key(special(tcell.KeyTab))
-		if !u.projects.creating || u.projects.dir != "/home/me" || u.projects.name != "me" {
+		if !u.projects.creating || u.projects.dir != "/home/me" || u.projects.name != "" {
 			t.Fatalf("form: %+v", u.projects)
 		}
-		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyEscape))
 		typeText(u, "we") // still matches web; the filter names the session
 		u.key(special(tcell.KeyTab))
 		if u.projects.dir != "/home/me" || u.projects.name != "we" {
