@@ -455,7 +455,7 @@ func (u *ui) drawProjectList(ix, iy, iw, ih int) {
 		}
 		style := uiBaseStyle
 		if i == u.projects.chosen {
-			style = uiBaseStyle.Background(selectionBackground).Foreground(selectionForeground).Bold(true).Reverse(true)
+			style = uiBaseStyle.Background(selectionBackground).Foreground(selectionForeground).Bold(true)
 		}
 		y := listY + i - start
 		u.screen.PutStrStyled(ix, y, fit(label, iw), style)
