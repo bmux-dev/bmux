@@ -35,6 +35,10 @@ The mappings below first try an editor split. If focus did not move, they ask
 bmux to move to a neighboring pane. They also work in tmux. Install one recipe
 in your editor configuration; no plugin manager is needed.
 
+On Neovim, [nvim-bmux-navigator](https://github.com/bmux-dev/nvim-bmux-navigator)
+packages the Neovim recipe as a plugin for lazy.nvim, with an option to stay in
+a zoomed pane.
+
 Moving focus out of a zoomed pane unzooms it. To keep it zoomed instead, have
 the mapping run `bmux zoomed` first: it prints `true` when the calling pane's
 window is zoomed and `false` otherwise, and changes nothing. It needs the same
