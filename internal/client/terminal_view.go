@@ -50,6 +50,11 @@ func (u *ui) drawTerminalCells(area pickerArea, f *protocol.TerminalFrame, focus
 		}
 		columnStart = protocol.ViewportOrigin(f.CursorX, width, area.w)
 	}
+	graphics := u.graphicsOn()
+	var markers imageMarkers
+	if !graphics {
+		markers = placeholderMarkers(f)
+	}
 	for y := 0; y < area.h && rowStart+y < len(f.Rows); y++ {
 		row := f.Rows[rowStart+y]
 		for x := 0; x < area.w && columnStart+x < len(row); x++ {
@@ -62,7 +67,14 @@ func (u *ui) drawTerminalCells(area pickerArea, f *protocol.TerminalFrame, focus
 			if text == "" || c.Attrs&uv.AttrConceal != 0 || x+max(1, c.Width) > area.w {
 				text = " "
 			}
-			u.screen.Put(area.x+x, area.y+y, text, cellStyle(c))
+			if !graphics && isPlaceholder(c) {
+				c.FG = "" // the image id isn't a color to show
+			}
+			style := cellStyle(c)
+			if isPlaceholder(c) && text == c.Text {
+				text, style = u.placeholderCell(c, markers, index, rowStart+y, style)
+			}
+			u.screen.Put(area.x+x, area.y+y, text, style)
 		}
 	}
 	// Only a plain list can lend the real terminal cursor to the view. Search

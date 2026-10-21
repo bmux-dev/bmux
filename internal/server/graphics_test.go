@@ -7,7 +7,9 @@ import (
 	"image"
 	"image/png"
 	"math/rand"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -329,5 +331,41 @@ func TestSessionAppliesTheBestAttachedDisplay(t *testing.T) {
 	created.mu.Unlock()
 	if !created.graphicsOK.Load() || w != 10 || h != 20 {
 		t.Fatalf("new pane: supported=%v cell %dx%d", created.graphicsOK.Load(), w, h)
+	}
+}
+
+func TestAppSequencesNeverReachFramesOrFiles(t *testing.T) {
+	p, dir := scriptedPane(t, "sleep 30")
+	secret := filepath.Join(dir, "secret.png")
+	if err := os.WriteFile(secret, []byte("not an image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	enc := func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
+	for _, seq := range []string{
+		"\x1b_Ga=T,t=f,f=100,U=1,i=1,q=2;" + enc(secret) + "\x1b\\",
+		"\x1b_Ga=T,t=t,f=100,U=1,i=2,q=2;" + enc(secret) + "\x1b\\",
+		"\x1b_Ga=T,t=s,f=100,U=1,i=3,q=2;" + enc("/bmux-shm") + "\x1b\\",
+		"\x1b_Ga=p,t=f,U=1,i=4,q=2;" + enc(secret) + "\x1b\\",
+	} {
+		p.apply([]byte(seq + "after"))
+	}
+	for id := uint32(1); id <= 4; id++ {
+		if _, ok := p.graphics.Image(id); ok {
+			t.Errorf("image %d stored from a refused transmission", id)
+		}
+	}
+	if _, err := os.Stat(secret); err != nil {
+		t.Errorf("the app got a file deleted: %v", err)
+	}
+	f, _ := p.frame(0)
+	var row strings.Builder
+	for _, c := range f.Rows[0] {
+		row.WriteString(c.Text)
+	}
+	if got := strings.TrimSpace(row.String()); got != strings.Repeat("after", 4) {
+		t.Errorf("screen shows %q; the sequences must leave nothing but the text after each", got)
+	}
+	if len(f.Images) != 0 {
+		t.Errorf("frame lists images %+v", f.Images)
 	}
 }
