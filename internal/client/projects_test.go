@@ -182,6 +182,65 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 			t.Fatalf("name %q, popup open %v", u.name, u.projects.open)
 		}
 	})
+	t.Run("create directory toggle is on by default and sent with create", func(t *testing.T) {
+		u, requests := setup(t)
+		u.key(special(tcell.KeyTab))
+		if !u.projects.makeDir {
+			t.Fatal("toggle should default on")
+		}
+		u.key(special(tcell.KeyEnter))
+		if got := <-requests; got.Op != "create" || !got.MakeDir {
+			t.Fatalf("request %+v", got)
+		}
+	})
+	t.Run("space on the toggle turns it off and the request says so", func(t *testing.T) {
+		u, requests := setup(t)
+		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyDown))
+		u.key(special(tcell.KeyDown))
+		if u.projects.field != 2 {
+			t.Fatalf("field %d", u.projects.field)
+		}
+		u.key(special(tcell.KeyDown)) // stops at the toggle
+		if u.projects.field != 2 {
+			t.Fatalf("field %d past the toggle", u.projects.field)
+		}
+		typeText(u, "x") // other keys leave the toggle and the inputs alone
+		name, dir := u.projects.name, u.projects.dir
+		u.key(runeKey(' '))
+		if u.projects.makeDir || u.projects.name != name || u.projects.dir != dir {
+			t.Fatalf("form: %+v", u.projects)
+		}
+		u.draw()
+		if text := screenText(u); !strings.Contains(text, "[ ] Create directory if it doesn't exist") {
+			t.Fatalf("toggle not drawn off:\n%s", text)
+		}
+		u.key(special(tcell.KeyRight))
+		if !u.projects.makeDir {
+			t.Fatal("Right should toggle back on")
+		}
+		u.key(special(tcell.KeyLeft))
+		u.key(special(tcell.KeyEnter))
+		if got := <-requests; got.Op != "create" || got.MakeDir {
+			t.Fatalf("request %+v", got)
+		}
+	})
+	t.Run("start-dir replaces the working directory", func(t *testing.T) {
+		u, requests := setup(t)
+		u.settings.Projects.StartDir = "/home/me"
+		typeText(u, "zz")
+		u.key(special(tcell.KeyEnter))
+		if u.projects.dir != "/home/me" || u.projects.name != "zz" {
+			t.Fatalf("form: %+v", u.projects)
+		}
+		u.key(special(tcell.KeyDown))
+		u.key(special(tcell.KeyCtrlU))
+		typeText(u, "sub")
+		u.key(special(tcell.KeyEnter))
+		if got := <-requests; got.Op != "create" || got.Dir != "/home/me/sub" {
+			t.Fatalf("request %+v", got)
+		}
+	})
 	t.Run("popup is centered at 80 percent", func(t *testing.T) {
 		u, _ := setup(t)
 		u.draw()
