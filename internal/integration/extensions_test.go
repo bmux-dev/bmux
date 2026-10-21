@@ -11,10 +11,12 @@ import (
 )
 
 // piDriver loads a pi/omp extension with a stand-in for the extension API
-// and sends it [name, event] pairs with the given ctx.
+// (pi.on and the shared pi.events bus) and sends it [name, event] pairs with
+// the given ctx.
 const piDriver = `import extension from "./extension.mjs";
 const handlers = {};
-extension({ on: (name, fn) => { handlers[name] = fn; } });
+const on = (name, fn) => { handlers[name] = fn; };
+extension({ on, events: { on } });
 const ctx = JSON.parse(process.argv[2]);
 const sessionFile = ctx.sessionFile;
 ctx.sessionManager = { getSessionFile: () => sessionFile };
@@ -120,10 +122,13 @@ func TestOmpExtensionWaitsForTheFinalEndAndApprovals(t *testing.T) {
 		{"tool_approval_requested", map[string]any{"toolName": "bash"}},
 		{"tool_approval_resolved", map[string]any{}},
 		{"agent_end", map[string]any{"willContinue": true}},
+		{"agent:blocked", map[string]any{"active": true, "label": "approve path access"}}, // another extension's prompt
+		{"agent:blocked", map[string]any{"active": false}},
+		{"agent:blocked", map[string]any{"active": true}}, // an unanswered prompt ends with the turn
 		{"agent_end", map[string]any{}},
 	})
 	resume := "_--_omp_--resume=/s/two.jsonl"
-	want := []string{"agent_working_omp" + resume, "agent_blocked_omp" + resume, "agent_working_omp" + resume, "agent_idle_omp" + resume}
+	want := []string{"agent_working_omp" + resume, "agent_blocked_omp" + resume, "agent_working_omp" + resume, "agent_blocked_omp" + resume, "agent_working_omp" + resume, "agent_blocked_omp" + resume, "agent_idle_omp" + resume}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("reports:\n%v\nwant\n%v", got, want)
 	}

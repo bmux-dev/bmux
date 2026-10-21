@@ -283,8 +283,9 @@ always exits 0.
 
 omp and pi get one managed extension file each, generated from one template:
 it keeps working/blocked/idle from their extension events (pi's
-`agent_settled`, omp's `agent_end` without `willContinue`, prompts, approvals
-and the ask tool) and runs `bmux agent` itself, serialized and only when the
+`agent_settled`, omp's `agent_end` without `willContinue`, prompts, approvals,
+the ask tool and other extensions' `agent:blocked` events on the shared
+`pi.events` bus) and runs `bmux agent` itself, serialized and only when the
 report changes. Leaving the foreground already drops a recognized agent's
 reports, so extensions never report `clear`. omp refuses to install into a
 directory pi also loads, since each would run the other's extension.
