@@ -187,22 +187,51 @@ func runKill(socket string, args []string) error {
 	return err
 }
 
+// callingPane identifies the pane this command runs in from the environment,
+// like tmux's TMUX_PANE. The session ID survives renames; servers older than
+// v0.1.1 ignore it and use the name.
+func callingPane() (protocol.Request, error) {
+	session := os.Getenv("BMUX_SESSION")
+	if session == "" {
+		return protocol.Request{}, fmt.Errorf("not inside a bmux pane")
+	}
+	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
+	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
+	return protocol.Request{Name: session, SessionID: sessionID, PaneID: paneID}, nil
+}
+
 // runFocus is for editors handing focus back to bmux at an edge. Called
-// inside a pane, so the session and pane come from the environment, like
-// tmux's TMUX_PANE.
+// inside a pane, so the session and pane come from the environment.
 func runFocus(socket string, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: bmux focus left|right|up|down")
 	}
-	session := os.Getenv("BMUX_SESSION")
-	if session == "" {
-		return fmt.Errorf("not inside a bmux pane")
+	r, err := callingPane()
+	if err != nil {
+		return err
 	}
-	// The ID survives renames. Servers older than v0.1.1 ignore it and use the name.
-	sessionID, _ := strconv.ParseUint(os.Getenv("BMUX_SESSION_ID"), 10, 64)
-	paneID, _ := strconv.Atoi(os.Getenv("BMUX_PANE"))
-	_, err := client.Request(socket, protocol.Request{Op: "focus-pane", Name: session, SessionID: sessionID, PaneID: paneID, Direction: args[0]})
+	r.Op, r.Direction = "focus-pane", args[0]
+	_, err = client.Request(socket, r)
 	return err
+}
+
+// runZoomed prints whether the calling pane's window is zoomed, for editors
+// that leave focus alone while zoomed. It changes no state.
+func runZoomed(socket string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: bmux zoomed")
+	}
+	r, err := callingPane()
+	if err != nil {
+		return err
+	}
+	r.Op = "zoomed"
+	resp, err := client.Request(socket, r)
+	if err != nil {
+		return err
+	}
+	fmt.Println(resp.Zoomed)
+	return nil
 }
 
 func runRestart(socket string, args []string) error {

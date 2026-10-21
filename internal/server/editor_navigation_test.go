@@ -336,6 +336,67 @@ func TestStandaloneFocusPaneRouting(t *testing.T) {
 	}
 }
 
+// zoomed answers for the window showing the requested pane, not the active
+// window, and leaves focus and recent-use order alone.
+func TestZoomedReportsRequestedPanesWindow(t *testing.T) {
+	s := editorNavigationSession(t)
+	srv := New("/bin/sh")
+	srv.sessions["api"] = s
+	zoomed := func(r protocol.Request) protocol.Response {
+		t.Helper()
+		r.Op, r.Name = "zoomed", "api"
+		return srv.request(r)
+	}
+	if r := zoomed(protocol.Request{PaneID: 2}); r.Error != "" || r.Zoomed {
+		t.Fatalf("unzoomed window: %+v", r)
+	}
+	if err := s.input(protocol.Request{Op: "zoom", PaneID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	// Zoom is per window: the hidden neighbor shares the answer.
+	for _, id := range []int{0, 1, 2} {
+		if r := zoomed(protocol.Request{PaneID: id}); r.Error != "" || !r.Zoomed {
+			t.Fatalf("pane %d in zoomed window: %+v", id, r)
+		}
+	}
+	// A second window comes forward; the first stays zoomed behind it.
+	if err := s.input(protocol.Request{Op: "new-window"}); err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	newPane := s.focusedLocked()
+	s.mu.Unlock()
+	if newPane == 1 || newPane == 2 {
+		t.Fatalf("new window focus %d", newPane)
+	}
+	if r := zoomed(protocol.Request{PaneID: 1}); r.Error != "" || !r.Zoomed {
+		t.Fatalf("background zoomed window: %+v", r)
+	}
+	if r := zoomed(protocol.Request{PaneID: newPane}); r.Error != "" || r.Zoomed {
+		t.Fatalf("active unzoomed window: %+v", r)
+	}
+	// Read-only: no focus change, no recent-use update.
+	s.mu.Lock()
+	before := s.info.Used
+	s.mu.Unlock()
+	zoomed(protocol.Request{PaneID: 1})
+	s.mu.Lock()
+	after := s.info.Used
+	s.mu.Unlock()
+	if got := focusedPaneID(s); got != newPane || !after.Equal(before) {
+		t.Fatalf("zoomed changed state: focus %d, used %v -> %v", got, before, after)
+	}
+	if r := zoomed(protocol.Request{PaneID: 99}); r.Error == "" {
+		t.Fatal("unknown pane accepted")
+	}
+	if r := srv.request(protocol.Request{Op: "zoomed", Name: "missing", PaneID: 1}); r.Error == "" {
+		t.Fatal("unknown session accepted")
+	}
+	if r := zoomed(protocol.Request{SessionID: s.id + 100, PaneID: 1}); r.Error == "" {
+		t.Fatal("unknown session ID fell back to the session name")
+	}
+}
+
 // Panes keep the BMUX_SESSION they started with. The session ID keeps
 // bmux focus working after a rename, even if the old name is reused.
 func TestFocusPaneFollowsRenamedSession(t *testing.T) {
