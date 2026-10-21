@@ -11,11 +11,18 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 	u.resizeUntil = time.Time{}
 	if e.Err != nil {
 		u.notice(e.Err.Error())
+	} else if u.projects.open && u.projects.creating {
+		if u.projects.field == 1 {
+			u.projects.dir += e.Text
+		} else {
+			u.projects.name += e.Text
+		}
+		u.projects.formErr = ""
 	} else if u.projects.open {
 		u.projects.query += e.Text
 		u.projects.chosen = 0
 	} else if u.picker {
-		if u.prompt == "name" || u.prompt == "rename" || u.prompt == "directory" {
+		if u.prompt == "rename" {
 			u.input += e.Text
 			u.promptError = ""
 		} else if u.searching {
@@ -23,7 +30,7 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 			u.chosen = 0
 			u.requestPreview()
 		} else {
-			u.notice("Paste into a name, directory, or / filter")
+			u.notice("Paste into a name or / filter")
 		}
 	} else if u.view.active && u.view.searching {
 		u.view.input += strings.Map(func(r rune) rune {

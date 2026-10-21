@@ -24,7 +24,7 @@ works out of the box, with no plugin manager.
 | tmux-sessionx, tmux-fzf (sessions) | List-first session picker with fuzzy filtering and a live preview of the running terminal |
 | tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p), step to the previous or next one (Ctrl-a ( / )); bare `bmux` opens a session named after the current directory |
 | tmux-resurrect + tmux-continuum | Sessions, windows, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations; [`bmux restart`](#restarts-and-upgrades) for upgrades |
-| sesh, tmux-sessionizer | [Project picker](https://bmux-dev.github.io/bmux/guides/project-picker/) (Ctrl-a f, `bmux project`): zoxide's folders and your git repositories, landing in each folder's session or creating it |
+| sesh, tmux-sessionizer | [Project picker](https://bmux-dev.github.io/bmux/guides/project-picker/) (Ctrl-a n, `bmux project`): zoxide's folders and your git repositories, landing in each folder's session or creating it |
 | tmuxinator, tmuxp | [Layout files](https://bmux-dev.github.io/bmux/guides/layout-files/): a `.bmux.toml` declares a folder's windows, splits and pane commands, which run once you trust the file; `bmux layout save` writes one |
 | vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
 | tmux-pain-control | Ctrl-a \| and - splits in the focused pane's directory, Ctrl-a x close (asks first if a program is running), Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
@@ -86,9 +86,8 @@ including giving Ctrl-l back to the shell.
 | Action | Keys or mouse |
 | --- | --- |
 | Session picker | Ctrl-a s, or click the bottom status line |
-| Project picker (open or create a folder's session) | Ctrl-a f, or `bmux project [DIR]` |
+| New-session popup (find a project or create a session) | Ctrl-a n, or `bmux project [DIR]` |
 | Detach | Ctrl-a d |
-| Create session | Ctrl-a n |
 | Last session | Ctrl-a p |
 | Next / previous session | Ctrl-a ) / Ctrl-a ( |
 | New window / select 1–9 | Ctrl-a c / Ctrl-a 1…9, or click its tab on the top bar |

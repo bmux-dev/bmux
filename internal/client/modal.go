@@ -19,13 +19,7 @@ func (u *ui) drawModal(w, h int, title string, lines []modalLine, offset *int) {
 	if w < 10 || h < 6 {
 		return
 	}
-	for y := 1; y < h-1; y++ {
-		for x := range w {
-			if text, style, cellWidth := u.screen.Get(x, y); cellWidth > 0 {
-				u.screen.Put(x, y, text, style.Dim(true))
-			}
-		}
-	}
+	u.dimBody(w, h)
 	widest := displayWidth(title) + 2
 	for _, line := range lines {
 		widest = max(widest, displayWidth(line.text))
@@ -48,5 +42,17 @@ func (u *ui) drawModal(w, h int, title string, lines []modalLine, offset *int) {
 	u.screen.PutStrStyled(x+2, y, fit(label, min(displayWidth(label), width-4)), uiAccentStyle)
 	for row, line := range lines[*offset:min(len(lines), *offset+rows)] {
 		u.screen.PutStrStyled(x+2, y+1+row, fit(line.text, inner), line.style)
+	}
+}
+
+// dimBody dims every cell between the bars, leaving the chrome bright behind
+// an overlay.
+func (u *ui) dimBody(w, h int) {
+	for y := 1; y < h-1; y++ {
+		for x := range w {
+			if text, style, cellWidth := u.screen.Get(x, y); cellWidth > 0 {
+				u.screen.Put(x, y, text, style.Dim(true))
+			}
+		}
 	}
 }

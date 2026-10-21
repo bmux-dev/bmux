@@ -1,14 +1,19 @@
 ---
-title: "Project picker"
-description: "Open any project folder or git repository as a session with Ctrl-a f or bmux project."
+title: "New-session popup"
+description: "Find a project folder or git repository and open its session, or create a session, from one popup with Ctrl-a n or bmux project."
 sidebar:
   order: 2
 ---
 
 import Screenshot from '../../../components/Screenshot.astro';
 
-**Ctrl-a f**, or `bmux project` from a shell, lists project folders, like
-sesh and tmux-sessionizer:
+**Ctrl-a n**, or `bmux project` from a shell, opens a centered popup (80% of the
+screen) over the current view, with two tabs. **Tab** switches between them.
+The picker's and the sidebar's **n** open the same popup.
+
+## Projects tab
+
+Lists project folders, like sesh and tmux-sessionizer:
 
 1. folders a session started in, most recently used first, with the session's
    name;
@@ -18,11 +23,23 @@ sesh and tmux-sessionizer:
    down (3). Hidden folders, `node_modules`, `vendor` and folders inside a
    repository aren't searched.
 
-<Screenshot name="project-picker" alt="The project picker listing session folders and git repositories" />
+<Screenshot name="project-picker" alt="The new-session popup listing session folders and git repositories" />
 
 Typing filters the list; Up/Down (or Ctrl-j/k, Ctrl-n/p) select, Backspace
 and Ctrl-u edit the filter. **Enter** attaches to the most recent session
 started in that folder, or creates one named after it, the way bare `bmux`
-names sessions. **Esc** goes back; when `bmux project` opened the picker, it
-exits. `bmux project DIR` does the same for one folder without the list.
-Folders reached through a symlink are the same folder.
+names sessions. When nothing matches the filter, **Enter** opens the Create tab
+with the filter as the session name. **Esc** closes the popup; when
+`bmux project` opened it, bmux exits. `bmux project DIR` does the same for one
+folder without the popup. Folders reached through a symlink are the same
+folder.
+
+## Create tab
+
+**Tab** (or Enter with no match) opens a form with a session name and a start
+directory, prefilled from the highlighted project (a name not already used,
+numbered like `api-2`) or from the filter and the current directory.
+Up/Down move between the fields, Backspace and Ctrl-u edit the focused one, and
+**Enter** creates the session and attaches to it. A relative directory is
+relative to where you started bmux, and `~` is your home directory. **Tab** or
+**Esc** returns to the Projects tab without creating anything.
