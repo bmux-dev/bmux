@@ -40,14 +40,14 @@ letters are the same as Ctrl letters in most terminals.
 | `break-pane`, `join-pane` | prefix `!`, `@` | Join goes into the last window, beside its focused pane |
 | `next-layout`, `equalize-layout` | prefix `space`, `E` | |
 | `layout-even-horizontal`, `layout-even-vertical`, `layout-main-horizontal`, `layout-main-vertical`, `layout-tiled` | prefix `A-1` … `A-5` | |
-| `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `,` | New window in the focused pane's directory; close asks first if a program is running |
+| `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `R` | New window in the focused pane's directory; close asks first if a program is running |
 | `next-window` / `previous-window`, `last-window` | prefix `]` / `[`, `tab` | |
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |
 | `sessions`, `new-session`, `last-session` | prefix `s`, `n`, `p` | `new-session` opens the [popup](/bmux/guides/project-picker/) that finds a project's session or creates one |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy`, `scrollback`, `search-scrollback` | prefix `d`, `y`, `v`, `/` | `scrollback` opens the [keyboard scrollback](/bmux/guides/selection-scrollback/#keyboard-scrollback) view; `search-scrollback` opens it with a search prompt |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
-| `toggle-sidebar`, `reload-config`, `help`, `integrations` | prefix `b`, `r`, `?`, `i` | `help` lists the bindings in effect; `integrations` opens the integrations panel |
+| `toggle-sidebar`, `reload-config`, `help`, `integrations`, `settings` | prefix `b`, `r`, `?`, `i`, `,` | `help` lists the bindings in effect; `integrations` opens the integrations panel; `settings` opens the [settings page](/bmux/configuration/config-file/) |
 | `send-prefix` | the prefix again | Send the prefix key to the application |
 
 The prefix can't be a root key. The status line's hints and the prefix help

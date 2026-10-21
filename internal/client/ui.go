@@ -101,6 +101,7 @@ type ui struct {
 	help                            bool              // key list overlay open
 	helpOffset                      int               // first key list line shown
 	integrations                    integrationsPanel
+	settingsPage                    settingsPage
 	welcome, welcomed               bool // welcome screen open; already shown by this client
 }
 
@@ -282,7 +283,7 @@ func (u *ui) endSession(name string) {
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}
-	u.help, u.integrations.open, u.welcome = false, false, false
+	u.help, u.integrations.open, u.settingsPage.open, u.welcome = false, false, false, false
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -372,7 +373,7 @@ func (u *ui) switchTo(name string) error {
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}
-	u.help, u.integrations.open, u.welcome = false, false, false
+	u.help, u.integrations.open, u.settingsPage.open, u.welcome = false, false, false, false
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -491,6 +492,10 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	}
 	if u.integrations.open {
 		u.integrationsKey(e)
+		return
+	}
+	if u.settingsPage.open {
+		u.settingsKey(e)
 		return
 	}
 	if u.welcome {
@@ -705,11 +710,11 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		}
 		return
 	}
-	if u.help || u.integrations.open || u.welcome {
+	if u.help || u.integrations.open || u.settingsPage.open || u.welcome {
 		// Overlays are modal: a click closes the key list or panel and
 		// reaches nothing else. The welcome screen waits for its keys.
 		if e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
-			u.help, u.integrations.open = false, false
+			u.help, u.integrations.open, u.settingsPage.open = false, false, false
 		}
 		return
 	}
@@ -944,6 +949,8 @@ func (u *ui) draw() {
 			u.drawHelp(w, h)
 		} else if u.integrations.open {
 			u.drawIntegrations(w, h)
+		} else if u.settingsPage.open {
+			u.drawSettings(w, h)
 		} else if u.welcome {
 			u.drawWelcome(w, h)
 		}
@@ -985,6 +992,11 @@ func (u *ui) draw() {
 		footer = "Keys: j/k or arrows scroll · any other key closes"
 	} else if u.integrations.open {
 		footer = "Integrations: Enter installs · Esc closes"
+	} else if u.settingsPage.open {
+		footer = "Settings: ←/→ tab · j/k select · Enter or Space changes · Esc closes"
+		if u.settingsPage.editing {
+			footer = "Settings: type a value · Enter saves · Esc cancels"
+		}
 	} else if u.welcome {
 		footer = "Welcome: Enter continues · Esc skips"
 	} else if time.Now().Before(u.resizeUntil) {

@@ -206,6 +206,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.help, u.helpOffset = true, 0
 	case "integrations":
 		u.openIntegrations()
+	case "settings":
+		u.openSettings()
 	default:
 		if name, ok := strings.CutPrefix(action, "layout-"); ok {
 			u.send(protocol.Request{Op: "select-layout", Kind: name})

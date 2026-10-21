@@ -163,7 +163,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | herdr's first run and agent integrations | A welcome screen on first attach leading into the integrations panel (Ctrl-a i); `bmux integration` for Claude Code, Codex, omp, opencode and pi, reporting exact working/blocked/idle and the session to resume |
 | Agents supervising agents | `bmux agents`, `bmux capture`, `bmux send --if-seq`, `bmux wait-agent`; `bmux guide`, `bmux capabilities` and an installed skill teach agents to use them |
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
-| `new-window`, `select-window`, `last-window`, `rename-window`, `kill-window`, window list | Ctrl-a c, 1–9, ] / [, Tab, `,`, &; tabs on the top bar with a `!` for windows waiting on you |
+| `new-window`, `select-window`, `last-window`, `rename-window`, `kill-window`, window list | Ctrl-a c, 1–9, ] / [, Tab, `R`, &; tabs on the top bar with a `!` for windows waiting on you |
 | `swap-pane`, `rotate-window`, `break-pane`, `join-pane`, `last-pane`, `select-layout` (incl. `-E`) | Ctrl-a { / }, Ctrl-a Ctrl-o, Ctrl-a ! / @, Ctrl-a ;, Ctrl-a Space / Alt-1…5 / E |
 | sesh, tmux-sessionizer | Project picker: Ctrl-a n, `bmux project [DIR]` |
 | tmuxinator, tmuxp | `.bmux.toml` layout files with trusted commands; `bmux layout save` |
