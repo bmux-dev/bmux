@@ -17,7 +17,7 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 		} else {
 			u.projects.name += e.Text
 		}
-		u.projects.formErr = ""
+		u.projects.formErr, u.projects.candidates = "", nil
 	} else if u.projects.open {
 		u.projects.query += e.Text
 		u.projects.chosen = 0

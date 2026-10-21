@@ -41,5 +41,10 @@ directory, prefilled from the highlighted project (a name not already used,
 numbered like `api-2`) or from the filter and the current directory.
 Up/Down move between the fields, Backspace and Ctrl-u edit the focused one, and
 **Enter** creates the session and attaches to it. A relative directory is
-relative to where you started bmux, and `~` is your home directory. **Tab** or
-**Esc** returns to the Projects tab without creating anything.
+relative to where you started bmux, and `~` is your home directory.
+
+In the directory field, **Tab** completes the path like a shell: one matching
+folder completes to it plus a slash, several complete to what they share, and
+a Tab that can't add anything lists the matches. Only folders are offered, and
+hidden ones only after you type a dot. **Esc** (or **Tab** in the name field)
+returns to the Projects tab without creating anything.

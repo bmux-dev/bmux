@@ -40,17 +40,18 @@ type projectResult struct {
 }
 
 type projectPicker struct {
-	open      bool
-	loading   bool
-	query     string
-	chosen    int
-	list      []project
-	sessions  []protocol.Session // every session, for unique name suggestions
-	err       string             // loading/opening error; hides the list
-	creating  bool               // Create tab shown instead of Projects
-	field     int                // focused form field: 0 name, 1 directory
-	name, dir string             // form inputs
-	formErr   string             // create validation/RPC error, shown in the form
+	open       bool
+	loading    bool
+	query      string
+	chosen     int
+	list       []project
+	sessions   []protocol.Session // every session, for unique name suggestions
+	err        string             // loading/opening error; hides the list
+	creating   bool               // Create tab shown instead of Projects
+	field      int                // focused form field: 0 name, 1 directory
+	name, dir  string             // form inputs
+	formErr    string             // create validation/RPC error, shown in the form
+	candidates []string           // directories Tab could not choose between
 }
 
 // openProjects shows the picker and finds projects off the UI goroutine.
@@ -234,7 +235,7 @@ func (u *ui) closeProjects() {
 // highlighted project, or from the filter and the working directory when
 // nothing matches.
 func (u *ui) beginProjectForm() {
-	u.projects.creating, u.projects.field, u.projects.formErr = true, 0, ""
+	u.projects.creating, u.projects.field, u.projects.formErr, u.projects.candidates = true, 0, "", nil
 	matches := u.filteredProjects()
 	if u.projects.chosen < len(matches) {
 		dir := matches[u.projects.chosen].dir
@@ -328,8 +329,17 @@ func (u *ui) projectFormKey(e *tcell.EventKey) {
 	if u.projects.field == 1 {
 		field = &u.projects.dir
 	}
+	if e.Key() != tcell.KeyTab {
+		u.projects.candidates = nil // the list belongs to the Tab that showed it
+	}
 	switch e.Key() {
-	case tcell.KeyTab, tcell.KeyEscape:
+	case tcell.KeyTab:
+		if u.projects.field == 1 {
+			u.completeProjectDir()
+		} else {
+			u.projects.creating, u.projects.formErr = false, ""
+		}
+	case tcell.KeyEscape:
 		u.projects.creating, u.projects.formErr = false, ""
 	case tcell.KeyCtrlC:
 		u.quitting = true
@@ -367,6 +377,9 @@ func (u *ui) openProject(dir string) {
 // projectsFooter is the key hint line for the popup's current tab.
 func (u *ui) projectsFooter() string {
 	if u.projects.creating {
+		if u.projects.field == 1 {
+			return "New session: ↑↓ field · Tab completes directory · Enter create · Esc back to projects"
+		}
 		return "New session: ↑↓ field · Enter create · Ctrl-u clear · Tab/Esc back to projects"
 	}
 	return "New session: type to find · ↑↓ select · Enter open or create · Tab form · Esc close"
@@ -469,8 +482,19 @@ func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
 	put(1, name, uiBaseStyle)
 	put(3, "Start directory", labelStyle(1))
 	put(4, dir, uiBaseStyle)
+	next := 6
 	if u.projects.formErr != "" {
 		put(6, "Error: "+u.projects.formErr, uiBaseStyle.Bold(true))
+		next = 7
+	}
+	if lines := wrapNames(u.projects.candidates, iw); len(lines) > 0 {
+		rows := max(0, ih-next)
+		if len(lines) > rows && rows > 0 {
+			lines = append(lines[:rows-1], "…")
+		}
+		for i, line := range lines {
+			put(next+i, line, uiMutedStyle)
+		}
 	}
 	row, value := 1, name
 	if u.projects.field == 1 {
