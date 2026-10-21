@@ -65,8 +65,12 @@ behaves as before.
 Only `http`, `https` and `mailto` links are opened or passed on, because the
 text comes from whatever runs in the pane. bmux uses `open` on macOS and
 `xdg-open` on Linux. OSC 8 links are also passed through to your terminal, so
-a terminal that supports them can open one with its own gesture, such as
-Cmd-click.
+a terminal that supports them can open one with its own gesture.
+
+bmux asks the terminal to report the mouse, and the mouse protocol has no
+Command key. Ghostty on macOS therefore sends a Cmd-click to bmux as a plain
+click, and nothing opens. Hold Shift as well: **Shift-Cmd-click** makes
+Ghostty keep the click and open the link itself.
 
 ## Keyboard scrollback
 
