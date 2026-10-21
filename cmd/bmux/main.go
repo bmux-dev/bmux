@@ -410,7 +410,7 @@ Inside a session:
   Ctrl-a ( / )   Previous / next session
   Ctrl-a c   New window           Ctrl-a 1-9   Select window
   Ctrl-a [ / ]   Previous / next window      Ctrl-a Tab   Last window
-  Ctrl-a ,   Rename window        Ctrl-a &   Close window
+  Ctrl-a R   Rename window        Ctrl-a &   Close window
   Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
   Ctrl-a v   Scrollback view: move with hjkl, v/V/Ctrl-v select, y copy, Esc back
   Ctrl-a /   Search history, newest first; in the view / and ? search, n/N repeat
@@ -427,6 +427,7 @@ Inside a session:
   Ctrl-a b   Show / hide sidebar  Ctrl-a r   Reload config
   Ctrl-a ?   List key bindings (rebind them in the config file)
   Ctrl-a i   Agent integrations: exact agent state, installed on Enter
+  Ctrl-a ,   Settings: tabs of options, saved to the config file
 
 Settings: ~/.config/bmux/config.toml (see bmux default-config).
 

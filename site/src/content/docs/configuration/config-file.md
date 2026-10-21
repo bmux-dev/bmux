@@ -9,7 +9,21 @@ bmux reads `~/.config/bmux/config.toml` (or `$XDG_CONFIG_HOME/bmux/config.toml`,
 or the path in `BMUX_CONFIG`). It's TOML laid out like Helix's `config.toml`: a
 theme and the prefix at the top, then one table per area with kebab-case keys.
 The file and every line in it are optional; write only what you change.
-`bmux default-config` prints every setting, commented out, with its default:
+`bmux default-config` prints every setting, commented out, with its default.
+
+You don't have to edit the file by hand for the common settings: **Ctrl-a ,**
+opens a settings page with one tab per area (General, Appearance, Sidebar,
+Sound, Agents, Projects, Sessions). Move with **←/→** (or **h/l**) and
+**j/k**. **Enter** or **Space** flips a switch or cycles a choice; on a number,
+path, list or duration it opens an editor (**Enter** saves, **Esc** cancels).
+On the accent color, **e** types a `#RRGGBB` value. Each change is written to
+the config file at once and applied without a restart. Comments and the other
+lines are kept, and a value the file's rules reject isn't saved; the page says
+why. Keybindings, per-agent resume commands and `onboarding` stay in the file.
+The page shows what the file says, so a `BMUX_*` environment variable can
+still override it.
+
+The defaults look like this:
 
 ```toml
 theme = "dark"
