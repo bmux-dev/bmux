@@ -69,6 +69,11 @@ type Emulator struct {
 	// Indicates if the terminal is closed.
 	closed bool
 
+	// graphics handles Kitty graphics commands; nil drops them.
+	graphics Graphics
+	// The attached terminal's cell size in pixels; 0 when unknown.
+	cellWidth, cellHeight int
+
 	// atPhantom indicates if the cursor is out of bounds.
 	// When true, and a character is written, the cursor is moved to the next line.
 	atPhantom bool
@@ -239,7 +244,8 @@ func (e *Emulator) Resize(width int, height int) {
 	e.tabstops = uv.DefaultTabStops(width)
 
 	if e.isModeSet(ansi.ModeInBandResize) {
-		_, _ = io.WriteString(e.pw, ansi.InBandResize(e.Height(), e.Width(), 0, 0))
+		pw, ph := e.pixelSize()
+		_, _ = io.WriteString(e.pw, ansi.InBandResize(e.Height(), e.Width(), ph, pw))
 	}
 }
 

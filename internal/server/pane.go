@@ -18,6 +18,7 @@ import (
 	"github.com/creack/pty"
 	"golang.org/x/sys/unix"
 
+	"github.com/josephferrero/bmux/internal/graphics"
 	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/josephferrero/bmux/internal/vt"
 )
@@ -59,6 +60,8 @@ type pane struct {
 	resume                      []string // reported resume command, or nil
 	clipboard                   string   // latest OSC 52 write, for attached clients
 	clipboardSeq                uint64   // its clipboardWrites number, 0 if none
+	graphics                    *graphics.Pane
+	graphicsOK                  atomic.Bool // some attached client can display images
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
@@ -93,6 +96,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 	s.trackNotifications()
 	s.trackPrompts()
 	s.trackClipboard()
+	s.trackGraphics(images)
 	s.cmd = exec.Command(shell, "-l")
 	s.cmd.Dir = dir
 	s.cmd.Env = shellEnv(os.Environ(), sessionID, name, paneID)
@@ -204,6 +208,7 @@ func (s *pane) closeIO() {
 		// unsynchronized closed flag. Keeping that flag immutable avoids a race.
 		_ = s.term.InputPipe().(io.Closer).Close()
 		_ = s.pty.Close()
+		s.graphics.Close()
 	})
 }
 
@@ -264,7 +269,8 @@ func (s *pane) input(r protocol.Request) error {
 	case "resize":
 		w, h := dimensions(r.Width, r.Height)
 		if !s.info.Exited {
-			if err := resizePTY(s.pty, w, h); err != nil {
+			cw, ch := s.term.CellPixels()
+			if err := resizePTY(s.pty, w, h, cw, ch); err != nil {
 				return err
 			}
 		}
