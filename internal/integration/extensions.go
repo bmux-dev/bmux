@@ -36,7 +36,8 @@ func (f fileAgent) agent(label, command string, configDir func(Env) string, note
 //   - working from agent_start until the agent settles (pi's agent_settled;
 //     omp's agent_end unless it will continue on its own)
 //   - blocked while an extension prompt (pi's ui_prompt_*), a tool approval
-//     (omp's tool_approval_*) or the ask tool waits on you
+//     (omp's tool_approval_*), the ask tool or another extension's prompt
+//     (agent:blocked on the shared pi.events bus: {active, label?}) waits on you
 //   - the session file, for resuming exactly this session
 //
 // Leaving the foreground already drops a recognized agent's reports, so it
@@ -117,6 +118,9 @@ export default function (pi) {
   pi.on("ui_prompt_end", () => wait(-1));
   pi.on("tool_approval_requested", () => wait(1));
   pi.on("tool_approval_resolved", () => wait(-1));
+  // Other extensions can't emit the events above; they mark their own prompts
+  // on the shared bus instead. The bus is not part of pi.on, so it's optional.
+  pi.events?.on?.("agent:blocked", (data) => wait(data?.active === true ? 1 : -1));
   pi.on("tool_execution_start", (event) => {
     if (event?.toolName === "ask") wait(1);
   });
@@ -143,12 +147,12 @@ func ompDir(e Env) string {
 }
 
 var pi = fileAgent{
-	name: "pi", version: 2, file: filepath.Join("extensions", "bmux-agent-state.ts"),
+	name: "pi", version: 3, file: filepath.Join("extensions", "bmux-agent-state.ts"),
 	text: piExtension("pi", "agent_settled", "", `"pi", "--session", sessionFile`),
 }
 
 var omp = fileAgent{
-	name: "omp", version: 2, file: filepath.Join("extensions", "bmux-agent-state.ts"),
+	name: "omp", version: 3, file: filepath.Join("extensions", "bmux-agent-state.ts"),
 	// omp marks the shells it spawns with OMPCODE=1; an omp started from one
 	// is nested, not the pane's agent.
 	text: piExtension("omp", "agent_end", ` && process.env.OMPCODE !== "1"`, `"omp", "--resume=" + sessionFile`),
