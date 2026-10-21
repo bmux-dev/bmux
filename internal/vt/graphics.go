@@ -21,6 +21,12 @@ type Graphics interface {
 	Kitty(payload []byte) string
 }
 
+// IsPlaceholder reports whether cell content is an image placeholder cell,
+// which holds no text: copies, searches and captures leave it out.
+func IsPlaceholder(content string) bool {
+	return strings.HasPrefix(content, Placeholder)
+}
+
 // SetGraphics installs the handler for APC G sequences. Without one they are
 // dropped.
 func (e *Emulator) SetGraphics(g Graphics) {
@@ -78,7 +84,7 @@ func (e *Emulator) pixelSize() (width, height int) {
 func (e *Emulator) PlaceholderImageIDs() map[uint32]struct{} {
 	ids := make(map[uint32]struct{})
 	note := func(c *uv.Cell) {
-		if c != nil && strings.HasPrefix(c.Content, Placeholder) {
+		if c != nil && IsPlaceholder(c.Content) {
 			ids[PlaceholderID(c.Style.Fg)] = struct{}{}
 		}
 	}

@@ -102,7 +102,7 @@ func cellOwner(row []protocol.Cell, x int) int {
 }
 
 func visibleCellText(c protocol.Cell) string {
-	if c.Attrs&uv.AttrConceal != 0 || c.Text == "" {
+	if c.Attrs&uv.AttrConceal != 0 || c.Text == "" || isPlaceholder(c) {
 		return strings.Repeat(" ", max(1, c.Width))
 	}
 	return c.Text

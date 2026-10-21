@@ -51,7 +51,8 @@ bmux capture --json api:1   # {"target","agent","state","seq","text"}
 ```
 
 This is the screen as the user would see it: the question, its options and
-which option is highlighted. Read it before you answer anything.
+which option is highlighted. Read it before you answer anything. Images a
+program drew (screenshots) are blanks in the text.
 
 ## Type into a pane
 

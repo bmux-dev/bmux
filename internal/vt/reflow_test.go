@@ -212,3 +212,29 @@ func TestPromptMarksFollowTheirLines(t *testing.T) {
 		t.Fatalf("alternate screen marked a prompt: %v", got)
 	}
 }
+
+func TestImageRowsAreClippedNotWrapped(t *testing.T) {
+	const cell = "\U0010EEEE\u0305\u0305"
+	term := newTestTerminal(t, 12, 4)
+	term.SetScrollbackSize(10)
+	term.WriteString("\x1b[38;2;0;0;7m" + strings.Repeat(cell, 10) + "\x1b[0m\r\nplain words here")
+	term.Resize(6, 4)
+	rows := screenLines(term)
+	if got := strings.Count(rows[0], cell); got != 6 || rows[1] != "plain" {
+		t.Fatalf("narrowed screen: %q (image cells in row 0: %d)", rows, got)
+	}
+	if wrapped := wrappedRows(term); wrapped[0] {
+		t.Fatal("clipped image row is marked as wrapping onto the next")
+	}
+	if rows[2] != "words" || rows[3] != "here" {
+		t.Fatalf("ordinary text must still rewrap: %q", rows)
+	}
+	// Scrolled into history, the row stays clipped through further reflows.
+	term.WriteString("\r\n\r\n\r\n\r\n")
+	term.Resize(4, 4)
+	for _, line := range historyLines(term) {
+		if strings.Contains(line, cell) && strings.Count(line, cell) > 4 {
+			t.Fatalf("history row grew past the width: %q", line)
+		}
+	}
+}

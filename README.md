@@ -31,6 +31,7 @@ works out of the box, with no plugin manager.
 | tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH. Apps' own OSC 52 copies (Neovim yanks) go to the same clipboard |
 | tmux-better-mouse-mode | Click to focus, drag dividers to resize, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
 | tmux-copycat, copy mode | An optional [scrollback view](https://bmux-dev.github.io/bmux/guides/selection-scrollback/#keyboard-scrollback) (Ctrl-a v) with vi keys, search (Ctrl-a /), and jumps between shell prompts; the mouse never needs it |
+| (no tmux equivalent) | Images programs draw in a pane (an agent sharing a screenshot) with the Kitty graphics protocol, kept per pane so they survive scrolling, splits, windows and detaching; see [images](https://bmux-dev.github.io/bmux/reference/troubleshooting/#images-in-panes) |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
 | tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
@@ -269,7 +270,7 @@ Apply changes with **Ctrl-a r**, `bmux reload`, or `SIGUSR1` to the server, as
 in Helix; attached clients pick them up. Mistakes are shown in the status line
 and that setting keeps its default. The file also covers sounds, agent state
 colors, the terminal window title (session and pane title, on by default),
-turning agent detection or restore off, and per-agent resume commands; see
+turning agent detection or restore off, whether to show images (`ui.graphics`), and per-agent resume commands; see
 [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/).
 
 The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`

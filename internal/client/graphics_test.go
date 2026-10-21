@@ -485,3 +485,33 @@ func TestDrawSendsShownImagesBeforeShowing(t *testing.T) {
 		t.Fatalf("commands %.80q", cmds)
 	}
 }
+
+func TestSelectionCopiesAndSearchSkipImageCells(t *testing.T) {
+	ph := protocol.Cell{Text: placeholder + "\u0305\u0305", Width: 1, FG: "#000009"}
+	row := []protocol.Cell{{Text: "a", Width: 1}, {Text: "b", Width: 1}, ph, ph, {Text: "c", Width: 1}, {Text: "d", Width: 1}}
+	frame := &protocol.TerminalFrame{Rows: [][]protocol.Cell{row, {ph, ph, ph}}}
+	sel := selection{active: true, start: point{0, 0}, end: point{5, 1}}
+	sel.remember(frame)
+	got := sel.text()
+	if strings.ContainsRune(got, 0x10EEEE) || got != "ab  cd\n" {
+		t.Errorf("copied %q, want the image cells as blanks", got)
+	}
+	matches := searchMatches(row, "b  c")
+	hit := 0
+	for _, m := range matches {
+		if m {
+			hit++
+		}
+	}
+	if hit != 4 {
+		t.Errorf("search across the image highlighted %d cells, want 4: %v", hit, matches)
+	}
+	for _, m := range searchMatches(row, placeholder) {
+		if m {
+			t.Fatal("search matched the placeholder rune")
+		}
+	}
+	if !isBlank(ph) {
+		t.Error("an image cell counts as text for word and prompt motions")
+	}
+}
