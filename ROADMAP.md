@@ -128,7 +128,7 @@ existing sessions without warning.
 | Area | Items |
 | --- | --- |
 | Compatibility promise | Stable CLI, config format and snapshot format. Protocol changes never silently cost sessions (builds on `bmux restart`). |
-| Terminal support | Extended keys (CSI u / kitty keyboard), hyperlinks (OSC 8), activity alerts, opt-in graphics passthrough. |
+| Terminal support | Extended keys (CSI u / kitty keyboard), activity alerts, opt-in graphics passthrough. |
 | Quality | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux. |
 | Linux | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked. |
 | Distribution | Homebrew tap, signed and notarized macOS binaries, release signatures. |

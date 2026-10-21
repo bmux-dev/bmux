@@ -37,6 +37,7 @@ default, with padding disabled.
 
 ## Terminal compatibility
 
-Graphics protocols and clickable hyperlinks are not supported yet. CI runs on
+Graphics protocols are not supported yet. Links open with Ctrl-click (see
+[Selection and scrollback](/bmux/guides/selection-scrollback/#links)). CI runs on
 macOS and Ubuntu; most day-to-day interactive use has been on macOS. For a bug
 report, include your OS, terminal emulator, `bmux version`, and reproduction steps.
