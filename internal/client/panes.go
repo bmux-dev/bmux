@@ -177,6 +177,9 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 				continue
 			}
 			style := cellStyle(c)
+			if c.Link > 0 && c.Link <= len(f.Links) && openableLink(f.Links[c.Link-1]) {
+				style = style.Url(f.Links[c.Link-1])
+			}
 			if x < len(matches) && matches[x] {
 				style = style.Background(accentColor).Foreground(chrome.background)
 			}

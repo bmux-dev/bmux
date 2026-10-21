@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 6
+const Version = 7
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -138,6 +138,9 @@ type Cell struct {
 	BG        string `json:"b,omitempty"`
 	Attrs     uint8  `json:"a,omitempty"`
 	Underline bool   `json:"u,omitempty"`
+	// Link is 1 + the index in TerminalFrame.Links of the OSC 8 hyperlink
+	// the cell belongs to; 0 when it has none.
+	Link int `json:"l,omitempty"`
 }
 
 type TerminalFrame struct {
@@ -161,6 +164,9 @@ type TerminalFrame struct {
 	// terminal wrapped it; copies join such rows without a newline. Nil when
 	// no row is wrapped.
 	Wrapped []bool `json:"wrapped,omitempty"`
+	// Links holds the targets of the OSC 8 hyperlinks on screen; cells refer
+	// to them by Cell.Link, so a long URL is sent once per frame.
+	Links []string `json:"links,omitempty"`
 }
 
 type PaneFrame struct {

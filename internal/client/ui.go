@@ -68,7 +68,9 @@ type ui struct {
 	drag                            dragScroll // auto-scroll while a selection drag is outside the pane
 	appMouseDown                    bool
 	appMouseButton                  int
-	divider                         *dividerDrag // divider being dragged, or nil
+	linkHeld                        bool               // a Ctrl+click opened a link; swallow the rest of that press
+	opener                          func(string) error // opens links; nil means openLink
+	divider                         *dividerDrag       // divider being dragged, or nil
 	quitting                        bool
 	clipboard                       *clipboardWorker
 	clipboardSeq                    uint64
@@ -714,6 +716,12 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	if u.frame == nil {
 		return
 	}
+	if u.linkHeld {
+		if e.Buttons() == tcell.ButtonNone {
+			u.linkHeld = false
+		}
+		return
+	}
 	screenWidth, screenHeight := u.screen.Size()
 	if y == screenHeight-1 && e.Buttons()&tcell.Button1 != 0 && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
 		if hint := u.updateHint(); hint != nil && u.updateHintFrom > 0 && x >= u.updateHintFrom {
@@ -809,6 +817,21 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		return
 	}
 	x = max(0, min(x, len(u.frame.Rows[y])-1))
+	if e.Buttons()&tcell.Button1 != 0 && e.Modifiers()&tcell.ModCtrl != 0 && !u.selection.dragging && !u.appMouseDown {
+		// Ctrl+click opens a link and nothing else: no selection, and the
+		// application never sees the click.
+		if link := linkAt(u.frame, x, y); link != "" {
+			u.linkHeld = true
+			open := u.opener
+			if open == nil {
+				open = openLink
+			}
+			if err := open(link); err != nil {
+				u.notice(err.Error())
+			}
+			return
+		}
+	}
 	buttons, mods := e.Buttons(), e.Modifiers()
 	if u.frame.Mouse && mods&(tcell.ModShift|tcell.ModAlt) == 0 && !u.selection.dragging {
 		m := protocol.Request{Op: "mouse", X: x, Y: y, Kind: "click"}

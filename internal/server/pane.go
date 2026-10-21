@@ -381,14 +381,32 @@ func (s *pane) defaultBG() string {
 	return s.background
 }
 
-// cell converts an emulator cell; bg replaces the default background.
-func (s *pane) cell(c *uv.Cell, bg string) protocol.Cell {
+// cell converts an emulator cell; bg replaces the default background. A cell
+// inside an OSC 8 hyperlink is added to links, which may be nil to leave
+// links out.
+func (s *pane) cell(c *uv.Cell, bg string, links *[]string) protocol.Cell {
 	cellBG := s.cellColor(c.Style.Bg)
 	if cellBG == "" {
 		cellBG = bg
 	}
-	return protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
+	out := protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
 		Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
+	if links != nil && c.Link.URL != "" {
+		out.Link = linkIndex(links, c.Link.URL)
+	}
+	return out
+}
+
+// linkIndex returns 1 + the position of url in links, appending it when new.
+// A screen holds few distinct links, so a scan beats a map.
+func linkIndex(links *[]string, url string) int {
+	for i, l := range *links {
+		if l == url {
+			return i + 1
+		}
+	}
+	*links = append(*links, url)
+	return len(*links)
 }
 
 // frame returns only the requested viewport, not the entire scrollback buffer.
@@ -459,7 +477,7 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 				c = s.term.CellAt(x, row-history)
 			}
 			if c != nil {
-				f.Rows[y][x] = s.cell(c, bg)
+				f.Rows[y][x] = s.cell(c, bg, &f.Links)
 			} else {
 				f.Rows[y][x].BG = bg
 			}
@@ -490,7 +508,7 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 		row := make([]protocol.Cell, width)
 		for x := range row {
 			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = s.cell(c, bg)
+				row[x] = s.cell(c, bg, nil)
 			} else {
 				row[x].BG = bg
 			}
