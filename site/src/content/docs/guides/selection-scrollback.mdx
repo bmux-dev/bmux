@@ -17,6 +17,7 @@ import Screenshot from '../../../components/Screenshot.astro';
 | Scroll history | Wheel up/down, three lines per event |
 | Select or scroll history in a mouse-aware application | Hold Alt |
 | Resize panes | Drag a divider between them |
+| Open a link | Ctrl-click it; works even in a mouse-aware application |
 
 Dragging a divider moves it as you go, down to each pane's minimum size,
 without changing which pane is focused. Where dividers meet, the one running
@@ -49,6 +50,27 @@ newline stay separate. When a pane gets shorter, rows above the cursor move
 into scrollback instead of being cut off. Full-screen programs on the
 alternate screen redraw themselves instead. Copying text the terminal wrapped
 gives one line, without a newline where it wrapped.
+
+## Links
+
+**Ctrl-click** opens a link under the pointer, on the machine running the
+bmux client, so it works over SSH too. bmux recognises two kinds: hyperlinks a
+program marked with OSC 8 (`ls --hyperlink`, `rg --hyperlink-format`), and
+`http://`, `https://` and `mailto:` addresses printed as plain text,
+including one the terminal wrapped across rows. Trailing punctuation such as
+the period ending a sentence is left out. Ctrl-click on a link opens it
+instead of selecting, and the program never sees the click; anywhere else it
+behaves as before.
+
+Only `http`, `https` and `mailto` links are opened or passed on, because the
+text comes from whatever runs in the pane. bmux uses `open` on macOS and
+`xdg-open` on Linux. OSC 8 links are also passed through to your terminal, so
+a terminal that supports them can open one with its own gesture.
+
+bmux asks the terminal to report the mouse, and the mouse protocol has no
+Command key. Ghostty on macOS therefore sends a Cmd-click to bmux as a plain
+click, and nothing opens. Hold Shift as well: **Shift-Cmd-click** makes
+Ghostty keep the click and open the link itself.
 
 ## Keyboard scrollback
 
