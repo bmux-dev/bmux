@@ -28,14 +28,19 @@ func pollablePTY(f *os.File) (*os.File, error) {
 	return wrapped, nil
 }
 
-func resizePTY(f *os.File, width, height int) error {
+// resizePTY sets the window size; cellWidth and cellHeight, when known, fill
+// the pixel fields programs read with TIOCGWINSZ.
+func resizePTY(f *os.File, width, height, cellWidth, cellHeight int) error {
 	conn, err := f.SyscallConn()
 	if err != nil {
 		return err
 	}
 	var ioctlErr error
 	err = conn.Control(func(fd uintptr) {
-		ioctlErr = unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, &unix.Winsize{Col: uint16(width), Row: uint16(height)})
+		ioctlErr = unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, &unix.Winsize{
+			Col: uint16(width), Row: uint16(height),
+			Xpixel: pixels(width, cellWidth), Ypixel: pixels(height, cellHeight),
+		})
 	})
 	if err != nil {
 		return err
@@ -73,4 +78,8 @@ func foregroundPTYGroup(f *os.File) (int, error) {
 		return 0, err
 	}
 	return group, ioctlErr
+}
+
+func pixels(cells, cell int) uint16 {
+	return uint16(max(0, min(cells*cell, 1<<16-1)))
 }
