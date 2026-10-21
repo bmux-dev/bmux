@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 7
+const Version = 8
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -37,18 +37,20 @@ type Request struct {
 	Name       string `json:"name,omitempty"`
 	NewName    string `json:"new_name,omitempty"`
 	Dir        string `json:"dir,omitempty"`
-	Width      int    `json:"width,omitempty"`
-	Height     int    `json:"height,omitempty"`
-	Text       string `json:"text,omitempty"`
-	Code       rune   `json:"code,omitempty"`
-	Mod        int    `json:"mod,omitempty"`
-	Delta      int    `json:"delta,omitempty"`
-	X          int    `json:"x,omitempty"`
-	Y          int    `json:"y,omitempty"`
-	Button     int    `json:"button,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-	Focused    bool   `json:"focused,omitempty"`
-	PaneID     int    `json:"pane_id,omitempty"`
+	// MakeDir makes create build Dir, parents included, when it is missing.
+	MakeDir bool   `json:"make_dir,omitempty"`
+	Width   int    `json:"width,omitempty"`
+	Height  int    `json:"height,omitempty"`
+	Text    string `json:"text,omitempty"`
+	Code    rune   `json:"code,omitempty"`
+	Mod     int    `json:"mod,omitempty"`
+	Delta   int    `json:"delta,omitempty"`
+	X       int    `json:"x,omitempty"`
+	Y       int    `json:"y,omitempty"`
+	Button  int    `json:"button,omitempty"`
+	Kind    string `json:"kind,omitempty"`
+	Focused bool   `json:"focused,omitempty"`
+	PaneID  int    `json:"pane_id,omitempty"`
 	// NeighborID is the pane across a dragged divider from PaneID.
 	NeighborID int    `json:"neighbor_id,omitempty"`
 	SessionID  uint64 `json:"session_id,omitempty"`

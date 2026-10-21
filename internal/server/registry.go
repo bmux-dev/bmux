@@ -1,7 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,6 +65,11 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 			return result
 		}
 		stat, err := os.Stat(dir)
+		if errors.Is(err, fs.ErrNotExist) && r.MakeDir {
+			if err = os.MkdirAll(dir, 0o755); err == nil {
+				stat, err = os.Stat(dir)
+			}
+		}
 		if err != nil {
 			result.Error = err.Error()
 			return result

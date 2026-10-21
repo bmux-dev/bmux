@@ -88,6 +88,9 @@ enabled = false
 [restore.resume]
 claude = ["claude", "--continue", "--model", "opus"]
 codex = []
+
+[projects]
+start-dir = "~/work"
 `)
 	cfg, err := Load(path, noEnv)
 	if err != nil {
@@ -98,7 +101,7 @@ codex = []
 		cfg.Sidebar != (Sidebar{Show: false, Width: 30, MinScreenWidth: 100}) || cfg.Sound.Ready != filepath.Join(home, "sounds/done.aiff") ||
 		!reflect.DeepEqual(cfg.Agents.Extra, []string{"myagent"}) || cfg.Agents.WorkingAfter.Duration != 3*time.Second ||
 		cfg.Agents.WaitingAfter.Duration != 1500*time.Millisecond || cfg.Restore.Enabled ||
-		len(cfg.Restore.Resume["codex"]) != 0 || cfg.Restore.Resume["claude"][3] != "opus" {
+		len(cfg.Restore.Resume["codex"]) != 0 || cfg.Restore.Resume["claude"][3] != "opus" || cfg.Projects.StartDir != "~/work" {
 		t.Fatalf("settings: %+v", cfg)
 	}
 	if key, _ := PrefixKey(cfg.Prefix); key != 'b' {
@@ -127,11 +130,13 @@ waiting_after = "10ms"
 waiting-after = "10ms"
 [restore.resume]
 claude = ["/usr/local/bin/claude"]
+[projects]
+start-dir = "work"
 `), noEnv)
 	if err == nil {
 		t.Fatal("invalid settings accepted silently")
 	}
-	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude"} {
+	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude", "projects.start-dir"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error doesn't mention %s: %v", want, err)
 		}
@@ -139,7 +144,7 @@ claude = ["/usr/local/bin/claude"]
 	d := Default()
 	if cfg.Prefix != d.Prefix || cfg.Theme != d.Theme || cfg.UI.Accent != d.UI.Accent || cfg.Sidebar.Width != d.Sidebar.Width ||
 		cfg.Sound.Ready != "" || !reflect.DeepEqual(cfg.Agents.Extra, []string{"ok"}) || cfg.Agents.WaitingAfter != d.Agents.WaitingAfter ||
-		cfg.Restore.Resume["claude"] != nil {
+		cfg.Restore.Resume["claude"] != nil || cfg.Projects.StartDir != d.Projects.StartDir {
 		t.Fatalf("invalid settings not reset: %+v", cfg)
 	}
 	if _, err := Load(write(t, "prefix = \n"), noEnv); err == nil {
