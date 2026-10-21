@@ -37,9 +37,10 @@ folder.
 ## Create tab
 
 **Tab** (or Enter with no match) opens a form with a session name, a start
-directory and a *Create directory if it doesn't exist* toggle, prefilled from
-the highlighted project (a name not already used, numbered like `api-2`) or
-from the filter and the start directory.
+directory and a *Create directory if it doesn't exist* toggle. With
+`projects.start-dir` set, it starts in that folder, named after the filter (or
+a name not already used, like `api-2`). Without it, the form is prefilled from
+the highlighted project, or from the filter and the folder you started bmux in.
 Up/Down move between the fields, Backspace and Ctrl-u edit the focused text
 field, and **Enter** creates the session and attaches to it. A relative
 directory is relative to the start directory, and `~` is your home directory.
