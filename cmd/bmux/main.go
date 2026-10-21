@@ -124,7 +124,7 @@ func runAttach(socket string, args []string) error {
 }
 
 // runProject lands in DIR's session, creating one named after it if none
-// started there; without DIR it opens the project picker.
+// started there; without DIR it opens the new-session popup.
 func runProject(socket string, args []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -376,8 +376,8 @@ func helpText() string {
 const interactiveHelp = `
 Inside a session:
   Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
-  Ctrl-a f   Project picker: a folder's session, created if needed
-  Ctrl-a n   New session          Ctrl-a p   Last session
+  Ctrl-a n   New session: find a project (Enter) or create one (Tab)
+  Ctrl-a p   Last session
   Ctrl-a ( / )   Previous / next session
   Ctrl-a c   New window           Ctrl-a 1-9   Select window
   Ctrl-a [ / ]   Previous / next window      Ctrl-a Tab   Last window

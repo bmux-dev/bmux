@@ -82,7 +82,7 @@ Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21
 | Break and join panes | M | Done: Ctrl-a ! / @ |
 | Preset layouts | M | Done: Ctrl-a Space cycles, Alt-1…5 pick, Ctrl-a E equalizes |
 | Last pane toggle | S | Done: Ctrl-a ; |
-| Project picker | M | Done: Ctrl-a f and `bmux project`, from zoxide and `projects.roots` |
+| Project picker | M | Done: the Ctrl-a n popup (Projects and Create tabs) and `bmux project`, from zoxide and `projects.roots` |
 | Layout files | M | Done: `.bmux.toml`, commands run once trusted; `bmux layout save` / `trust` |
 
 ## v0.5: keyboard scrollback
@@ -165,7 +165,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-pain-control, `split-window -c "#{pane_current_path}"`, `select-pane`, `resize-pane` (repeatable), zoom | `Ctrl-a \|` / `-` in the focused pane's directory, Ctrl-h/j/k/l, `Ctrl-a` arrows / `o`, `Ctrl-a h/j/k/l`, `Ctrl-a m` |
 | `new-window`, `select-window`, `last-window`, `rename-window`, `kill-window`, window list | Ctrl-a c, 1–9, ] / [, Tab, `,`, &; tabs on the top bar with a `!` for windows waiting on you |
 | `swap-pane`, `rotate-window`, `break-pane`, `join-pane`, `last-pane`, `select-layout` (incl. `-E`) | Ctrl-a { / }, Ctrl-a Ctrl-o, Ctrl-a ! / @, Ctrl-a ;, Ctrl-a Space / Alt-1…5 / E |
-| sesh, tmux-sessionizer | Project picker: Ctrl-a f, `bmux project [DIR]` |
+| sesh, tmux-sessionizer | Project picker: Ctrl-a n, `bmux project [DIR]` |
 | tmuxinator, tmuxp | `.bmux.toml` layout files with trusted commands; `bmux layout save` |
 | `focus-events on`, vim-tmux-focus-events | Focus in/out (`?1004`) for the focused pane while a client's terminal has focus |
 | `set-titles on` | Window title from the session and the focused pane's title; `ui.set-title` turns it off |
@@ -197,7 +197,7 @@ alert sounds on Linux.
 
 v0.4.0 added windows (tabs) per session, swapping, rotating, breaking and
 joining panes, preset layouts, the last-pane toggle, the project picker
-(Ctrl-a f, `bmux project`), `.bmux.toml` layout files, deleting sessions from
+(Ctrl-a n, `bmux project`), `.bmux.toml` layout files, deleting sessions from
 the sidebar, and window counts in `bmux list`.
 
 v0.5.0 added the scrollback view (Ctrl-a v) with vi-style keyboard selection,

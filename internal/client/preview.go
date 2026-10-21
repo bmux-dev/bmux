@@ -33,7 +33,7 @@ func (u *ui) stopPreview() {
 }
 
 func (u *ui) requestPreview() {
-	if !u.picker || u.prompt != "" || u.quitting || u.screen == nil {
+	if !u.picker || u.prompt != "" || u.projects.open || u.quitting || u.screen == nil {
 		u.stopPreview()
 		return
 	}

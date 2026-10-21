@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -114,7 +113,7 @@ func Run(socket, name, cwd string) error {
 	})
 }
 
-// RunProjects opens the project picker without attaching first; leaving it
+// RunProjects opens the new-session popup without attaching first; leaving it
 // without choosing a project exits.
 func RunProjects(socket, cwd string) error {
 	return run(socket, cwd, func(u *ui) error {
@@ -556,14 +555,6 @@ func (u *ui) resumeLive() {
 }
 func (u *ui) scroll(delta int) { u.send(protocol.Request{Op: "scroll", Delta: delta}) }
 
-func (u *ui) beginCreate() {
-	u.promptError = ""
-	u.prompt = "name"
-	u.input = u.query
-	if u.input == "" {
-		u.input = filepath.Base(u.cwd)
-	}
-}
 func (u *ui) pickerKey(e *tcell.EventKey) {
 	defer u.requestPreview()
 	if u.prompt == "delete" {
@@ -585,49 +576,22 @@ func (u *ui) pickerKey(e *tcell.EventKey) {
 			u.input += string(e.Rune())
 			u.promptError = ""
 		case tcell.KeyEnter:
-			if u.prompt == "name" {
-				if err := validatePromptName(strings.TrimSpace(u.input)); err != nil {
-					u.promptError = err.Error()
-					return
-				}
-				u.newName, u.prompt, u.input = strings.TrimSpace(u.input), "directory", u.cwd
+			if err := validatePromptName(strings.TrimSpace(u.input)); err != nil {
+				u.promptError = err.Error()
 				return
 			}
-			if u.prompt == "rename" {
-				if err := validatePromptName(strings.TrimSpace(u.input)); err != nil {
-					u.promptError = err.Error()
-					return
-				}
-				generation := ""
-				if !u.renameTarget.Created.IsZero() {
-					generation = protocol.SessionGeneration(u.renameTarget.Created)
-				}
-				_, err := Request(u.socket, protocol.Request{Op: "rename", Name: u.newName, NewName: strings.TrimSpace(u.input), Generation: generation})
-				if err != nil {
-					u.promptError = err.Error()
-					return
-				}
-				u.prompt = ""
-				u.refresh()
-				return
+			generation := ""
+			if !u.renameTarget.Created.IsZero() {
+				generation = protocol.SessionGeneration(u.renameTarget.Created)
 			}
-			dir := strings.TrimSpace(u.input)
-			if dir == "~" || strings.HasPrefix(dir, "~/") {
-				home, _ := os.UserHomeDir()
-				dir = filepath.Join(home, strings.TrimPrefix(dir, "~"))
-			}
-			if !filepath.IsAbs(dir) {
-				dir = filepath.Join(u.cwd, dir)
-			}
-			w, h := u.screen.Size()
-			_, err := Request(u.socket, protocol.Request{Op: "create", Name: u.newName, Dir: dir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
+			_, err := Request(u.socket, protocol.Request{Op: "rename", Name: u.newName, NewName: strings.TrimSpace(u.input), Generation: generation})
 			if err != nil {
 				u.promptError = err.Error()
 				return
 			}
-			if err := u.switchTo(u.newName); err != nil {
-				u.notice(err.Error())
-			}
+			u.prompt = ""
+			u.refresh()
+			return
 		}
 		return
 	}
@@ -935,21 +899,9 @@ func (u *ui) draw() {
 	}
 	u.screen.Clear()
 	u.screen.HideCursor()
-	if u.projects.open {
-		u.screen.Fill(' ', uiBaseStyle)
-		u.drawProjects(w, h)
-		footer := "Projects: type to filter · Up/Down select · Enter opens its session, or creates one · Esc back"
-		if time.Now().Before(u.messageUntil) {
-			footer = u.message
-		}
-		if h > 1 {
-			u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
-		}
-		u.updateTitle()
-		u.screen.Show()
-		return
-	}
-	if u.picker {
+	if u.projects.open && u.conn == nil && !u.picker {
+		u.screen.Fill(' ', uiBaseStyle) // bmux project: nothing behind the popup
+	} else if u.picker {
 		u.screen.Fill(' ', uiBaseStyle)
 		u.drawPicker(w, h)
 	} else {
@@ -977,6 +929,9 @@ func (u *ui) draw() {
 		}
 		u.drawPowerline(w, time.Now())
 	}
+	if u.projects.open {
+		u.drawProjects(w, h)
+	}
 	root, _ := u.keyTables()
 	footer := keyHints([2]string{u.prefixKey("sessions"), " sessions"}, [2]string{directionKeys(root, "navigate"), " navigate"}, [2]string{u.prefixKey("detach"), " detach"})
 	if u.picker {
@@ -989,7 +944,9 @@ func (u *ui) draw() {
 			footer = fmt.Sprintf("Scrollback: %d lines up · typing returns to live output", u.frame.Offset)
 		}
 	}
-	if u.prefix {
+	if u.projects.open {
+		footer = u.projectsFooter()
+	} else if u.prefix {
 		footer = u.prefixHelp()
 	} else if u.closeConfirm != 0 {
 		footer = "Close the pane running " + u.closeCommand + "? y closes it · any other key keeps it"
@@ -1014,7 +971,7 @@ func (u *ui) draw() {
 	if time.Now().Before(u.messageUntil) {
 		footer = u.message
 	}
-	if !u.picker {
+	if !u.picker && !u.projects.open {
 		identity := u.name + " | " + u.focusedPaneLabel()
 		if len(identity) > 0 {
 			footer = identity + " | " + footer
@@ -1066,6 +1023,19 @@ func fit(s string, width int) string {
 	}
 	result.WriteString(strings.Repeat(" ", max(0, width-used)))
 	return result.String()
+}
+
+// tailFit keeps the end of s within width cells, so a long input shows the
+// text next to its cursor.
+func tailFit(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	for displayWidth(s) > width {
+		_, rest, _, _ := uniseg.FirstGraphemeClusterInString(s, -1)
+		s = rest
+	}
+	return s
 }
 
 func cellColor(name string) tcell.Color {

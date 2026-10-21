@@ -30,7 +30,7 @@ func TestRawPasteResumesLiveBeforeSendingExactPayload(t *testing.T) {
 }
 
 func TestRawPasteAppendsToPickerPromptsAndFilter(t *testing.T) {
-	for _, prompt := range []string{"name", "rename", "directory", "filter"} {
+	for _, prompt := range []string{"rename", "filter"} {
 		t.Run(prompt, func(t *testing.T) {
 			u, requests := navigationUI(t)
 			u.picker = true
@@ -68,13 +68,13 @@ func TestRawPasteRejectsListAndDeleteConfirmation(t *testing.T) {
 		t.Run("prompt="+prompt, func(t *testing.T) {
 			u := &ui{picker: true, prompt: prompt, input: "unchanged", query: "unchanged", deleteTarget: protocol.Session{Name: "keep"}}
 			u.handleRawPaste(&rawPasteEvent{Text: "y\n\x01d"})
-			if u.prompt != prompt || u.input != "unchanged" || u.query != "unchanged" || u.message != "Paste into a name, directory, or / filter" || !time.Now().Before(u.messageUntil) {
+			if u.prompt != prompt || u.input != "unchanged" || u.query != "unchanged" || u.message != "Paste into a name or / filter" || !time.Now().Before(u.messageUntil) {
 				t.Fatalf("paste accepted outside an editable prompt: %+v", u)
 			}
 			if prompt == "delete" {
 				// Paste must not act as the bare, unmodified y required to terminate.
 				u.pickerKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModCtrl))
-				if u.prompt != "" || u.message != "Paste into a name, directory, or / filter" {
+				if u.prompt != "" || u.message != "Paste into a name or / filter" {
 					t.Fatal("modified y confirmed termination")
 				}
 			}

@@ -43,7 +43,7 @@ letters are the same as Ctrl letters in most terminals.
 | `new-window`, `close-window`, `rename-window` | prefix `c`, `&`, `,` | New window in the focused pane's directory; close asks first if a program is running |
 | `next-window` / `previous-window`, `last-window` | prefix `]` / `[`, `tab` | |
 | `select-window-1` … `select-window-9` | prefix `1` … `9` | |
-| `sessions`, `projects`, `new-session`, `last-session` | prefix `s`, `f`, `n`, `p` | |
+| `sessions`, `new-session`, `last-session` | prefix `s`, `n`, `p` | `new-session` opens the [popup](/bmux/guides/project-picker/) that finds a project's session or creates one |
 | `previous-session` / `next-session` | prefix `(` / `)` | |
 | `detach`, `copy`, `scrollback`, `search-scrollback` | prefix `d`, `y`, `v`, `/` | `scrollback` opens the [keyboard scrollback](/bmux/guides/selection-scrollback/#keyboard-scrollback) view; `search-scrollback` opens it with a search prompt |
 | `scroll-up` / `scroll-down` | root `S-pageup` / `S-pagedown` | Ten lines of history |
