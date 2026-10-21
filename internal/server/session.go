@@ -40,6 +40,11 @@ type session struct {
 	owned         map[*pane]struct{} // retains cleanup ownership before layout publication
 	stopping      atomic.Bool
 	stopOnce      sync.Once
+	// What attached clients can display; see applyGraphicsLocked.
+	graphicsClients       map[*clientGraphics]struct{}
+	graphicsSeq           uint64
+	graphicsSupported     bool
+	cellWidth, cellHeight int
 }
 
 func newSession(name, dir, shell string, width, height int) (*session, error) {
@@ -359,6 +364,10 @@ func (s *session) startPaneLocked(dir string, width, height int) (int, error) {
 	}
 	created, err := newPane(s.id, s.info.Name, dir, s.shell, width, height, s.nextID)
 	if err != nil {
+		return 0, err
+	}
+	if err := created.setGraphics(s.graphicsSupported, s.cellWidth, s.cellHeight); err != nil {
+		created.stop()
 		return 0, err
 	}
 	s.shutdownMu.Lock()

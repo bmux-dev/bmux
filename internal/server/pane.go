@@ -382,13 +382,14 @@ func (s *pane) defaultBG() string {
 }
 
 // cell converts an emulator cell; bg replaces the default background.
-func (s *pane) cell(c *uv.Cell, bg string) protocol.Cell {
+func (s *pane) cell(c *uv.Cell, bg string, placed *frameImages) protocol.Cell {
 	cellBG := s.cellColor(c.Style.Bg)
 	if cellBG == "" {
 		cellBG = bg
 	}
-	return protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
+	cell := protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
 		Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
+	return placed.remap(cell, c.Style.Fg)
 }
 
 // frame returns only the requested viewport, not the entire scrollback buffer.
@@ -435,6 +436,8 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 		Mouse: s.modes[9] || s.modes[1000] || s.modes[1002] || s.modes[1003],
 	}
 	bg := s.defaultBG()
+	placed := s.frameImages()
+	defer placed.finish(f)
 	f.Rows = make([][]protocol.Cell, s.term.Height())
 	for y := range f.Rows {
 		f.Rows[y] = make([]protocol.Cell, s.term.Width())
@@ -459,7 +462,7 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 				c = s.term.CellAt(x, row-history)
 			}
 			if c != nil {
-				f.Rows[y][x] = s.cell(c, bg)
+				f.Rows[y][x] = s.cell(c, bg, placed)
 			} else {
 				f.Rows[y][x].BG = bg
 			}
@@ -486,11 +489,13 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 	f.CursorVisible = visible && f.CursorX >= 0 && f.CursorX < width && f.CursorY >= 0 && f.CursorY < height
 	f.Base = max(s.historyTotal, s.term.ScrollbackLen()) + startY
 	bg := s.defaultBG()
+	placed := s.frameImages()
+	defer placed.finish(f)
 	for y := 0; y < height; y++ {
 		row := make([]protocol.Cell, width)
 		for x := range row {
 			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = s.cell(c, bg)
+				row[x] = s.cell(c, bg, placed)
 			} else {
 				row[x].BG = bg
 			}
