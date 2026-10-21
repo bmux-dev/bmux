@@ -52,14 +52,14 @@ func TestCreateFormTabCompletesOnlyTheDirectory(t *testing.T) {
 	mkdirs(t, filepath.Join(root, "app-web"), filepath.Join(root, "app-worker"))
 	u, _ := sidebarUI(t)
 	u.cwd = root
-	u.projects = projectPicker{open: true, creating: true, name: "x", dir: "app"}
+	u.projects = projectPicker{open: true, creating: true, name: "x", dir: "app", field: 1}
 	tab := tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)
 
 	u.key(tab) // name field: back to the Projects tab
 	if u.projects.creating {
 		t.Fatal("Tab in the name field didn't leave the form")
 	}
-	u.projects.creating, u.projects.field = true, 1
+	u.projects.creating, u.projects.field = true, 0
 	u.key(tab)
 	if !u.projects.creating || u.projects.dir != "app-w" || u.projects.candidates != nil {
 		t.Fatalf("first Tab: %+v", u.projects)
