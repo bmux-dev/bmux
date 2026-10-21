@@ -39,6 +39,11 @@ type Emulator struct {
 	// Terminal modes.
 	modes ansi.Modes
 
+	// Keyboard protocols the program asked for: a kitty flag stack per
+	// screen, and xterm's modifyOtherKeys level.
+	kitty           [2]kittyKeyboard
+	modifyOtherKeys int
+
 	// The last written character.
 	lastChar rune // either ansi.Rune or ansi.Grapheme
 	// The bytes of a grapheme cluster still being composed. Bytes rather than

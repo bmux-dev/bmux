@@ -28,10 +28,13 @@ func (e *Emulator) SendKey(k uv.KeyEvent) {
 	ack := e.isModeSet(ansi.ModeCursorKeys)    // Application cursor keys mode
 	akk := e.isModeSet(ansi.ModeNumericKeypad) // Application keypad keys mode
 
-	//nolint:godox
-	// TODO: Support Kitty, CSI u, and XTerm modifyOtherKeys.
 	switch key := k.(type) {
 	case KeyPressEvent:
+		if seq, ok := e.encodeKey(key); ok {
+			io.WriteString(e.pw, seq) //nolint:errcheck,gosec
+			return
+		}
+
 		if key.Mod&ModAlt != 0 {
 			// Handle alt-modified keys
 			seq = "\x1b" + seq
