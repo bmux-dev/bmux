@@ -241,4 +241,6 @@ type Response struct {
 	Env []string `json:"env,omitempty"`
 	// Range is search-history's match: From is its first cell, To its last.
 	Range *TextRange `json:"range,omitempty"`
+	// Zoomed is zoomed's answer: whether the window showing the pane is zoomed.
+	Zoomed bool `json:"zoomed,omitempty"`
 }
