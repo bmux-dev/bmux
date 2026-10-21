@@ -417,7 +417,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # next-window, previous-window, last-window, select-window-1 to
 # select-window-9, scrollback, search-scrollback, sessions, new-session, last-session, previous-session,
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
-# reload-config, help, integrations, send-prefix.
+# reload-config, help, integrations, settings, send-prefix.
 
 [keys]
 # pass-through = []         # programs that get Ctrl-h/j/k/l like Vim, e.g. ["fzf"]
@@ -455,7 +455,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # ")" = "next-session"
 # "c" = "new-window"        # in the focused pane's directory
 # "&" = "close-window"      # asks first if a program is running
-# "," = "rename-window"
+# "R" = "rename-window"
 # "]" = "next-window"
 # "[" = "previous-window"
 # "tab" = "last-window"
@@ -468,4 +468,5 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "r" = "reload-config"
 # "?" = "help"
 # "i" = "integrations"
+# "," = "settings"          # change settings; saved to this file
 `

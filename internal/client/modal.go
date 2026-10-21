@@ -11,24 +11,20 @@ type modalLine struct {
 	style tcell.Style
 }
 
-// drawModal dims everything between the bars and centers a titled box of
-// lines over it, starting at line *offset, which it clamps so the last page
-// stays full. Used by overlays that take every key while open.
-func (u *ui) drawModal(w, h int, title string, lines []modalLine, offset *int) {
+// modalFrame dims everything between the bars and draws an empty titled box
+// big enough for contentWidth columns and contentLines lines, shrunk to fit
+// the screen. It returns where the content starts and how much of it shows;
+// ok is false when the screen is too small for any box.
+func (u *ui) modalFrame(w, h int, title string, contentWidth, contentLines int) (x, y, inner, rows int, ok bool) {
 	u.screen.HideCursor()
 	if w < 10 || h < 6 {
-		return
+		return 0, 0, 0, 0, false
 	}
 	u.dimBody(w, h)
-	widest := displayWidth(title) + 2
-	for _, line := range lines {
-		widest = max(widest, displayWidth(line.text))
-	}
-	width := min(widest+4, w-4)
-	height := min(len(lines)+2, h-2)
-	inner, rows := width-4, height-2
-	*offset = max(0, min(*offset, len(lines)-rows))
-	x, y := (w-width)/2, 1+(h-2-height)/2
+	width := min(max(contentWidth, displayWidth(title)+2)+4, w-4)
+	height := min(contentLines+2, h-2)
+	inner, rows = width-4, height-2
+	x, y = (w-width)/2, 1+(h-2-height)/2
 	for row := range height {
 		u.screen.PutStrStyled(x, y+row, fit("", width), uiBaseStyle)
 	}
@@ -40,8 +36,24 @@ func (u *ui) drawModal(w, h int, title string, lines []modalLine, offset *int) {
 	}
 	label := " " + title + " "
 	u.screen.PutStrStyled(x+2, y, fit(label, min(displayWidth(label), width-4)), uiAccentStyle)
+	return x + 2, y + 1, inner, rows, true
+}
+
+// drawModal dims everything between the bars and centers a titled box of
+// lines over it, starting at line *offset, which it clamps so the last page
+// stays full. Used by overlays that take every key while open.
+func (u *ui) drawModal(w, h int, title string, lines []modalLine, offset *int) {
+	widest := 0
+	for _, line := range lines {
+		widest = max(widest, displayWidth(line.text))
+	}
+	x, y, inner, rows, ok := u.modalFrame(w, h, title, widest, len(lines))
+	if !ok {
+		return
+	}
+	*offset = max(0, min(*offset, len(lines)-rows))
 	for row, line := range lines[*offset:min(len(lines), *offset+rows)] {
-		u.screen.PutStrStyled(x+2, y+1+row, fit(line.text, inner), line.style)
+		u.screen.PutStrStyled(x, y+row, fit(line.text, inner), line.style)
 	}
 }
 

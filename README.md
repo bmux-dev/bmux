@@ -92,7 +92,7 @@ including giving Ctrl-l back to the shell.
 | Next / previous session | Ctrl-a ) / Ctrl-a ( |
 | New window / select 1–9 | Ctrl-a c / Ctrl-a 1…9, or click its tab on the top bar |
 | Next / previous / last window | Ctrl-a ] / Ctrl-a [ / Ctrl-a Tab |
-| Rename / close window | Ctrl-a , / Ctrl-a & (asks first if a program is running) |
+| Rename / close window | Ctrl-a R / Ctrl-a & (asks first if a program is running) |
 | Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
 | Close pane | Ctrl-a x (asks first if a program is running) |
 | Last pane / swap / rotate | Ctrl-a ; / Ctrl-a { } / Ctrl-a Ctrl-o |
@@ -104,6 +104,7 @@ including giving Ctrl-l back to the shell.
 | Reload config | Ctrl-a r |
 | List key bindings | Ctrl-a ? |
 | Agent integrations | Ctrl-a i; Enter installs every agent found |
+| Settings | Ctrl-a ,; ←/→ switch tabs, Enter or Space changes a value, saved to the config file |
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps. Or Ctrl-a v, move, v/V/Ctrl-v, y |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |
@@ -235,8 +236,10 @@ sessions are saved.
 
 ## Configuration
 
-Everything works without a config file. To change settings, create
-`~/.config/bmux/config.toml`. It's laid out like Helix's: a theme and the
+Everything works without a config file. Press **Ctrl-a ,** to change common
+settings in a tabbed page; each change is saved to the config file and applies
+at once. Keybindings and a few other settings are edited in the file. The file
+is `~/.config/bmux/config.toml`, laid out like Helix's: a theme and the
 prefix at the top, one table per area, kebab-case keys, and only the lines you
 change. `bmux default-config` prints every setting with its default.
 

@@ -103,7 +103,7 @@ func TestPaneArrangementKeysSendTheirOperations(t *testing.T) {
 
 func TestRenameWindowPromptEditsOnlyTheName(t *testing.T) {
 	u, requests := windowUI(t)
-	prefixed(u, runeKey(','))
+	prefixed(u, runeKey('R'))
 	if u.prompt != "rename-window" || u.input != "edit" {
 		t.Fatalf("prompt %q input %q", u.prompt, u.input)
 	}
@@ -125,7 +125,7 @@ func TestRenameWindowPromptEditsOnlyTheName(t *testing.T) {
 	if u.prompt != "" {
 		t.Fatal("prompt stayed open")
 	}
-	prefixed(u, runeKey(','))
+	prefixed(u, runeKey('R'))
 	u.key(runeKey('z'))
 	u.key(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
 	if u.prompt != "" {

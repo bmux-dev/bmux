@@ -86,6 +86,7 @@ var Actions = []struct{ Name, Help string }{
 	{"reload-config", "reload the config file"},
 	{"help", "list these key bindings"},
 	{"integrations", "set up agent integrations"},
+	{"settings", "change settings, saved to the config file"},
 	{"send-prefix", "send the prefix key to the application"},
 }
 
@@ -113,10 +114,10 @@ var DefaultPrefixKeys = map[string]string{
 	"left": "focus-left", "down": "focus-down", "up": "focus-up", "right": "focus-right",
 	"h": "resize-left", "j": "resize-down", "k": "resize-up", "l": "resize-right",
 	"s": "sessions", "n": "new-session", "p": "last-session", "(": "previous-session", ")": "next-session",
-	"c": "new-window", "&": "close-window", ",": "rename-window", "]": "next-window", "[": "previous-window", "tab": "last-window",
+	"c": "new-window", "&": "close-window", "R": "rename-window", "]": "next-window", "[": "previous-window", "tab": "last-window",
 	"1": "select-window-1", "2": "select-window-2", "3": "select-window-3", "4": "select-window-4", "5": "select-window-5",
 	"6": "select-window-6", "7": "select-window-7", "8": "select-window-8", "9": "select-window-9",
-	"d": "detach", "y": "copy", "v": "scrollback", "/": "search-scrollback", "b": "toggle-sidebar", "r": "reload-config", "?": "help", "i": "integrations",
+	"d": "detach", "y": "copy", "v": "scrollback", "/": "search-scrollback", "b": "toggle-sidebar", "r": "reload-config", "?": "help", "i": "integrations", ",": "settings",
 }
 
 var namedKeys = map[string]string{
