@@ -369,3 +369,33 @@ func TestAppSequencesNeverReachFramesOrFiles(t *testing.T) {
 		t.Errorf("frame lists images %+v", f.Images)
 	}
 }
+
+func TestCopiesSearchesAndCapturesLeaveImageCellsOut(t *testing.T) {
+	p := shellless(20, 3)
+	p.write("ab" + placeholderCell + placeholderCell + "cd\r\n" + placeholderCell + placeholderCell + "\r\nsee err")
+	p.mu.Lock()
+	captured := p.textLocked()
+	p.mu.Unlock()
+	if want := "ab  cd\n\nsee err\n"; captured != want {
+		t.Errorf("capture %q, want %q", captured, want)
+	}
+	text, err := p.historyText(protocol.TextRange{Epoch: 1, FromX: 0, FromY: 0, ToX: 0, ToY: 2, Mode: "line"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "ab  cd\n\nsee err"; text != want {
+		t.Errorf("history text %q, want %q", text, want)
+	}
+	for name, got := range map[string]string{"capture": captured, "history-text": text} {
+		if strings.ContainsRune(got, 0x10EEEE) {
+			t.Errorf("%s contains the placeholder rune", name)
+		}
+	}
+	if _, err := p.searchHistory(protocol.TextRange{Epoch: 1, FromY: 2}, "\U0010EEEE", true); err == nil {
+		t.Error("search found the placeholder rune")
+	}
+	found, err := p.searchHistory(protocol.TextRange{Epoch: 1, FromY: 2}, "b  c", true)
+	if err != nil || found.FromX != 1 || found.ToX != 4 {
+		t.Errorf("a search across an image sees blanks there: %+v %v", found, err)
+	}
+}
