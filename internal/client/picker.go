@@ -87,7 +87,7 @@ func (u *ui) listKey(e *tcell.EventKey) {
 	case tcell.KeyUp, tcell.KeyCtrlK:
 		u.movePicker(-1)
 	case tcell.KeyCtrlN:
-		u.beginCreate()
+		u.openProjects()
 	case tcell.KeyCtrlR:
 		if selected {
 			u.newName, u.input, u.prompt = s.Name, s.Name, "rename"
@@ -109,7 +109,7 @@ func (u *ui) listKey(e *tcell.EventKey) {
 		case 'k':
 			u.movePicker(-1)
 		case 'n':
-			u.beginCreate()
+			u.openProjects()
 		case 'd':
 			if selected {
 				u.beginDelete(s)
@@ -314,7 +314,7 @@ func (u *ui) drawPickerPrompt(w, h int) {
 			y++
 		}
 	}
-	label := map[string]string{"name": "New session name:", "rename": "Rename session " + u.newName + ":", "directory": "Start directory:"}[u.prompt]
+	label := "Rename session " + u.newName + ":"
 	put(label, uiAccentStyle)
 	put(u.input, uiBaseStyle)
 	inputLines := pickerWrap(u.input, width)

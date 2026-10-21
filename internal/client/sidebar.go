@@ -245,9 +245,7 @@ func (u *ui) sidebarKey(e *tcell.EventKey) {
 		case 'd':
 			u.deleteSidebarRow()
 		case 'n':
-			u.sidebarFocus = false
-			u.openPicker()
-			u.beginCreate()
+			u.openProjects()
 		}
 	}
 }

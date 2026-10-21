@@ -7,7 +7,7 @@ sidebar:
 
 A `.bmux.toml` in a folder declares the windows, splits and pane commands a
 session there starts with, like tmuxinator or tmuxp. Bare `bmux`, `bmux new`,
-the picker's n and the project picker all build it when they create a session
+the picker's n and the new-session popup all build it when they create a session
 in that folder. It's the restore format, in TOML:
 
 ```toml

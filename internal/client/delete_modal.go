@@ -15,15 +15,7 @@ func (u *ui) drawDeleteModal(w, h int) {
 	if w <= 0 || h <= 2 {
 		return
 	}
-	for y := 1; y < h-1; y++ {
-		for x := 0; x < w; x++ {
-			text, style, cellWidth := u.screen.Get(x, y)
-			if cellWidth == 0 {
-				continue
-			}
-			u.screen.Put(x, y, text, style.Dim(true))
-		}
-	}
+	u.dimBody(w, h)
 	question := fmt.Sprintf("Delete %q?", u.deleteTarget.Name)
 	counts := u.deleteModalCounts()
 	preferredWidth := min(56, max(36, max(displayWidth(question), displayWidth(counts))+4))

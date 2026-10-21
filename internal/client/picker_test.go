@@ -37,10 +37,13 @@ func TestPickerDefaultsToJKListWithOptionalSearchAndActions(t *testing.T) {
 		t.Fatal("k didn't move up")
 	}
 	u.pickerKey(runeKey('n'))
-	if u.prompt != "name" {
-		t.Fatal("n didn't create a session")
+	if !u.projects.open || !u.picker || u.prompt != "" {
+		t.Fatal("n didn't open the new-session popup")
 	}
-	u.pickerKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	u.key(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if u.projects.open || !u.picker || u.quitting {
+		t.Fatal("Esc didn't return to the picker")
+	}
 	u.pickerKey(runeKey('d'))
 	if u.prompt != "delete" || u.newName != "api" {
 		t.Fatal("d did not ask to delete selected session")

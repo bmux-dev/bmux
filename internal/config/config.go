@@ -78,7 +78,7 @@ type Restore struct {
 	Resume map[string][]string `toml:"resume"`
 }
 
-// Projects configures the project picker (Ctrl-a f, bmux project). Roots are
+// Projects configures the new-session popup (Ctrl-a n, bmux project). Roots are
 // searched for git repositories down to Depth levels; paths may start with
 // ~/. Zoxide adds the directories zoxide knows, when it's installed.
 type Projects struct {
@@ -385,7 +385,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # claude = ["claude", "--continue"]
 # codex = ["codex", "resume", "--last"]
 
-[projects]                  # the project picker, Ctrl-a f and bmux project
+[projects]                  # folders the new-session popup lists, Ctrl-a n and bmux project
 # roots = ["~/code", "~/src", "~/projects", "~/dev"]  # searched for git repositories
 # depth = 3                 # how many levels down each root to look
 # zoxide = true             # also list zoxide's directories, when installed
@@ -405,7 +405,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # layout-even-vertical, layout-main-horizontal, layout-main-vertical,
 # layout-tiled, equalize-layout, new-window, close-window, rename-window,
 # next-window, previous-window, last-window, select-window-1 to
-# select-window-9, scrollback, search-scrollback, sessions, projects, new-session, last-session, previous-session,
+# select-window-9, scrollback, search-scrollback, sessions, new-session, last-session, previous-session,
 # next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
 # reload-config, help, integrations, send-prefix.
 
@@ -439,8 +439,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # "left" = "focus-left"     # and down, up, right
 # "h" = "resize-left"       # j down, k up, l right; repeat without the prefix
 # "s" = "sessions"
-# "f" = "projects"
-# "n" = "new-session"
+# "n" = "new-session"       # find a project or create a session
 # "p" = "last-session"
 # "(" = "previous-session"
 # ")" = "next-session"
