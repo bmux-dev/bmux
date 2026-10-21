@@ -24,9 +24,16 @@ bmux integration uninstall claude
 | --- | --- | --- |
 | Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, plus the [bmux skill](/bmux/agents/scripting/) in `skills/bmux/SKILL.md`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
 | Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
-| omp (`omp`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals and the ask tool, idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
+| omp (`omp`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals, the ask tool and extensions' own prompts (see below), idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |
 | opencode (`opencode`) | `plugins/bmux-agent-state.js` in `$XDG_CONFIG_HOME/opencode` or `~/.config/opencode` | working while any session, subagents included, is busy, blocked on permission requests and questions, idle, and the top-level session for `opencode --session` |
-| pi (`pi`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts and the ask tool, idle, and the session for `pi --session` |
+| pi (`pi`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR` or `~/.pi/agent` | working until pi settles (after retries and follow-ups), blocked on extension prompts, the ask tool and extensions' own prompts (see below), idle, and the session for `pi --session` |
+
+An omp or pi extension that asks you something with its own dialog (such as
+`ctx.ui.confirm`) can mark the pane blocked: emit `agent:blocked` on the
+shared event bus, `pi.events.emit("agent:blocked", { active: true, label })`,
+before the dialog and `{ active: false }` after it, in a `finally`. Each
+`active: true` needs its own `active: false`, and the end of the turn clears
+any left over.
 
 Every file bmux writes starts with a `bmux-integration: NAME vN` line, which
 is how `status` spots an outdated version; reinstalling updates it. Edited JSON
