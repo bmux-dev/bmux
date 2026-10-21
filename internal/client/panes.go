@@ -155,6 +155,11 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 		sel = u.selection
 	}
 	viewing := u.view.active && p.ID == u.view.pane
+	graphics := u.graphicsOn()
+	var markers imageMarkers
+	if !graphics {
+		markers = placeholderMarkers(f)
+	}
 	for y, row := range f.Rows {
 		if y >= p.Height || paneOriginY+p.Y+y >= h-1 {
 			break
@@ -176,6 +181,9 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 			if c.Width == 0 && x > 0 && row[x-1].Width > 1 {
 				continue
 			}
+			if !graphics && isPlaceholder(c) {
+				c.FG = "" // the image id isn't a color to show
+			}
 			style := cellStyle(c)
 			if x < len(matches) && matches[x] {
 				style = style.Background(accentColor).Foreground(chrome.background)
@@ -192,6 +200,8 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 			}
 			if text == "" || x+max(1, c.Width) > p.Width || p.X+x+max(1, c.Width) > w {
 				text = " "
+			} else if isPlaceholder(c) && text == c.Text {
+				text, style = u.placeholderCell(c, markers, x, y, style)
 			}
 			u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
 		}

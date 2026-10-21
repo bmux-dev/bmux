@@ -117,6 +117,7 @@ colour = "red"
 theme = "neon"
 [ui]
 accent = "pink"
+graphics = "sixel"
 [sidebar]
 width = 5
 [sound]
@@ -131,19 +132,26 @@ claude = ["/usr/local/bin/claude"]
 	if err == nil {
 		t.Fatal("invalid settings accepted silently")
 	}
-	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude"} {
+	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "ui.graphics", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error doesn't mention %s: %v", want, err)
 		}
 	}
 	d := Default()
-	if cfg.Prefix != d.Prefix || cfg.Theme != d.Theme || cfg.UI.Accent != d.UI.Accent || cfg.Sidebar.Width != d.Sidebar.Width ||
+	if cfg.Prefix != d.Prefix || cfg.Theme != d.Theme || cfg.UI.Accent != d.UI.Accent || cfg.UI.Graphics != d.UI.Graphics || cfg.Sidebar.Width != d.Sidebar.Width ||
 		cfg.Sound.Ready != "" || !reflect.DeepEqual(cfg.Agents.Extra, []string{"ok"}) || cfg.Agents.WaitingAfter != d.Agents.WaitingAfter ||
 		cfg.Restore.Resume["claude"] != nil {
 		t.Fatalf("invalid settings not reset: %+v", cfg)
 	}
 	if _, err := Load(write(t, "prefix = \n"), noEnv); err == nil {
 		t.Fatal("malformed TOML accepted")
+	}
+}
+
+func TestGraphicsSettingIsCaseInsensitive(t *testing.T) {
+	cfg, err := Load(write(t, "[ui]\ngraphics = \"Off\"\n"), noEnv)
+	if err != nil || cfg.UI.Graphics != "off" {
+		t.Fatalf("graphics = %q, %v", cfg.UI.Graphics, err)
 	}
 }
 

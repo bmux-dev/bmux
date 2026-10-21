@@ -100,6 +100,10 @@ type ui struct {
 	helpOffset                      int               // first key list line shown
 	integrations                    integrationsPanel
 	welcome, welcomed               bool // welcome screen open; already shown by this client
+	graphics                        graphicsEnv
+	images                          *imageSender
+	imageResults                    chan imageResult
+	imageWake                       chan struct{} // more images wait for a redraw
 }
 
 // Run attaches to session name, or opens the session picker when name is "".
@@ -128,7 +132,7 @@ func run(socket, cwd string, start func(*ui) error) error {
 	if pathErr != nil {
 		configErr = pathErr
 	}
-	screen, err := newNavigationScreen(settings.UI.TerminalPadding)
+	screen, err := newNavigationScreen(settings.UI.TerminalPadding, settings.UI.Graphics)
 	if err != nil {
 		return err
 	}
@@ -141,6 +145,11 @@ func run(socket, cwd string, start func(*ui) error) error {
 	screen.EnableFocus()
 	u := &ui{screen: screen, socket: socket, cwd: cwd, updates: make(chan update, 32), previews: make(chan previewResult, 4), deletions: make(chan deleteResult, 1), sidebarResults: make(chan sidebarResult, 1), projectResults: make(chan projectResult, 1), reconnects: make(chan string, 1), done: make(chan struct{})}
 	u.configPath = path
+	if r, ok := screen.(*rawPasteScreen); ok {
+		u.graphics = r.graphics
+	}
+	u.initImages()
+	defer func() { _ = u.images.reset() }() // before screen.Fini, which drops the screen's images anyway
 	u.applySettings(settings)
 	u.clipboard = newClipboardWorker()
 	u.sound = u.playAlert
@@ -181,8 +190,7 @@ func run(socket, cwd string, start func(*ui) error) error {
 			case *tcell.EventMouse:
 				u.mouse(e)
 			case *tcell.EventResize:
-				w, h := screen.Size()
-				u.send(protocol.Request{Op: "resize", Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
+				u.sendResize()
 				u.requestPreview()
 				screen.Sync()
 			case *tcell.EventFocus:
@@ -199,6 +207,8 @@ func run(socket, cwd string, start func(*ui) error) error {
 				name := u.name
 				_ = u.conn.Close()
 				u.conn = nil
+				// A restarted server numbers images afresh.
+				_ = u.images.reset()
 				u.openPicker()
 				u.notice("Disconnected: " + next.err.Error())
 				u.reconnect(name)
@@ -227,6 +237,9 @@ func run(socket, cwd string, start func(*ui) error) error {
 				u.pending = 0
 				u.applyFrame(f)
 			}
+		case result := <-u.imageResults:
+			u.images.accept(result)
+		case <-u.imageWake:
 		case result := <-u.previews:
 			u.acceptPreview(result)
 		case result := <-u.deletions:
@@ -351,7 +364,7 @@ func (u *ui) send(r protocol.Request) {
 func (u *ui) switchTo(name string) error {
 	u.stopPreview()
 	w, h := u.screen.Size()
-	conn, err := attach(u.socket, name, u.paneViewportWidth(w), paneViewportHeight(h))
+	conn, err := attach(u.socket, name, u.paneViewportWidth(w), paneViewportHeight(h), u.graphicsReport())
 	if err != nil {
 		return err
 	}
@@ -997,6 +1010,7 @@ func (u *ui) draw() {
 		u.drawUpdateHint(w, h, 1+displayWidth(footer))
 	}
 	u.updateTitle()
+	u.drawImages()
 	u.screen.Show()
 }
 

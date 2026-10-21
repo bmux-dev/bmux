@@ -37,11 +37,14 @@ type Config struct {
 }
 
 type UI struct {
-	Accent          string      `toml:"accent"`
-	PowerlineASCII  bool        `toml:"powerline-ascii"`
-	TerminalPadding bool        `toml:"terminal-padding"`
-	SetTitle        bool        `toml:"set-title"`
-	AgentColors     AgentColors `toml:"agent-colors"`
+	Accent          string `toml:"accent"`
+	PowerlineASCII  bool   `toml:"powerline-ascii"`
+	TerminalPadding bool   `toml:"terminal-padding"`
+	SetTitle        bool   `toml:"set-title"`
+	// Graphics is "auto" (show images in terminals that support the Kitty
+	// graphics protocol), "on" (assume the terminal does) or "off".
+	Graphics    string      `toml:"graphics"`
+	AgentColors AgentColors `toml:"agent-colors"`
 }
 
 // AgentColors override the sidebar's state colors; "" keeps herdr's palette.
@@ -120,7 +123,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "cyan", SetTitle: true},
+		UI:         UI{Accent: "cyan", SetTitle: true, Graphics: "auto"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -251,6 +254,11 @@ func (c *Config) repair() []string {
 		bad("theme %q must be \"dark\" or \"light\"", c.Theme)
 		c.Theme = d.Theme
 	}
+	c.UI.Graphics = strings.ToLower(c.UI.Graphics)
+	if c.UI.Graphics != "auto" && c.UI.Graphics != "on" && c.UI.Graphics != "off" {
+		bad("ui.graphics %q must be \"auto\", \"on\" or \"off\"", c.UI.Graphics)
+		c.UI.Graphics = d.UI.Graphics
+	}
 	switch accent := strings.ToLower(c.UI.Accent); {
 	case accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
 		c.UI.Accent = accent
@@ -355,6 +363,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
 # set-title = true          # name the terminal window after the session and pane
+# graphics = "auto"         # show images programs draw: "auto" detects Kitty
+                            # graphics support, "on" assumes it, "off" never
 
 [ui.agent-colors]           # "#RRGGBB"; empty keeps herdr's palette
 # working = ""
