@@ -95,6 +95,9 @@ func TestKeyMapping(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, '界', tcell.ModNone), '界', 0},
 		{tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt), 'a', int(uv.ModAlt)},
 		{tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), uv.KeyEnter, 0},
+		{tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModShift), uv.KeyEnter, int(uv.ModShift)},
+		{tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModCtrl), uv.KeyEnter, int(uv.ModCtrl)},
+		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModShift|tcell.ModCtrl), uv.KeyUp, int(uv.ModShift | uv.ModCtrl)},
 		{tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModCtrl|tcell.ModShift), 'c', int(uv.ModCtrl)},
 	} {
 		r := keyRequest(tc.event)
