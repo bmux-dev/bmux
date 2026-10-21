@@ -27,6 +27,7 @@ func (e *Emulator) fullReset() {
 
 	// XXX: Do we reset all modes here? Investigate.
 	e.resetModes()
+	e.resetKeyboard()
 
 	e.gl, e.gr = 0, 1
 	e.gsingle = 0
