@@ -204,7 +204,7 @@ func TestDeleteRPCDoesNotBlockPickerAndCannotSubmitTwice(t *testing.T) {
 	default:
 	}
 	// Completing a deletion must not replace a new prompt the user opened.
-	u.beginCreate()
+	u.newName, u.input, u.prompt = "web", "web", "rename"
 	releaseResponse()
 	select {
 	case result := <-u.deletions:
@@ -212,7 +212,7 @@ func TestDeleteRPCDoesNotBlockPickerAndCannotSubmitTwice(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("no server acknowledgement")
 	}
-	if u.deleteBusy || u.prompt != "name" || u.message != "Deleted session api" {
+	if u.deleteBusy || u.prompt != "rename" || u.message != "Deleted session api" {
 		t.Fatal("completion changed unrelated picker state")
 	}
 }

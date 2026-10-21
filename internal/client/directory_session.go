@@ -23,7 +23,7 @@ func CreateDirectorySession(socket, cwd string) (string, error) {
 }
 
 // ProjectSession returns the most recently used session started in dir, or
-// creates one there named after it, for the project picker and bmux project.
+// creates one there named after it, for the new-session popup (Ctrl-a n, bmux project).
 func ProjectSession(socket, dir string) (string, error) {
 	r, err := Request(socket, protocol.Request{Op: "list"})
 	if err != nil {
@@ -85,6 +85,21 @@ func directorySessionBase(cwd string) string {
 		return "session"
 	}
 	return base
+}
+
+// freeDirectorySessionName is dir's folder name, numbered past names the
+// sessions already use, as createDirectorySession would pick it.
+func freeDirectorySessionName(dir string, sessions []protocol.Session) string {
+	used := make(map[string]bool, len(sessions))
+	for _, s := range sessions {
+		used[s.Name] = true
+	}
+	base := directorySessionBase(dir)
+	for number := 1; ; number++ {
+		if name := directorySessionCandidate(base, number); !used[name] {
+			return name
+		}
+	}
 }
 
 func directorySessionCandidate(base string, number int) string {

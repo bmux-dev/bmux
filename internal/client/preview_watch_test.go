@@ -124,7 +124,7 @@ func TestViewportPreviewStreamCancelsOnPickerTransitions(t *testing.T) {
 	if r.Width != area.w || r.Height != area.h {
 		t.Fatal("resized panel sent old dimensions")
 	}
-	u.pickerKey(runeKey('n'))
+	u.pickerKey(runeKey('r'))
 	assertClosed("web")
 	if u.previewBusy {
 		t.Fatal("prompt retained viewport stream")

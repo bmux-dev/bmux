@@ -15,9 +15,10 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
-// The project picker (Ctrl-a f, bmux project) lists project folders and
-// lands in the session already started there, or creates one named after
-// the folder, like sesh and tmux-sessionizer.
+// The new-session popup (Ctrl-a n, bmux project) has two tabs. Projects lists
+// project folders and lands in the session already started there, or
+// creates one named after the folder, like sesh and tmux-sessionizer. Create
+// is a name and directory form for a session anywhere else.
 
 // Bounds keep a huge root from stalling the picker.
 const (
@@ -34,16 +35,23 @@ type project struct {
 
 type projectResult struct {
 	projects []project
+	sessions []protocol.Session
 	err      error
 }
 
 type projectPicker struct {
-	open    bool
-	loading bool
-	query   string
-	chosen  int
-	list    []project
-	err     string
+	open       bool
+	loading    bool
+	query      string
+	chosen     int
+	list       []project
+	sessions   []protocol.Session // every session, for unique name suggestions
+	err        string             // loading/opening error; hides the list
+	creating   bool               // Create tab shown instead of Projects
+	field      int                // focused form field: 0 name, 1 directory
+	name, dir  string             // form inputs
+	formErr    string             // create validation/RPC error, shown in the form
+	candidates []string           // directories Tab could not choose between
 }
 
 // openProjects shows the picker and finds projects off the UI goroutine.
@@ -60,6 +68,7 @@ func (u *ui) openProjects() {
 		if err == nil {
 			home, _ := os.UserHomeDir()
 			result.projects = findProjects(settings, home, r.Sessions, zoxideDirs(settings))
+			result.sessions = r.Sessions
 		}
 		select {
 		case results <- result:
@@ -74,6 +83,7 @@ func (u *ui) finishProjects(result projectResult) {
 	}
 	u.projects.loading = false
 	u.projects.list = result.projects
+	u.projects.sessions = result.sessions
 	if result.err != nil {
 		u.projects.err = result.err.Error()
 	}
@@ -216,10 +226,71 @@ func (u *ui) closeProjects() {
 	if u.conn == nil && !u.picker {
 		u.quitting = true
 	}
+	if u.picker {
+		u.requestPreview()
+	}
 }
 
-// projectsKey filters as you type; arrows and Ctrl-j/k/n/p move.
+// beginProjectForm switches to the Create tab, prefilled from the
+// highlighted project, or from the filter and the working directory when
+// nothing matches.
+func (u *ui) beginProjectForm() {
+	u.projects.creating, u.projects.field, u.projects.formErr, u.projects.candidates = true, 0, "", nil
+	matches := u.filteredProjects()
+	if u.projects.chosen < len(matches) {
+		dir := matches[u.projects.chosen].dir
+		u.projects.dir = projectLabel(dir)
+		u.projects.name = freeDirectorySessionName(dir, u.projects.sessions)
+		return
+	}
+	u.projects.dir = projectLabel(u.cwd)
+	u.projects.name = strings.TrimSpace(u.projects.query)
+	if u.projects.name == "" {
+		u.projects.name = freeDirectorySessionName(u.cwd, u.projects.sessions)
+	}
+}
+
+// createFromForm creates the session the Create tab describes and attaches
+// to it. Failures stay in the form.
+func (u *ui) createFromForm() {
+	name := strings.TrimSpace(u.projects.name)
+	if err := validatePromptName(name); err != nil {
+		u.projects.formErr, u.projects.field = err.Error(), 0
+		return
+	}
+	dir := startDirectory(u.projects.dir, u.cwd)
+	w, h := u.screen.Size()
+	if _, err := Request(u.socket, protocol.Request{Op: "create", Name: name, Dir: dir, Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)}); err != nil {
+		u.projects.formErr = err.Error()
+		return
+	}
+	u.projects = projectPicker{}
+	if err := u.switchTo(name); err != nil {
+		u.notice(err.Error())
+	}
+}
+
+// startDirectory resolves a typed start directory: ~ is the home directory
+// and relative paths are relative to cwd.
+func startDirectory(input, cwd string) string {
+	dir := strings.TrimSpace(input)
+	if dir == "~" || strings.HasPrefix(dir, "~/") {
+		home, _ := os.UserHomeDir()
+		dir = filepath.Join(home, strings.TrimPrefix(dir, "~"))
+	}
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(cwd, dir)
+	}
+	return dir
+}
+
+// projectsKey drives the popup: the Projects tab filters as you type, the
+// Create tab edits the name and directory. Tab switches between them.
 func (u *ui) projectsKey(e *tcell.EventKey) {
+	if u.projects.creating {
+		u.projectFormKey(e)
+		return
+	}
 	matches := u.filteredProjects()
 	move := func(delta int) {
 		u.projects.chosen = max(0, min(u.projects.chosen+delta, len(matches)-1))
@@ -229,6 +300,8 @@ func (u *ui) projectsKey(e *tcell.EventKey) {
 		u.closeProjects()
 	case tcell.KeyCtrlC:
 		u.quitting = true
+	case tcell.KeyTab:
+		u.beginProjectForm()
 	case tcell.KeyDown, tcell.KeyCtrlJ, tcell.KeyCtrlN:
 		move(1)
 	case tcell.KeyUp, tcell.KeyCtrlK, tcell.KeyCtrlP:
@@ -240,11 +313,50 @@ func (u *ui) projectsKey(e *tcell.EventKey) {
 	case tcell.KeyEnter:
 		if u.projects.chosen < len(matches) {
 			u.openProject(matches[u.projects.chosen].dir)
+		} else if !u.projects.loading {
+			u.beginProjectForm()
 		}
 	case tcell.KeyRune:
 		if e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0 {
 			u.projects.query += string(e.Rune())
 			u.projects.chosen = 0
+		}
+	}
+}
+
+func (u *ui) projectFormKey(e *tcell.EventKey) {
+	field := &u.projects.name
+	if u.projects.field == 1 {
+		field = &u.projects.dir
+	}
+	if e.Key() != tcell.KeyTab {
+		u.projects.candidates = nil // the list belongs to the Tab that showed it
+	}
+	switch e.Key() {
+	case tcell.KeyTab:
+		if u.projects.field == 1 {
+			u.completeProjectDir()
+		} else {
+			u.projects.creating, u.projects.formErr = false, ""
+		}
+	case tcell.KeyEscape:
+		u.projects.creating, u.projects.formErr = false, ""
+	case tcell.KeyCtrlC:
+		u.quitting = true
+	case tcell.KeyDown, tcell.KeyCtrlJ:
+		u.projects.field = 1
+	case tcell.KeyUp, tcell.KeyCtrlK:
+		u.projects.field = 0
+	case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyCtrlH:
+		*field, u.projects.formErr = dropRune(*field), ""
+	case tcell.KeyCtrlU:
+		*field, u.projects.formErr = "", ""
+	case tcell.KeyEnter:
+		u.createFromForm()
+	case tcell.KeyRune:
+		if e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0 {
+			*field += string(e.Rune())
+			u.projects.formErr = ""
 		}
 	}
 }
@@ -262,12 +374,61 @@ func (u *ui) openProject(dir string) {
 	}
 }
 
+// projectsFooter is the key hint line for the popup's current tab.
+func (u *ui) projectsFooter() string {
+	if u.projects.creating {
+		if u.projects.field == 1 {
+			return "New session: ↑↓ field · Tab completes directory · Enter create · Esc back to projects"
+		}
+		return "New session: ↑↓ field · Enter create · Ctrl-u clear · Tab/Esc back to projects"
+	}
+	return "New session: type to find · ↑↓ select · Enter open or create · Tab form · Esc close"
+}
+
+// drawProjects draws the popup, 80% of the screen and centered between the
+// bars, over whatever is behind it.
 func (u *ui) drawProjects(w, h int) {
-	u.screen.PutStrStyled(0, 0, fit(" Projects / "+u.projects.query, w), barStyle.Bold(true))
-	u.screen.ShowCursor(min(w-1, displayWidth(" Projects / "+u.projects.query)), 0)
+	u.dimBody(w, h)
+	u.screen.HideCursor()
+	if w < 20 || h < 8 {
+		return
+	}
+	bw := min(w, max(20, w*4/5))
+	bh := min(h-2, max(6, h*4/5))
+	x, y := (w-bw)/2, 1+(h-2-bh)/2
+	ix, iy, iw, ih := x+2, y+1, bw-4, bh-2
+	for row := range bh {
+		u.screen.PutStrStyled(x, y+row, fit("", bw), uiBaseStyle)
+	}
+	u.screen.PutStrStyled(x, y, "┌"+strings.Repeat("─", bw-2)+"┐", uiAccentStyle)
+	u.screen.PutStrStyled(x, y+bh-1, "└"+strings.Repeat("─", bw-2)+"┘", uiAccentStyle)
+	for row := 1; row < bh-1; row++ {
+		u.screen.Put(x, y+row, "│", uiAccentStyle)
+		u.screen.Put(x+bw-1, y+row, "│", uiAccentStyle)
+	}
+	projectsTab, createTab := uiAccentStyle.Reverse(true), uiMutedStyle
+	if u.projects.creating {
+		projectsTab, createTab = createTab, projectsTab
+	}
+	tabsEnd := x + bw - 1
+	u.screen.PutStrStyled(x+2, y, fit(" Projects ", min(10, max(0, tabsEnd-(x+2)))), projectsTab)
+	u.screen.PutStrStyled(x+12, y, fit(" Create ", min(8, max(0, tabsEnd-(x+12)))), createTab)
+	if u.projects.creating {
+		u.drawProjectForm(ix, iy, iw, ih)
+	} else {
+		u.drawProjectList(ix, iy, iw, ih)
+	}
+}
+
+func (u *ui) drawProjectList(ix, iy, iw, ih int) {
+	find := "Find: " + tailFit(u.projects.query, iw-7)
+	u.screen.PutStrStyled(ix, iy, fit(find, iw), uiBaseStyle)
+	u.screen.ShowCursor(ix+displayWidth(find), iy)
+	u.screen.PutStrStyled(ix, iy+1, strings.Repeat("─", iw), uiMutedStyle)
 	matches := u.filteredProjects()
 	u.projects.chosen = max(0, min(u.projects.chosen, len(matches)-1))
-	rows := max(0, h-2)
+	rows := max(0, ih-2)
+	listY := iy + 2
 	message := ""
 	switch {
 	case u.projects.err != "":
@@ -277,10 +438,10 @@ func (u *ui) drawProjects(w, h int) {
 	case len(u.projects.list) == 0:
 		message = "No projects. Set projects.roots in the config file, or install zoxide."
 	case len(matches) == 0:
-		message = "No matches. Backspace edits the filter."
+		message = "No matches. Enter creates a session named after the filter."
 	}
 	if message != "" && rows > 0 {
-		u.screen.PutStrStyled(1, 1, fit(message, max(0, w-2)), uiMutedStyle)
+		u.screen.PutStrStyled(ix, listY, fit(message, iw), uiMutedStyle)
 		if u.projects.err != "" || len(matches) == 0 {
 			return
 		}
@@ -294,12 +455,52 @@ func (u *ui) drawProjects(w, h int) {
 		}
 		style := uiBaseStyle
 		if i == u.projects.chosen {
-			style = uiBaseStyle.Background(selectionBackground).Foreground(selectionForeground).Bold(true).Reverse(true)
+			style = uiBaseStyle.Background(selectionBackground).Foreground(selectionForeground).Bold(true)
 		}
-		y := 1 + i - start
-		u.screen.PutStrStyled(0, y, fit(label, w), style)
-		if note != "" && displayWidth(label)+displayWidth(note) < w {
-			u.screen.PutStrStyled(w-displayWidth(note), y, note, style.Foreground(accentColor))
+		y := listY + i - start
+		u.screen.PutStrStyled(ix, y, fit(label, iw), style)
+		if note != "" && displayWidth(label)+displayWidth(note) < iw {
+			u.screen.PutStrStyled(ix+iw-displayWidth(note), y, note, style.Foreground(accentColor))
 		}
+	}
+}
+
+func (u *ui) drawProjectForm(ix, iy, iw, ih int) {
+	put := func(row int, text string, style tcell.Style) {
+		if row < ih {
+			u.screen.PutStrStyled(ix, iy+row, fit(text, iw), style)
+		}
+	}
+	labelStyle := func(field int) tcell.Style {
+		if u.projects.field == field {
+			return uiAccentStyle
+		}
+		return uiMutedStyle
+	}
+	name, dir := tailFit(u.projects.name, iw-1), tailFit(u.projects.dir, iw-1)
+	put(0, "Session name", labelStyle(0))
+	put(1, name, uiBaseStyle)
+	put(3, "Start directory", labelStyle(1))
+	put(4, dir, uiBaseStyle)
+	next := 6
+	if u.projects.formErr != "" {
+		put(6, "Error: "+u.projects.formErr, uiBaseStyle.Bold(true))
+		next = 7
+	}
+	if lines := wrapNames(u.projects.candidates, iw); len(lines) > 0 {
+		rows := max(0, ih-next)
+		if len(lines) > rows && rows > 0 {
+			lines = append(lines[:rows-1], "…")
+		}
+		for i, line := range lines {
+			put(next+i, line, uiMutedStyle)
+		}
+	}
+	row, value := 1, name
+	if u.projects.field == 1 {
+		row, value = 4, dir
+	}
+	if row < ih {
+		u.screen.ShowCursor(ix+displayWidth(value), iy+row)
 	}
 }

@@ -10,7 +10,7 @@ sidebar:
 | `bmux` | Create and attach to a fresh session in the current directory; `bmux attach` returns to an existing one |
 | `bmux new [--dir PATH] [--detach] NAME` | Create a named session; attach unless `--detach` is set |
 | `bmux attach [NAME]` | Attach by name, or to the most recently used session (the first in `bmux list`) |
-| `bmux project [DIR]` | Attach to the session started in `DIR`, creating one named after it if there is none; without `DIR`, open the [project picker](/bmux/guides/project-picker/) |
+| `bmux project [DIR]` | Attach to the session started in `DIR`, creating one named after it if there is none; without `DIR`, open the [new-session popup](/bmux/guides/project-picker/) |
 | `bmux layout save [SESSION]` | Write the session's windows, splits, pane directories and agents' resume commands to `.bmux.toml` in its folder, and trust it; inside a pane, the pane's session |
 | `bmux layout trust [DIR]` | Let `DIR`'s `.bmux.toml` (default: the current folder) run its commands, as it is now |
 | `bmux list` | Show sessions, state, window/pane/client counts, and starting directories, most recently used first |

@@ -171,7 +171,7 @@ func TestPickerFooterKeepsActionsInCompactWidths(t *testing.T) {
 			}
 		}
 	}
-	for _, prompt := range []string{"delete", "name"} {
+	for _, prompt := range []string{"delete", "rename"} {
 		u.prompt = prompt
 		if displayWidth(u.pickerFooter(40)) > 40 {
 			t.Fatalf("%s footer hides keys at 40 columns", prompt)

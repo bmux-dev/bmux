@@ -174,11 +174,8 @@ func (u *ui) run(action string, now time.Time) {
 		u.send(protocol.Request{Op: "select-window", Direction: "last"})
 	case "sessions":
 		u.openPicker()
-	case "projects":
-		u.openProjects()
 	case "new-session":
-		u.openPicker()
-		u.beginCreate()
+		u.openProjects()
 	case "last-session":
 		if u.previous != "" {
 			if err := u.switchTo(u.previous); err != nil {

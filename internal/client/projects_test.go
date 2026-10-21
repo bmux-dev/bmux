@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
@@ -93,7 +94,7 @@ func TestProjectPickerFiltersAsYouTypeAndLeaves(t *testing.T) {
 		t.Fatalf("filter w: %+v chosen %d", got, u.projects.chosen)
 	}
 	u.draw()
-	if text := screenText(u); !strings.Contains(text, "Projects / w") || !strings.Contains(text, "/p/web") {
+	if text := screenText(u); !strings.Contains(text, "Find: w") || !strings.Contains(text, "/p/web") {
 		t.Fatalf("screen:\n%s", text)
 	}
 	noRequest(t, requests) // typing never reaches the pane
@@ -108,4 +109,93 @@ func TestProjectPickerFiltersAsYouTypeAndLeaves(t *testing.T) {
 	if !u.quitting {
 		t.Fatal("Esc without a session didn't exit")
 	}
+}
+
+func TestNewSessionPopupFindsOrCreates(t *testing.T) {
+	special := func(k tcell.Key) *tcell.EventKey { return tcell.NewEventKey(k, 0, tcell.ModNone) }
+	typeText := func(u *ui, text string) {
+		for _, r := range text {
+			u.key(runeKey(r))
+		}
+	}
+	setup := func(t *testing.T) (*ui, <-chan protocol.Request) {
+		u, _ := sidebarUI(t)
+		socket, requests := fakeStartupRPC(t, func(protocol.Request) protocol.Response { return protocol.Response{} })
+		u.socket, u.cwd = socket, "/work"
+		u.projects = projectPicker{open: true, list: []project{{"/p/api", "api"}, {"/p/web", ""}}, sessions: []protocol.Session{{Name: "api"}, {Name: "web"}}}
+		return u, requests
+	}
+	t.Run("Tab prefills from the highlighted project", func(t *testing.T) {
+		u, _ := setup(t)
+		u.key(special(tcell.KeyDown))
+		u.key(special(tcell.KeyTab))
+		if !u.projects.creating || u.projects.field != 0 || u.projects.name != "web-2" || u.projects.dir != "/p/web" {
+			t.Fatalf("form: %+v", u.projects)
+		}
+		u.key(special(tcell.KeyTab))
+		if u.projects.creating || u.projects.query != "" || u.projects.chosen != 1 {
+			t.Fatalf("back on projects: %+v", u.projects)
+		}
+	})
+	t.Run("no match creates from the filter", func(t *testing.T) {
+		u, _ := setup(t)
+		typeText(u, "zz")
+		u.key(special(tcell.KeyEnter))
+		if !u.projects.creating || u.projects.name != "zz" || u.projects.dir != "/work" {
+			t.Fatalf("form: %+v", u.projects)
+		}
+	})
+	t.Run("empty name is rejected without a request", func(t *testing.T) {
+		u, requests := setup(t)
+		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyCtrlU))
+		u.key(special(tcell.KeyEnter))
+		if u.projects.formErr != "Enter a session name" || !u.projects.open {
+			t.Fatalf("form: %+v", u.projects)
+		}
+		select {
+		case r := <-requests:
+			t.Fatalf("unexpected request %+v", r)
+		case <-time.After(50 * time.Millisecond):
+		}
+	})
+	t.Run("submit creates and attaches", func(t *testing.T) {
+		u, requests := setup(t)
+		u.key(special(tcell.KeyTab))
+		u.key(special(tcell.KeyCtrlU))
+		typeText(u, "scratch")
+		u.key(special(tcell.KeyDown))
+		u.key(special(tcell.KeyCtrlU))
+		typeText(u, "sub")
+		u.key(special(tcell.KeyEnter))
+		for _, want := range []protocol.Request{{Op: "create", Name: "scratch", Dir: "/work/sub"}, {Op: "attach", Name: "scratch"}} {
+			select {
+			case got := <-requests:
+				if got.Op != want.Op || got.Name != want.Name || got.Dir != want.Dir {
+					t.Fatalf("request %+v, want %+v", got, want)
+				}
+			case <-time.After(time.Second):
+				t.Fatalf("no %s request", want.Op)
+			}
+		}
+		if u.name != "scratch" || u.projects.open {
+			t.Fatalf("name %q, popup open %v", u.name, u.projects.open)
+		}
+	})
+	t.Run("popup is centered at 80 percent", func(t *testing.T) {
+		u, _ := setup(t)
+		u.draw()
+		if text, _, _ := u.screen.Get(10, 2); text != "┌" {
+			t.Fatalf("top-left corner %q", text)
+		}
+		if text, _, _ := u.screen.Get(89, 17); text != "┘" {
+			t.Fatalf("bottom-right corner %q", text)
+		}
+		if row := pickerScreenLine(u, 2); !strings.Contains(row, "Projects") || !strings.Contains(row, "Create") {
+			t.Fatalf("tabs row %q", row)
+		}
+		if !strings.Contains(pickerScreenLine(u, 19), "Tab form") {
+			t.Fatalf("footer %q", pickerScreenLine(u, 19))
+		}
+	})
 }
