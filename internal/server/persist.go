@@ -278,7 +278,7 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 	}
 	s := &session{
 		id:    sessionIDs.Add(1),
-		info:  protocol.Session{Name: snap.Name, Dir: dir, Created: time.Now(), Used: used, Restored: true},
+		info:  protocol.Session{Name: snap.Name, Dir: dir, Created: time.Now(), Used: used},
 		panes: make(map[int]*pane), windows: windows, active: active, width: w, height: h, shell: shell,
 		revision: 1, done: make(chan struct{}), owned: make(map[*pane]struct{}),
 	}
@@ -404,6 +404,11 @@ func (s *Server) EnablePersistence(path string) error {
 			fmt.Fprintf(os.Stderr, "bmux: could not restore session %s: %v\n", snap.Name, err)
 			continue
 		}
+		// Layout files build sessions with restoreSession too; only these
+		// came back from the save file.
+		item.mu.Lock()
+		item.info.Restored = true
+		item.mu.Unlock()
 		s.mu.Lock()
 		if s.closed || s.sessions[snap.Name] != nil {
 			s.mu.Unlock()
