@@ -398,12 +398,30 @@ func (u *ui) drawChoices(x, y, inner, listHeight int) {
 // tabGap is the space between tab labels.
 const tabGap = 1
 
+// nerdIcons says whether to draw Nerd Font icons. A terminal can't report its
+// font, so auto trusts the same assumption as the powerline separators.
+func (u *ui) nerdIcons() bool {
+	switch u.settings.UI.Icons {
+	case "nerd":
+		return true
+	case "plain":
+		return false
+	}
+	return !u.settings.UI.PowerlineASCII
+}
+
 // tabLabel is a tab's icon and name with a cell of padding either side. A
-// terminal that can't draw the icon gets the name alone.
+// terminal that can't draw an icon gets the plain symbol, then the name alone.
 func (u *ui) tabLabel(i int) string {
 	tab := config.SettingTabs[i]
-	if tab.Icon != "" && u.screen.CanDisplay([]rune(tab.Icon)[0], false) {
-		return " " + tab.Icon + " " + tab.Name + " "
+	icons := []string{tab.Icon}
+	if u.nerdIcons() {
+		icons = []string{tab.NerdIcon, tab.Icon}
+	}
+	for _, icon := range icons {
+		if icon != "" && u.screen.CanDisplay([]rune(icon)[0], false) {
+			return " " + icon + " " + tab.Name + " "
+		}
 	}
 	return " " + tab.Name + " "
 }
