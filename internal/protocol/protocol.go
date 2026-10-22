@@ -113,6 +113,9 @@ type Session struct {
 	Panes    int            `json:"panes"`
 	Windows  int            `json:"windows,omitempty"`
 	Activity []PaneActivity `json:"activity,omitempty"`
+	// Restored: brought back from the save file when the server started,
+	// and no client has attached since. Its programs ended.
+	Restored bool `json:"restored,omitempty"`
 }
 
 // Agent states reported from inside a pane with `bmux agent`.

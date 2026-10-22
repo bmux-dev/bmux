@@ -278,7 +278,7 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 	}
 	s := &session{
 		id:    sessionIDs.Add(1),
-		info:  protocol.Session{Name: snap.Name, Dir: dir, Created: time.Now(), Used: used},
+		info:  protocol.Session{Name: snap.Name, Dir: dir, Created: time.Now(), Used: used, Restored: true},
 		panes: make(map[int]*pane), windows: windows, active: active, width: w, height: h, shell: shell,
 		revision: 1, done: make(chan struct{}), owned: make(map[*pane]struct{}),
 	}

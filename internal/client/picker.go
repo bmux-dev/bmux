@@ -197,6 +197,9 @@ func (u *ui) drawPicker(w, h int) {
 		if list.w < 64 && s.Clients > 0 {
 			attachment = fmt.Sprintf(" (attached: %dc)", s.Clients)
 		}
+		if s.Restored {
+			attachment = " (restored)" // its programs ended; nobody has looked yet
+		}
 		prefix := fmt.Sprintf("(%d) + ", i)
 		suffix := fmt.Sprintf(": %d panes%s", s.Panes, attachment)
 		if s.Windows > 1 {
