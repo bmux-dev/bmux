@@ -46,10 +46,10 @@ type Setting struct {
 // SettingTab groups related settings under one tab of the settings page.
 type SettingTab struct {
 	Name string
-	// Icon is one cell wide and shown before the name where the terminal
-	// can draw it.
-	Icon     string
-	Settings []Setting
+	// Icon is a Unicode symbol and NerdIcon a Nerd Font glyph, each one cell
+	// wide and shown before the name; ui.icons picks between them.
+	Icon, NerdIcon string
+	Settings       []Setting
 }
 
 func boolSetting(key, label, help string, field func(*Config) *bool) Setting {
@@ -95,7 +95,7 @@ func group(name string, settings ...Setting) []Setting {
 // SettingTabs lists the settings the page edits. Keys, the per-agent resume
 // commands and onboarding stay in the config file; see Config.
 var SettingTabs = []SettingTab{
-	{"General", "⌘", slices.Concat(
+	{"General", "⌘", "\uf013", slices.Concat(
 		group("Keys",
 			textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
 		),
@@ -103,7 +103,7 @@ var SettingTabs = []SettingTab{
 			boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
 		),
 	)},
-	{"Appearance", "◐", slices.Concat(
+	{"Appearance", "◐", "\uf1fc", slices.Concat(
 		group("Theme",
 			enumSetting("theme", "Theme", "Colors for the bars and overlays", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
 			boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
@@ -114,6 +114,7 @@ var SettingTabs = []SettingTab{
 			boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
 			boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
 			boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),
+			enumSetting("ui.icons", "Icons", "Tab icons: auto uses Nerd Font icons unless ASCII separators are on; plain needs no special font", []string{"auto", "nerd", "plain"}, false, func(c *Config) *string { return &c.UI.Icons }),
 			enumSetting("ui.graphics", "Images", "Show images programs draw: auto detects Kitty graphics, on assumes it, off never", []string{"auto", "on", "off"}, false, func(c *Config) *string { return &c.UI.Graphics }),
 			enumSetting("ui.notice-position", "Notice position", "Where notices appear", NoticePositions, false, func(c *Config) *string { return &c.UI.NoticePosition }),
 		),
@@ -124,7 +125,7 @@ var SettingTabs = []SettingTab{
 			textSetting("ui.agent-colors.idle", "Idle color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Idle }),
 		),
 	)},
-	{"Sidebar", "▌", slices.Concat(
+	{"Sidebar", "≡", "\uf0db", slices.Concat(
 		group("Visibility",
 			boolSetting("sidebar.show", "Show sidebar", "The prefix key then b toggles it", func(c *Config) *bool { return &c.Sidebar.Show }),
 		),
@@ -133,12 +134,12 @@ var SettingTabs = []SettingTab{
 			intSetting("sidebar.min-screen-width", "Minimum screen width", "Hide the sidebar on narrower terminals; at least width + 20", func(c *Config) *int { return &c.Sidebar.MinScreenWidth }),
 		),
 	)},
-	{"Sound", "♪", group("Alerts",
+	{"Sound", "♪", "\uf028", group("Alerts",
 		boolSetting("sound.enabled", "Alert sounds", "When a background agent is ready or blocked", func(c *Config) *bool { return &c.Sound.Enabled }),
 		textSetting("sound.ready", "Ready sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Ready }),
 		textSetting("sound.blocked", "Blocked sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Blocked }),
 	)},
-	{"Agents", "◉", slices.Concat(
+	{"Agents", "◉", "\uf2db", slices.Concat(
 		group("Detection",
 			boolSetting("agents.detect", "Detect agents", "Recognize agents running in panes", func(c *Config) *bool { return &c.Agents.Detect }),
 			listSetting("agents.extra", "Extra programs", "More program names to treat as agents, comma separated", func(c *Config) *[]string { return &c.Agents.Extra }),
@@ -148,7 +149,7 @@ var SettingTabs = []SettingTab{
 			durationSetting("agents.waiting-after", "Waiting after", "Quiet this long means waiting, 1s-1m", func(c *Config) *Duration { return &c.Agents.WaitingAfter }),
 		),
 	)},
-	{"Projects", "▤", slices.Concat(
+	{"Projects", "▤", "\uf07c", slices.Concat(
 		group("Search",
 			listSetting("projects.roots", "Roots", "Folders searched for git repositories, comma separated", func(c *Config) *[]string { return &c.Projects.Roots }),
 			intSetting("projects.depth", "Depth", "Levels to search below each root, 1-6", func(c *Config) *int { return &c.Projects.Depth }),
@@ -157,7 +158,7 @@ var SettingTabs = []SettingTab{
 			textSetting("projects.start-dir", "Start directory", "Where the new-session Create tab starts, such as ~; empty uses the current directory", func(c *Config) *string { return &c.Projects.StartDir }),
 		),
 	)},
-	{"Sessions", "↻", slices.Concat(
+	{"Sessions", "↻", "\uf1da", slices.Concat(
 		group("Restore",
 			boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
 		),

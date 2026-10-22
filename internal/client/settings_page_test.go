@@ -383,8 +383,9 @@ func TestSettingsPageScrollbarShowsOnlyWhenThereIsMoreToScrollTo(t *testing.T) {
 
 func TestSettingsTabsShowIconsWithSpaceBetween(t *testing.T) {
 	u, _ := settingsPageUI(t, "")
+	u.settings.UI.Icons = "plain"
 	u.draw()
-	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ▌ Sidebar   ♪ Sound ") {
+	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ≡ Sidebar   ♪ Sound ") {
 		t.Fatalf("tabs lack icons or spacing:\n%s", text)
 	}
 	// On a terminal too narrow for every tab, the current one still shows.
@@ -395,5 +396,29 @@ func TestSettingsTabsShowIconsWithSpaceBetween(t *testing.T) {
 	u.draw()
 	if text := screenText(u); !strings.Contains(text, "↻ Sessions") {
 		t.Fatalf("the current tab scrolled out of a narrow bar:\n%s", text)
+	}
+}
+
+func TestSettingsTabIconsFollowTheIconsSetting(t *testing.T) {
+	const nerd, plain = "\uf013 General", "⌘ General"
+	for _, tt := range []struct {
+		name, icons string
+		ascii       bool
+		want, not   string
+	}{
+		{"auto uses nerd icons with powerline separators", "auto", false, nerd, plain},
+		{"auto falls back when separators are ASCII", "auto", true, plain, nerd},
+		{"nerd wins over ASCII separators", "nerd", true, nerd, plain},
+		{"plain", "plain", false, plain, nerd},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			u, _ := settingsPageUI(t, "")
+			u.settings.UI.Icons, u.settings.UI.PowerlineASCII = tt.icons, tt.ascii
+			u.draw()
+			text := screenText(u)
+			if !strings.Contains(text, tt.want) || strings.Contains(text, tt.not) {
+				t.Fatalf("want %q and not %q:\n%s", tt.want, tt.not, text)
+			}
+		})
 	}
 }
