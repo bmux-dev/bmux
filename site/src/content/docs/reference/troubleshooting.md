@@ -51,7 +51,38 @@ default, with padding disabled.
 
 ## Terminal compatibility
 
-Graphics protocols are not supported yet. Links open with Ctrl-click (see
-[Selection and scrollback](/bmux/guides/selection-scrollback/#links)). CI runs on
+The sixel and iTerm2 image protocols are not supported yet. Links open with
+Ctrl-click (see [Selection and scrollback](/bmux/guides/selection-scrollback/#links)). CI runs on
 macOS and Ubuntu; most day-to-day interactive use has been on macOS. For a bug
 report, include your OS, terminal emulator, `bmux version`, and reproduction steps.
+
+## Images in panes
+
+bmux stores the images a program draws in a pane, such as a screenshot an agent
+shares, and shows them again after scrolling, splitting, switching windows
+or detaching and reattaching. Today that works for programs that use the
+[Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
+with Unicode placeholders (`omp` does), in a terminal that supports it: Ghostty,
+Kitty, Rio and WezTerm.
+
+At startup bmux asks the terminal whether it shows Kitty graphics; set
+`ui.graphics` to `"on"` to skip the question or `"off"` to never draw images.
+Where images are off, or the terminal can't show them (Alacritty, macOS
+Terminal.app), the image's cells are blank with `[image 800×600]` in its first
+row when it fits. Two clients on one session each get what their terminal can
+show.
+
+- **Nothing shows in a supported terminal.** `NO_COLOR` and
+  `TCELL_TRUECOLOR=disable` turn images off: they carry an image's id in a text
+  color, which those settings stop bmux from sending exactly. Unset them for
+  bmux, or accept the blank form.
+- **The program picked the wrong protocol.** Panes keep the environment of the
+  terminal that started the server, so a program that chooses from
+  `TERM_PROGRAM` may guess wrong after you attach from another terminal.
+- **Limits.** Each pane keeps up to 16 MiB of images and the server 128 MiB; the
+  oldest images no cell shows go first. An image id above 16,777,215 and
+  animations are not supported. Images aren't saved when bmux saves sessions,
+  like scrollback: after `bmux restart` the layout is back and the images are
+  not.
+- **Copy, search and `bmux capture`** treat an image's cells as blanks, so
+  nothing from the image reaches the clipboard.

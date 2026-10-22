@@ -168,7 +168,8 @@ heuristic or editor configuration mutation is involved.
 The live terminal view below the picker is input-read-only. It neither attaches nor
 injects input or changes MRU ordering. Native cells use source glyphs/colors and
 the outer terminal's font. Cursor rendering follows source visibility/shape;
-no invented blink clock, bitmap renderer, or terminal image protocol remains.
+no invented blink clock or bitmap renderer remains. Images a pane's program drew
+show through the same Kitty graphics placeholders as in an attached view.
 
 `watch-viewport` copies a panel-sized presentation layout from existing source
 terminal grids. Under `session.mu`, `previewSnapshot` samples shared revisions,

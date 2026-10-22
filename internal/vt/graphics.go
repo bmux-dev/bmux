@@ -10,15 +10,21 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// placeholder is the Kitty graphics protocol's Unicode placeholder: a cell
+// Placeholder is the Kitty graphics protocol's Unicode placeholder: a cell
 // starting with it shows part of the image whose id is in its foreground color.
-const placeholder = "\U0010EEEE"
+const Placeholder = "\U0010EEEE"
 
 // Graphics handles Kitty graphics commands the emulator receives.
 type Graphics interface {
 	// Kitty runs one command, the payload of an APC G sequence without the
 	// G, and returns the reply for the app, or "".
 	Kitty(payload []byte) string
+}
+
+// IsPlaceholder reports whether cell content is an image placeholder cell,
+// which holds no text: copies, searches and captures leave it out.
+func IsPlaceholder(content string) bool {
+	return strings.HasPrefix(content, Placeholder)
 }
 
 // SetGraphics installs the handler for APC G sequences. Without one they are
@@ -78,7 +84,7 @@ func (e *Emulator) pixelSize() (width, height int) {
 func (e *Emulator) PlaceholderImageIDs() map[uint32]struct{} {
 	ids := make(map[uint32]struct{})
 	note := func(c *uv.Cell) {
-		if c != nil && strings.HasPrefix(c.Content, placeholder) {
+		if c != nil && IsPlaceholder(c.Content) {
 			ids[PlaceholderID(c.Style.Fg)] = struct{}{}
 		}
 	}
@@ -100,7 +106,7 @@ func (e *Emulator) PlaceholderImageIDs() map[uint32]struct{} {
 	return ids
 }
 
-// PlaceholderID is the image id a placeholder cell's foreground color
+// PlaceholderID is the image id a Placeholder cell's foreground color
 // carries: the 24-bit color, or the palette index of a 256-color one.
 func PlaceholderID(fg color.Color) uint32 {
 	switch c := fg.(type) {

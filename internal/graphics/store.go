@@ -279,3 +279,36 @@ func (p *Pane) unplace(free bool, match func(appID uint32) bool) {
 		}
 	}
 }
+
+// Snapshot returns the pane's placed images by app id, or nil when it has
+// none. Unplaced images aren't shown by any cell, so they are left out.
+func (p *Pane) Snapshot() map[uint32]Info {
+	s := p.store
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out map[uint32]Info
+	for appID, img := range p.images {
+		if img.Cols == 0 {
+			continue
+		}
+		if out == nil {
+			out = make(map[uint32]Info, len(p.images))
+		}
+		out[appID] = img.Info
+	}
+	return out
+}
+
+// Touch marks images, by server-wide id, as just used, so eviction takes
+// older ones first.
+func (p *Pane) Touch(ids []uint32) {
+	s := p.store
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, id := range ids {
+		if img := s.byID[id]; img != nil {
+			s.clock++
+			img.used = s.clock
+		}
+	}
+}

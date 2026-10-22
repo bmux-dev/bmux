@@ -9,6 +9,7 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 // Scripting operations (bmux capture, bmux send) act on one pane from
@@ -163,7 +164,7 @@ func (s *pane) textLocked() string {
 		for x := range s.term.Width() {
 			c := s.term.CellAt(x, y)
 			switch {
-			case c == nil || c.Content == "" && c.Width > 0:
+			case c == nil || c.Content == "" && c.Width > 0 || vt.IsPlaceholder(c.Content):
 				row.WriteByte(' ')
 			case c.Width == 0:
 				// The second column of a wide character.

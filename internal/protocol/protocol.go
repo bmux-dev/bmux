@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-const Version = 9
+// Version 10: frames carry the images placeholder cells show, and image-data
+// fetches their pixels.
+const Version = 10
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -75,6 +77,48 @@ type Request struct {
 	Input []Input `json:"input,omitempty"`
 	// Range is history-text's selection.
 	Range *TextRange `json:"range,omitempty"`
+	// Graphics is what the attaching terminal can display, sent with attach
+	// and again with every resize. nil means no images and an unknown cell
+	// size.
+	Graphics *Graphics `json:"graphics,omitempty"`
+	// ImageID and Offset select the bytes image-data returns: up to Size of
+	// them (MaxImageChunk when 0) from Offset into the image.
+	ImageID uint32 `json:"image_id,omitempty"`
+	Offset  int    `json:"offset,omitempty"`
+}
+
+// MaxImageChunk bounds one image-data reply, so a large image never holds up
+// the connection for long.
+const MaxImageChunk = 192 << 10
+
+// Graphics is a terminal's image support.
+type Graphics struct {
+	// Kitty says the terminal shows Kitty graphics with Unicode placeholders.
+	Kitty bool `json:"kitty,omitempty"`
+	// CellWidth and CellHeight are one cell's size in pixels; 0 if unknown.
+	CellWidth  int `json:"cell_width,omitempty"`
+	CellHeight int `json:"cell_height,omitempty"`
+}
+
+// Image is a stored image that cells in a frame show through Unicode
+// placeholders. Placeholder cells carry the ID as their exact "#rrggbb"
+// foreground; the image's PNG bytes come from image-data.
+type Image struct {
+	ID int `json:"id"`
+	// Width and Height are the image's size in pixels.
+	Width  int `json:"w"`
+	Height int `json:"h"`
+	// Cols and Rows are the size in cells the program placed it at.
+	Cols int `json:"cols"`
+	Rows int `json:"rows"`
+}
+
+// ImageChunk is a piece of an image's PNG bytes.
+type ImageChunk struct {
+	ID     int    `json:"id"`
+	Total  int    `json:"total"` // the whole image's size in bytes
+	Offset int    `json:"offset"`
+	Data   []byte `json:"data"`
 }
 
 // Input is one key press or one paste for send-input. Paste, when set, is
@@ -183,6 +227,8 @@ type TerminalFrame struct {
 	// Links holds the targets of the OSC 8 hyperlinks on screen; cells refer
 	// to them by Cell.Link, so a long URL is sent once per frame.
 	Links []string `json:"links,omitempty"`
+	// Images are the stored images the rows' placeholder cells show.
+	Images []Image `json:"images,omitempty"`
 }
 
 type PaneFrame struct {
@@ -273,6 +319,8 @@ type Response struct {
 	// Panes is describe's answer: one entry per pane, window by window in
 	// layout order.
 	Panes []PaneInfo `json:"panes,omitempty"`
+	// ImageChunk is image-data's reply.
+	ImageChunk *ImageChunk `json:"image_chunk,omitempty"`
 }
 
 // PaneInfo describes a pane and its window and session, for bmux

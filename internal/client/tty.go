@@ -134,7 +134,9 @@ func (t *navigationTty) Drain() error {
 	return err
 }
 
-func newNavigationScreen(preservePadding bool) (tcell.Screen, error) {
+// newNavigationScreen opens the terminal. graphics is ui.graphics: unless it
+// is "off", the terminal is probed for image support before the screen starts.
+func newNavigationScreen(preservePadding bool, graphics string) (tcell.Screen, error) {
 	info, err := tcell.LookupTerminfo(os.Getenv("TERM"))
 	if err != nil {
 		return nil, err
@@ -145,22 +147,46 @@ func newNavigationScreen(preservePadding bool) (tcell.Screen, error) {
 	}
 	pastes := make(chan *rawPasteEvent, 1)
 	wrapped := &navigationTty{Tty: tty, input: navigationReader{reader: tty, pastes: pastes}}
-	screen, err := tcell.NewTerminfoScreenFromTtyTerminfo(wrapped, screenTerminfo(info, preservePadding))
+	probe := probeTerminal(wrapped, graphics)
+	screen, err := tcell.NewTerminfoScreenFromTtyTerminfo(wrapped, screenTerminfo(info, preservePadding, graphics == "on" || probe.kitty))
 	if err != nil {
 		_ = tty.Close()
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &rawPasteScreen{Screen: screen, pastes: pastes}, nil
+	env := graphicsEnv{probe: probe, cellPixels: func() (int, int) { return cellPixels(wrapped, probe) },
+		write: func(p []byte) error { _, err := wrapped.Write(p); return err }}
+	return &rawPasteScreen{Screen: screen, pastes: pastes, graphics: env}, nil
 }
 
-func screenTerminfo(original *terminfo.Terminfo, preservePadding bool) *terminfo.Terminfo {
+// cellPixels is the size of one cell in pixels: from the terminal's reported
+// window size when it has one, else from the startup probe, else 0, 0.
+func cellPixels(tty tcell.Tty, probe terminalProbe) (width, height int) {
+	if size, err := tty.WindowSize(); err == nil && size.Width > 0 && size.Height > 0 {
+		if w, h := size.CellDimensions(); w > 0 && h > 0 && w <= maxCellPixels && h <= maxCellPixels {
+			return w, h
+		}
+	}
+	return probe.cellWidth, probe.cellHeight
+}
+
+func screenTerminfo(original *terminfo.Terminfo, preservePadding, exactColor bool) *terminfo.Terminfo {
 	// Terminfo entries are globally cached. Clone rather than mutating them.
 	// Emulators don't need millisecond hardware delays for each cell update.
 	info := *original
 	if !preservePadding {
 		info.PadChar = ""
+	}
+	if exactColor {
+		// Image placeholder cells carry the image id in their foreground
+		// color; tcell would approximate it with the palette without these.
+		if info.SetFgRGB == "" {
+			info.SetFgRGB = "\x1b[38;2;%p1%d;%p2%d;%p3%dm"
+		}
+		if info.SetBgRGB == "" {
+			info.SetBgRGB = "\x1b[48;2;%p1%d;%p2%d;%p3%dm"
+		}
 	}
 	return &info
 }

@@ -8,8 +8,8 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.5.2 | A settings page, one popup to find or create a session, clickable links, modified keys ([already built](#already-built)) |
-| **Now** | [v0.6](#v06-scripting) | Scripting and automation |
-| **Next** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, graphics passthrough, and everything 1.0 needs |
+| **Now** | [v0.6](#v06-scripting) | Scripting and automation, images in panes |
+| **Next** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
 | **Later** | [v1.0](#v10-stable) | v0.7, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -118,6 +118,7 @@ Targets depend on windows from v0.4.
 | Hooks | M | Done: `[hooks]` in the config file for `session-created`, `session-closed`, `window-created`, `pane-exited`, `client-attached`, `client-detached`, `agent-blocked`, `agent-idle` ([#88](https://github.com/bmux-dev/bmux/issues/88)) |
 | `run-shell`, `if-shell` | S | Done: `bmux run-shell` and `bmux if-shell` for a pane, and keys bound to `run-shell COMMAND` ([#90](https://github.com/bmux-dev/bmux/issues/90)) |
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
+| Images in panes | L | Done: the Kitty graphics protocol with Unicode placeholders, stored per pane so images survive scrolling, splits, windows and reattaching; `ui.graphics` ([#47](https://github.com/bmux-dev/bmux/issues/47)) |
 
 ## v0.7: alerts and hardening
 
@@ -129,7 +130,6 @@ existing sessions without warning.
 | --- | --- | --- |
 | Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
 | Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
-| Graphics passthrough | M | Opt-in: images from a pane's program reach your terminal |
 | Compatibility promise | M | Stable CLI, config format and snapshot format, pinned by tests. Protocol changes never silently cost sessions (builds on `bmux restart`) |
 | Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
@@ -159,6 +159,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | Read-only attach, detach other clients | `attach -r`, `detach -a` |
 | Type into every pane at once | `synchronize-panes` |
 | Lock a session | `lock-session` |
+| Sixel and iTerm2 images, Kitty direct placements (images today use Kitty's Unicode placeholders) | `allow-passthrough` |
 
 ## Already built
 
@@ -188,6 +189,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | `.tmux.conf`, `source-file` | `~/.config/bmux/config.toml` (Helix layout), reload with Ctrl-a r, `bmux reload` or SIGUSR1; `bmux default-config` |
 | `bind-key`, `unbind-key`, `list-keys` (`C-b ?`) | `[keys.root]` and `[keys.prefix]` in the config file; Ctrl-a ? lists the bindings in effect |
 | Status themes | Powerline status bars, accent colors, light theme |
+| (no tmux equivalent) | Images programs draw in panes (Kitty graphics), kept per pane through scrolling, splits and detaching |
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a
 rename, directional navigation while zoomed, and `bmux --help` wording.
