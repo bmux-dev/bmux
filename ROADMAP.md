@@ -129,8 +129,8 @@ existing sessions without warning.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
-| Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
+| Activity alerts | M | Done: `bmux monitor activity on` and the `monitor-activity` key mark a background pane and its tab when it prints; `alert-activity` hook ([#107](https://github.com/bmux-dev/bmux/issues/107)) |
+| Silence alerts | S | Done: `bmux monitor silence 30s` and the `monitor-silence` key mark it once it's been quiet that long; `alerts.silence-after`, `alert-silence` hook ([#108](https://github.com/bmux-dev/bmux/issues/108)) |
 | Compatibility promise | M | Stable CLI, config format and snapshot format, pinned by tests. Protocol changes never silently cost sessions (builds on `bmux restart`) |
 | Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |

@@ -70,7 +70,7 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 func (s *session) watchPane(id int, p *pane) {
 	s.watchers.Add(1)
 	p.mu.Lock()
-	p.agentHook = func(state string) { s.hook("agent-"+state, id) }
+	p.hook = func(event string) { s.hook(event, id) }
 	p.mu.Unlock()
 	go func() {
 		defer s.watchers.Done()
@@ -223,6 +223,14 @@ func (s *session) input(r protocol.Request) error {
 	case "run-shell":
 		// A key bound to run-shell COMMAND; see hooks.go.
 		return s.runShell(r.PaneID, r.Text)
+	case "monitor":
+		// The monitor-activity and monitor-silence keys toggle the pane and
+		// say the result in the status line; see alerts.go.
+		message, err := s.monitor(paneTarget{pane: r.PaneID}, r.Kind, "toggle")
+		if err == nil {
+			s.showMessage(message)
+		}
+		return err
 	}
 	// The new pane's directory is read from the OS before taking session.mu;
 	// the split then targets the pane that was sampled. Dir, from bmux split

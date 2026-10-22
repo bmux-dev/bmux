@@ -22,6 +22,7 @@ type serverSettings struct {
 	scrollback                int                 // history lines kept per pane
 	updateCheck               bool                // look for new releases
 	hooks                     map[string][]string // event -> shell commands
+	silenceAfter              time.Duration       // monitor-silence's default quiet time
 }
 
 var (
@@ -61,6 +62,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		scrollback:   cfg.Scrollback.Lines,
 		updateCheck:  cfg.Update.Check,
 		hooks:        cfg.Hooks,
+		silenceAfter: cfg.Alerts.SilenceAfter.Duration,
 	}
 }
 

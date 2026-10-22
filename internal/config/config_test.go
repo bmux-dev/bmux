@@ -134,11 +134,13 @@ waiting-after = "10ms"
 claude = ["/usr/local/bin/claude"]
 [projects]
 start-dir = "work"
+[alerts]
+silence-after = "100ms"
 `), noEnv)
 	if err == nil {
 		t.Fatal("invalid settings accepted silently")
 	}
-	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "ui.graphics", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude", "projects.start-dir"} {
+	for _, want := range []string{"prefix", `unknown setting "colour"`, `unknown setting "agents.waiting_after"`, `theme "neon"`, "ui.accent", "ui.graphics", "sidebar.width", "sound file", "agents.extra", "agents.waiting-after", "restore.resume.claude", "projects.start-dir", "alerts.silence-after"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error doesn't mention %s: %v", want, err)
 		}
@@ -146,7 +148,7 @@ start-dir = "work"
 	d := Default()
 	if cfg.Prefix != d.Prefix || cfg.Theme != d.Theme || cfg.UI.Accent != d.UI.Accent || cfg.UI.Graphics != d.UI.Graphics || cfg.Sidebar.Width != d.Sidebar.Width ||
 		cfg.Sound.Ready != "" || !reflect.DeepEqual(cfg.Agents.Extra, []string{"ok"}) || cfg.Agents.WaitingAfter != d.Agents.WaitingAfter ||
-		cfg.Restore.Resume["claude"] != nil || cfg.Projects.StartDir != d.Projects.StartDir {
+		cfg.Restore.Resume["claude"] != nil || cfg.Projects.StartDir != d.Projects.StartDir || cfg.Alerts.SilenceAfter != d.Alerts.SilenceAfter {
 		t.Fatalf("invalid settings not reset: %+v", cfg)
 	}
 	if _, err := Load(write(t, "prefix = \n"), noEnv); err == nil {

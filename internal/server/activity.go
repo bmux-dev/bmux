@@ -72,11 +72,14 @@ func (s *pane) foregroundAgent() (string, error) {
 	return foregroundGroupCommand(group, agentMatch)
 }
 
-// Caller holds pane.mu. Records autonomous output for the agent sampler.
+// Caller holds pane.mu. Records autonomous output for the agent sampler, and
+// any output for the alerts.
 func (s *pane) noteOutputLocked(now time.Time) {
-	if now.Sub(s.lastInput) > inputEchoWindow {
+	autonomous := now.Sub(s.lastInput) > inputEchoWindow
+	if autonomous {
 		s.outputSeen = true
 	}
+	s.noteAlertOutputLocked(now, autonomous)
 }
 
 // observeAgentLocked applies one sample of the pane's foreground agent.
@@ -130,6 +133,7 @@ func (s *session) watchAgents() {
 		if s.stopping.Load() {
 			return
 		}
+		s.checkSilence(time.Now())
 		s.sampleAgents()
 	}
 }
@@ -158,7 +162,7 @@ func (s *session) sampleAgents() {
 // Caller holds pane.mu. A pane someone is looking at never collects attention.
 func (s *pane) noteAttentionLocked() {
 	if !s.viewed.Load() {
-		s.attention = true
+		s.attention, s.alert = true, ""
 	}
 }
 
@@ -310,20 +314,23 @@ func (s *pane) trackAgentLocked(agent, state string) {
 		return
 	}
 	s.agentSeq = agentSeqs.Add(1)
-	if s.agentHook == nil || now == "" {
+	if s.hook == nil || now == "" {
 		return
 	}
 	switch {
 	case nowState == protocol.AgentBlocked && state != protocol.AgentBlocked:
-		s.agentHook("blocked")
+		s.hook("agent-blocked")
 	case nowState == protocol.AgentIdle && state == protocol.AgentWorking:
-		s.agentHook("idle")
+		s.hook("agent-idle")
 	}
 }
 
 // Caller holds pane.mu.
 func (s *pane) activityLocked(id int) (protocol.PaneActivity, bool) {
 	a := protocol.PaneActivity{Pane: id, Attention: s.attention, Seq: s.agentSeq}
+	if s.attention {
+		a.Alert = s.alert
+	}
 	a.Agent, a.State = s.agentViewLocked()
 	return a, a.Agent != "" || a.Attention
 }

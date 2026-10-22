@@ -49,7 +49,8 @@ type pane struct {
 	epoch        uint64
 	agent        string      // self-reported label; "" when no agent reported
 	agentState   string      // protocol.Agent* or ""
-	attention    bool        // unseen bell, notification, block or finished turn
+	attention    bool        // unseen bell, notification, block, finished turn or alert
+	alert        string      // "activity" or "silence" when an alert raised attention; see alerts.go
 	agentSeq     uint64      // agentSeqs value of the latest agent or state change
 	viewed       atomic.Bool // set under session.mu; read by emulator callbacks
 	// Agent sampler state; see activity.go.
@@ -62,10 +63,15 @@ type pane struct {
 	clipboardSeq                uint64   // its clipboardWrites number, 0 if none
 	graphics                    *graphics.Pane
 	graphicsOK                  atomic.Bool // some attached client can display images
-	// agentHook runs the agent-blocked and agent-idle hooks; set by the
-	// session that owns the pane. Called under pane.mu.
-	agentHook func(state string)
-	pipe      *panePipe // bmux pipe-pane's command; see pipe.go
+	// Activity and silence monitoring; see alerts.go.
+	monitorActivity bool
+	monitorSilence  time.Duration // 0 when off
+	lastOutput      time.Time     // latest output, or when silence monitoring began
+	silenceAlerted  bool          // this quiet stretch has been marked
+	// hook runs a hook event (agent-blocked, alert-activity, ...) for this
+	// pane; set by the session that owns the pane. Called under pane.mu.
+	hook func(event string)
+	pipe *panePipe // bmux pipe-pane's command; see pipe.go
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {

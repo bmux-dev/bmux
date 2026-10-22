@@ -36,6 +36,7 @@ letters are the same as Ctrl letters in most terminals.
 | `resize-left` / `-down` / `-up` / `-right` | prefix `h/j/k/l` | Move a divider five cells; prefix keys bound to resize repeat without the prefix for a second |
 | `split-right` / `split-down` | prefix `\|` / `-` | Split side by side / stacked |
 | `zoom`, `close-pane` | prefix `m`, `x` | |
+| `monitor-activity`, `monitor-silence` | none | Toggle watching the focused pane for [activity or silence](/bmux/agents/sidebar/#activity-and-silence-alerts); the status line says the result |
 | `last-pane`, `swap-pane-previous` / `swap-pane-next`, `rotate-window` | prefix `;`, `{` / `}`, `C-o` | |
 | `break-pane`, `join-pane` | prefix `!`, `@` | Join goes into the last window, beside its focused pane |
 | `next-layout`, `equalize-layout` | prefix `space`, `E` | |

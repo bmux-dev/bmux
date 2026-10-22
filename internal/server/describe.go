@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/josephferrero/bmux/internal/protocol"
 )
@@ -84,6 +85,8 @@ func (s *session) describe(t paneTarget, scope string) ([]protocol.PaneInfo, err
 			a, _ := p.activityLocked(id)
 			info.Agent, info.State = a.Agent, a.State
 			info.Pipe = p.pipe != nil
+			info.MonitorActivity = p.monitorActivity
+			info.MonitorSilence = int(p.monitorSilence / time.Second)
 			p.mu.Unlock()
 			entries = append(entries, entry{info, p})
 		}

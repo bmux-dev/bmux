@@ -170,12 +170,16 @@ const (
 )
 
 // PaneActivity lists a pane only when it has a reported agent or unseen
-// attention (bell, OSC 9/777 notification, blocked agent or finished turn).
+// attention (bell, OSC 9/777 notification, blocked agent, finished turn or a
+// monitored pane's alert).
 type PaneActivity struct {
 	Pane      int    `json:"pane"`
 	Agent     string `json:"agent,omitempty"`
 	State     string `json:"state,omitempty"`
 	Attention bool   `json:"attention,omitempty"`
+	// Alert is "activity" or "silence" when a monitored pane's alert raised
+	// Attention, else "".
+	Alert string `json:"alert,omitempty"`
 	// Seq changes whenever Agent or State does. It is unique across all panes
 	// of a server, so a stale value never matches a different pane.
 	Seq uint64 `json:"seq,omitempty"`
@@ -348,4 +352,8 @@ type PaneInfo struct {
 	Agent           string `json:"agent,omitempty"`
 	State           string `json:"state,omitempty"`
 	Pipe            bool   `json:"pipe,omitempty"` // bmux pipe-pane is copying its output
+	// MonitorActivity and MonitorSilence (whole seconds, 0 when off) are bmux
+	// monitor's settings for the pane.
+	MonitorActivity bool `json:"monitor_activity,omitempty"`
+	MonitorSilence  int  `json:"monitor_silence,omitempty"`
 }

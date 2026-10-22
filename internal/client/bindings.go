@@ -117,6 +117,12 @@ func (u *ui) run(action string, now time.Time) {
 		u.send(protocol.Request{Op: "run-shell", PaneID: u.focused, Text: command})
 		return
 	}
+	// monitor-activity and monitor-silence toggle the focused pane; the server
+	// says the result in the status line.
+	if kind, ok := strings.CutPrefix(action, "monitor-"); ok {
+		u.send(protocol.Request{Op: "monitor", PaneID: u.focused, Kind: kind})
+		return
+	}
 	switch kind, direction := actionDirection(action); kind {
 	case "navigate":
 		u.resumeLive()

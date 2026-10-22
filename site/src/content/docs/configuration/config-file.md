@@ -62,6 +62,7 @@ width = 24
 | `projects.start-dir` | `""` | Folder the new-session popup's Create tab starts in, and what its relative paths are relative to, e.g. `"~"`; absolute or `~/` path. Empty means the directory bmux was started in. |
 | `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
 | `update.check` | `true` | Look for a new release once a day and show `↑` in the status bar; see [Updates](/bmux/start/installation/#updates) |
+| `alerts.silence-after` | `"30s"` | How long a pane must be quiet before `monitor-silence` (or `bmux monitor silence on`) marks it, 1s to 1h; see [alerts](/bmux/agents/sidebar/#activity-and-silence-alerts) |
 | `hooks.EVENT` | none | Shell commands to run when an event happens; see [Hooks](#hooks) |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](/bmux/configuration/rebinding-keys/) |
 | `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |
@@ -93,6 +94,7 @@ pane-exited = ["echo '#{pane_target} exited' >> ~/.local/state/bmux/exits.log"]
 | `client-attached`, `client-detached` | A client attaches to or leaves the session | Its focused pane |
 | `agent-blocked` | A pane's agent starts waiting on a decision | That pane |
 | `agent-idle` | A pane's agent finishes a turn | That pane |
+| `alert-activity`, `alert-silence` | A pane watched with [`bmux monitor`](/bmux/agents/sidebar/#activity-and-silence-alerts) is marked for printing or going quiet | That pane |
 
 Each command runs with `/bin/sh -c` after its [`#{...}` variables](/bmux/reference/commands/#format-variables)
 are filled in for the event's pane. It runs in that pane's directory, with

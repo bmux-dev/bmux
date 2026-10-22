@@ -399,6 +399,10 @@ func activityLabel(a protocol.PaneActivity) (string, string, tcell.Style) {
 		return icon, "blocked", style
 	case a.Attention && a.State == protocol.AgentIdle:
 		return icon, "waiting", style
+	case a.Attention && a.Alert == "activity":
+		return icon, "activity", style
+	case a.Attention && a.Alert == "silence":
+		return icon, "silent", style
 	case a.Attention:
 		return icon, "bell", style
 	}

@@ -56,6 +56,8 @@ var Actions = []struct{ Name, Help string }{
 	{"split-down", "split stacked"},
 	{"zoom", "zoom or unzoom the pane"},
 	{"close-pane", "close the pane"},
+	{"monitor-activity", "mark the pane when it prints, or stop"},
+	{"monitor-silence", "mark the pane when it goes quiet, or stop"},
 	{"new-window", "new window"},
 	{"close-window", "close the window"},
 	{"rename-window", "rename the window"},

@@ -34,6 +34,7 @@ type Config struct {
 	Projects   Projects   `toml:"projects"`
 	Scrollback Scrollback `toml:"scrollback"`
 	Update     Update     `toml:"update"`
+	Alerts     Alerts     `toml:"alerts"`
 	// Hooks maps an event (HookEvents) to shell commands the server runs
 	// when it happens, with #{...} format variables for its pane.
 	Hooks map[string][]string `toml:"hooks"`
@@ -106,10 +107,25 @@ type Update struct {
 	Check bool `toml:"check"`
 }
 
+// Alerts configures activity and silence monitoring (bmux monitor and the
+// monitor-activity and monitor-silence keys).
+type Alerts struct {
+	// SilenceAfter is how long a pane must be quiet before monitor-silence
+	// (or bmux monitor TARGET silence on) marks it.
+	SilenceAfter Duration `toml:"silence-after"`
+}
+
+// Bounds for alerts.silence-after.
+const (
+	MinSilenceAfter = time.Second
+	MaxSilenceAfter = time.Hour
+)
+
 // HookEvents are the events [hooks] can name.
 var HookEvents = []string{
 	"session-created", "session-closed", "window-created", "pane-exited",
 	"client-attached", "client-detached", "agent-blocked", "agent-idle",
+	"alert-activity", "alert-silence",
 }
 
 // Bounds for scrollback.lines; each line holds a row of cells.
@@ -142,6 +158,7 @@ func Default() Config {
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3},
 		Scrollback: Scrollback{Lines: 10000},
 		Update:     Update{Check: true},
+		Alerts:     Alerts{SilenceAfter: Duration{30 * time.Second}},
 	}
 }
 
@@ -312,6 +329,10 @@ func (c *Config) repair() []string {
 			*timing.value = timing.def
 		}
 	}
+	if s := c.Alerts.SilenceAfter.Duration; s < MinSilenceAfter || s > MaxSilenceAfter {
+		bad("alerts.silence-after %s must be between 1s and 1h", s)
+		c.Alerts.SilenceAfter = d.Alerts.SilenceAfter
+	}
 	extra := c.Agents.Extra[:0]
 	for _, name := range c.Agents.Extra {
 		if name == "" || strings.ContainsRune(name, '/') {
@@ -434,16 +455,20 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 [update]
 # check = true              # look for a new release once a day; bmux update installs it
 
+[alerts]                    # bmux monitor, and the monitor-activity and monitor-silence keys
+# silence-after = "30s"     # quiet this long before monitor-silence marks a pane, 1s-1h
+
 [hooks]                     # shell commands run on events, with #{...} variables for the event's pane
 # Events: session-created, session-closed, window-created, pane-exited,
-# client-attached, client-detached, agent-blocked, agent-idle. See bmux guide.
+# client-attached, client-detached, agent-blocked, agent-idle,
+# alert-activity, alert-silence. See bmux guide.
 # agent-blocked = ["notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"]
 
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
 # navigate-left/down/up/right (Vim/Neovim-aware), focus-left/down/up/right,
 # next-pane, last-pane, resize-left/down/up/right, split-right, split-down,
-# zoom, close-pane, swap-pane-previous, swap-pane-next, rotate-window,
+# zoom, close-pane, monitor-activity, monitor-silence, swap-pane-previous, swap-pane-next, rotate-window,
 # break-pane, join-pane, next-layout, layout-even-horizontal,
 # layout-even-vertical, layout-main-horizontal, layout-main-vertical,
 # layout-tiled, equalize-layout, new-window, close-window, rename-window,

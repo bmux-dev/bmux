@@ -119,6 +119,7 @@ var SettingTabs = []SettingTab{
 	{"Sessions", []Setting{
 		boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
 		intSetting("scrollback.lines", "Scrollback lines", "History kept per pane, 100-200000", func(c *Config) *int { return &c.Scrollback.Lines }),
+		durationSetting("alerts.silence-after", "Silence after", "Quiet this long before monitor-silence marks a pane, 1s-1h", func(c *Config) *Duration { return &c.Alerts.SilenceAfter }),
 	}},
 }
 

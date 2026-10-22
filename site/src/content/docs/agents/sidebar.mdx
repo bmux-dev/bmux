@@ -30,6 +30,7 @@ the screen's text.
 | ● red / `blocked` | An agent reported it needs a decision |
 | ● teal / `waiting` | An agent stopped working while you weren't looking at its pane: it finished, or it is asking you something |
 | ● teal / `bell` | A program rang the bell or sent a desktop notification (OSC 9 or OSC 777) while you weren't looking |
+| ● teal / `activity`, `silent` | A pane you asked to watch printed something, or went quiet, while you weren't looking; see [Activity and silence alerts](#activity-and-silence-alerts) |
 | ● yellow / `working` | An agent is working |
 | ○ green / `idle` | An agent is ready for input and you have seen it |
 
@@ -51,6 +52,29 @@ default. Plain terminal bells from other programs mark their pane silently.
 `sound.enabled = false` in the [config file](/bmux/configuration/config-file/) or
 `BMUX_SOUND=0` turns sounds off; `sound.ready` and `sound.blocked` choose your
 own sound files.
+
+## Activity and silence alerts
+
+Any pane can ask for a mark like a bell's, as tmux's `monitor-activity` and
+`monitor-silence` do. It shows on the pane's sidebar row and as `!` on its
+window's tab:
+
+```sh
+bmux monitor activity on        # mark this pane when it prints
+bmux monitor -t api:2 silence 2m   # mark pane 2 of api after 2 minutes without output
+bmux monitor                    # what this pane is watched for
+```
+
+**activity** marks the pane the first time it prints something by itself;
+echo of what you type doesn't count. **silence** marks it once it has printed
+nothing for that long, such as a build that finished, then again after its next
+quiet stretch. `silence on` uses `alerts.silence-after` (30 seconds by
+default). A pane you're looking at is never marked, and looking at it clears
+the mark. Alerts make no sound; an `alert-activity` or `alert-silence`
+[hook](/bmux/configuration/config-file/#hooks) can run one, or a desktop
+notification. To toggle a pane from the keyboard, bind `monitor-activity` or
+`monitor-silence` to a key. They're unbound by default, as in tmux. Watching
+isn't saved across restarts.
 
 | Action in the sidebar | Control |
 | --- | --- |
