@@ -21,26 +21,88 @@ import (
 // Scripting commands: list agent panes, read one, type into one, and wait
 // for one to need you. They work the same for any agent or program.
 
-// paneTarget is the SESSION:PANE form every scripting command accepts.
+// paneTarget is the SESSION:PANE form bmux agents prints for a pane.
 func paneTarget(session string, pane int) string {
 	return session + ":" + strconv.Itoa(pane)
 }
 
-// parseTarget splits SESSION or SESSION:PANE; pane 0 means none was given.
-// Session names can't contain colons.
-func parseTarget(target string) (string, int, error) {
-	session, pane, found := strings.Cut(target, ":")
+// target is a parsed TARGET, written like tmux's session:window.pane:
+//
+//	api       the session (its active window's focused pane)
+//	api:7     pane 7, numbered across the session as bmux agents lists it
+//	api:2.    window 2 (its focused pane)
+//	api:2.1   window 2, the first pane in its layout order
+//	:2.1      the same in the session this command runs in
+//
+// api:N keeps meaning pane N, so targets bmux agents printed keep working;
+// the server points tmux users to api:N. when N is a window instead.
+type target struct {
+	Session             string
+	Window, Index, Pane int
+}
+
+const targetForms = "SESSION, SESSION:PANE, SESSION:WINDOW. or SESSION:WINDOW.N"
+
+// parseTarget reads a TARGET. An empty session means the calling pane's.
+func parseTarget(text string) (target, error) {
+	session, rest, found := strings.Cut(text, ":")
+	if session == "" && found {
+		session = os.Getenv("BMUX_SESSION")
+		if session == "" {
+			return target{}, fmt.Errorf("target %q: a target starting with : names the session this command runs in, and this isn't a bmux pane", text)
+		}
+	}
 	if err := protocol.ValidateSessionName(session); err != nil {
-		return "", 0, fmt.Errorf("target %q: %v", target, err)
+		return target{}, fmt.Errorf("target %q: %v", text, err)
 	}
-	if !found {
-		return session, 0, nil
+	t := target{Session: session}
+	if !found || rest == "" {
+		return t, nil
 	}
-	id, err := strconv.Atoi(pane)
-	if err != nil || id <= 0 {
-		return "", 0, fmt.Errorf("target %q: the pane after the colon must be a pane number, as bmux agents lists", target)
+	number := func(s string) (int, bool) {
+		n, err := strconv.Atoi(s)
+		return n, err == nil && n > 0 && s[0] != '+'
 	}
-	return session, id, nil
+	window, index, dotted := strings.Cut(rest, ".")
+	var ok bool
+	switch {
+	case !dotted:
+		t.Pane, ok = number(rest)
+	case index == "":
+		t.Window, ok = number(window)
+	default:
+		t.Window, ok = number(window)
+		if ok {
+			t.Index, ok = number(index)
+		}
+	}
+	if !ok {
+		return target{}, fmt.Errorf("target %q isn't one of %s; numbers start at 1", text, targetForms)
+	}
+	return t, nil
+}
+
+// names reports whether t picks one pane itself, not whatever is focused.
+func (t target) names() bool { return t.Pane != 0 || t.Index != 0 }
+
+// request fills in r's target fields.
+func (t target) request(r *protocol.Request) {
+	r.Name, r.Window, r.PaneIndex, r.PaneID = t.Session, t.Window, t.Index, t.Pane
+}
+
+// matches reports whether agent pane p is within t.
+func (t target) matches(p agentPane) bool {
+	switch {
+	case p.Session != t.Session:
+		return false
+	case t.Pane != 0:
+		return p.Pane == t.Pane
+	case t.Window != 0 && t.Index != 0:
+		return p.Window == t.Window && p.Index == t.Index
+	case t.Window != 0:
+		return p.Window == t.Window
+	}
+	return true
 }
 
 // agentPane is one agent pane as bmux agents and bmux wait-agent print it.
@@ -49,6 +111,8 @@ type agentPane struct {
 	Session   string `json:"session"`
 	SessionID uint64 `json:"session_id,omitempty"`
 	Pane      int    `json:"pane"`
+	Window    int    `json:"window,omitempty"`
+	Index     int    `json:"index,omitempty"`
 	Agent     string `json:"agent"`
 	State     string `json:"state"`
 	Seq       uint64 `json:"seq"`
@@ -72,7 +136,7 @@ func agentPanes(socket string) ([]agentPane, error) {
 				continue
 			}
 			result = append(result, agentPane{
-				Target: paneTarget(s.Name, a.Pane), Session: s.Name, SessionID: s.ID, Pane: a.Pane,
+				Target: paneTarget(s.Name, a.Pane), Session: s.Name, SessionID: s.ID, Pane: a.Pane, Window: a.Window, Index: a.Index,
 				Agent: a.Agent, State: a.State, Seq: a.Seq, Attention: a.Attention,
 				Self: selfID != 0 && s.ID == selfID && a.Pane == selfPane,
 			})
@@ -125,13 +189,15 @@ func runCapture(socket string, args []string) error {
 		}
 	}
 	if len(targets) != 1 {
-		return fmt.Errorf("usage: bmux capture [--json] SESSION[:PANE]")
+		return fmt.Errorf("usage: bmux capture [--json] TARGET (%s)", targetForms)
 	}
-	session, pane, err := parseTarget(targets[0])
+	t, err := parseTarget(targets[0])
 	if err != nil {
 		return err
 	}
-	r, err := client.Request(socket, protocol.Request{Op: "capture-pane", Name: session, PaneID: pane})
+	req := protocol.Request{Op: "capture-pane"}
+	t.request(&req)
+	r, err := client.Request(socket, req)
 	if err != nil {
 		return err
 	}
@@ -141,17 +207,19 @@ func runCapture(socket string, args []string) error {
 	}
 	return printJSON(struct {
 		Target string `json:"target"`
+		Window int    `json:"window,omitempty"`
+		Index  int    `json:"index,omitempty"`
 		Agent  string `json:"agent,omitempty"`
 		State  string `json:"state,omitempty"`
 		Seq    uint64 `json:"seq"`
 		Text   string `json:"text"`
-	}{paneTarget(session, r.Pane.Pane), r.Pane.Agent, r.Pane.State, r.Pane.Seq, r.Text})
+	}{paneTarget(t.Session, r.Pane.Pane), r.Pane.Window, r.Pane.Index, r.Pane.Agent, r.Pane.State, r.Pane.Seq, r.Text})
 }
 
 // sendRequest parses bmux send's arguments: one target and, in order, the
 // keys and text to type. Flags may come before or after the target.
 func sendRequest(args []string) (protocol.Request, error) {
-	const usage = "usage: bmux send SESSION:PANE [--if-seq N] (--key KEY | --text TEXT)..."
+	const usage = "usage: bmux send TARGET [--if-seq N] (--key KEY | --text TEXT)..., where TARGET names a pane: SESSION:PANE or SESSION:WINDOW.N"
 	r := protocol.Request{Op: "send-input"}
 	target := ""
 	for i := 0; i < len(args); i++ {
@@ -193,14 +261,14 @@ func sendRequest(args []string) (protocol.Request, error) {
 	if target == "" || len(r.Input) == 0 {
 		return r, errors.New(usage)
 	}
-	session, pane, err := parseTarget(target)
+	t, err := parseTarget(target)
 	if err != nil {
 		return r, err
 	}
-	if pane == 0 {
-		return r, fmt.Errorf("send needs SESSION:PANE, so input never reaches a pane by accident; bmux agents lists targets")
+	if !t.names() {
+		return r, fmt.Errorf("send needs a pane (SESSION:PANE or SESSION:WINDOW.N), so input never reaches a pane by accident; bmux agents lists targets")
 	}
-	r.Name, r.PaneID = session, pane
+	t.request(&r)
 	return r, nil
 }
 
@@ -252,7 +320,7 @@ func parseKey(name string) (protocol.Input, error) {
 type waitFor struct {
 	states  []string
 	since   uint64
-	targets []string // SESSION or SESSION:PANE; none means every pane
+	targets []target // none means every pane
 }
 
 // match picks the earliest change after since among panes in a wanted
@@ -277,13 +345,13 @@ func (w waitFor) wants(p agentPane) bool {
 	if len(w.targets) == 0 {
 		return true
 	}
-	return slices.Contains(w.targets, p.Session) || slices.Contains(w.targets, p.Target)
+	return slices.ContainsFunc(w.targets, func(t target) bool { return t.matches(p) })
 }
 
 const waitPollInterval = time.Second
 
 func runWaitAgent(socket string, args []string) error {
-	const usage = "usage: bmux wait-agent [--state S,...] [--since SEQ] [--timeout DURATION | --notify SESSION:PANE] [SESSION[:PANE]...]"
+	const usage = "usage: bmux wait-agent [--state S,...] [--since SEQ] [--timeout DURATION | --notify SESSION:PANE] [TARGET...]"
 	w := waitFor{states: []string{protocol.AgentBlocked, protocol.AgentIdle}}
 	var timeout time.Duration
 	notify, sinceGiven := "", false
@@ -319,17 +387,19 @@ func runWaitAgent(socket string, args []string) error {
 			}
 			timeout = d
 		case arg == "--notify":
-			if _, pane, err := parseTarget(value); err != nil || pane == 0 {
+			t, err := parseTarget(value)
+			if err != nil || t.Pane == 0 {
 				return fmt.Errorf("--notify needs the SESSION:PANE of the agent to tell; bmux agents lists them")
 			}
-			notify = value
+			notify = paneTarget(t.Session, t.Pane) // as bmux agents prints it, so :3 works too
 		case strings.HasPrefix(args[i], "-"):
 			return fmt.Errorf("unknown flag %s; %s", args[i], usage)
 		default:
-			if _, _, err := parseTarget(args[i]); err != nil {
+			t, err := parseTarget(args[i])
+			if err != nil {
 				return err
 			}
-			w.targets = append(w.targets, args[i])
+			w.targets = append(w.targets, t)
 		}
 	}
 	if notify != "" {
@@ -433,7 +503,7 @@ func notifyMessage(p agentPane) string {
 }
 
 func runNotify(socket string, n *notifier) error {
-	session, pane, _ := parseTarget(n.target)
+	t, _ := parseTarget(n.target)
 	fmt.Printf("Telling %s about agents that are blocked or idle; Ctrl-c stops.\n", n.target)
 	for {
 		panes, err := agentPanes(socket)
@@ -445,7 +515,7 @@ func runNotify(socket string, n *notifier) error {
 		}
 		n.observe(panes)
 		if p, guard, ok := n.next(panes); ok {
-			_, err := client.Request(socket, protocol.Request{Op: "send-input", Name: session, PaneID: pane, IfSeq: guard,
+			_, err := client.Request(socket, protocol.Request{Op: "send-input", Name: t.Session, PaneID: t.Pane, IfSeq: guard,
 				Input: []protocol.Input{{Paste: notifyMessage(p)}, {Code: uv.KeyEnter}}})
 			switch {
 			case err == nil:

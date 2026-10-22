@@ -20,6 +20,7 @@ func TestSendArgumentsKeepOrderAndNeedAPane(t *testing.T) {
 	}
 	for _, bad := range [][]string{
 		{"api", "--key", "enter"},       // no pane: would reach whatever is focused
+		{"api:2.", "--key", "enter"},    // a window, not a pane
 		{"api:3"},                       // nothing to send
 		{"api:x", "--key", "enter"},     // not a pane number
 		{"api:3", "--key", "nosuchkey"}, // unknown key
@@ -30,6 +31,9 @@ func TestSendArgumentsKeepOrderAndNeedAPane(t *testing.T) {
 		if _, err := sendRequest(bad); err == nil {
 			t.Errorf("accepted %q", bad)
 		}
+	}
+	if r, err := sendRequest([]string{"api:2.1", "--key", "enter"}); err != nil || r.Window != 2 || r.PaneIndex != 1 || r.PaneID != 0 {
+		t.Fatalf("window.index target: %+v %v", r, err)
 	}
 }
 
@@ -66,13 +70,60 @@ func TestWaitAgentWalksChangesInOrderAndSkipsItself(t *testing.T) {
 	if strings.Join(order, " ") != "api:1 web:2" {
 		t.Fatalf("walked %v", order)
 	}
-	w = waitFor{states: []string{protocol.AgentBlocked, protocol.AgentIdle}, targets: []string{"web"}}
+	w = waitFor{states: []string{protocol.AgentBlocked, protocol.AgentIdle}, targets: []target{{Session: "web"}}}
 	if p, _ := w.match(panes); p.Target != "web:2" {
 		t.Fatalf("session target matched %+v", p)
 	}
-	w = waitFor{states: []string{protocol.AgentIdle}, targets: []string{"api:1"}}
+	w = waitFor{states: []string{protocol.AgentIdle}, targets: []target{{Session: "api", Pane: 1}}}
 	if p, ok := w.match(panes); ok {
 		t.Fatalf("api:1 is blocked, not idle, yet matched %+v", p)
+	}
+}
+
+func TestTargetsNameSessionsPanesAndWindows(t *testing.T) {
+	t.Setenv("BMUX_SESSION", "here")
+	for text, want := range map[string]target{
+		"api":     {Session: "api"},
+		"api:":    {Session: "api"},
+		"api:7":   {Session: "api", Pane: 7}, // pane numbers as bmux agents prints them
+		"api:2.":  {Session: "api", Window: 2},
+		"api:2.1": {Session: "api", Window: 2, Index: 1},
+		":3":      {Session: "here", Pane: 3},
+		":2.1":    {Session: "here", Window: 2, Index: 1},
+		":":       {Session: "here"},
+	} {
+		if got, err := parseTarget(text); err != nil || got != want {
+			t.Errorf("%q: %+v %v, want %+v", text, got, err, want)
+		}
+	}
+	for _, bad := range []string{"api:0", "api:x", "api:-1", "api:+2", "api:.1", "api:2.0", "api:2.x", "api:2.1.3", "bad name:1"} {
+		if _, err := parseTarget(bad); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+	t.Setenv("BMUX_SESSION", "")
+	if _, err := parseTarget(":2.1"); err == nil || !strings.Contains(err.Error(), "isn't a bmux pane") {
+		t.Fatalf("a relative target outside bmux: %v", err)
+	}
+
+	// wait-agent narrows to a window, or one position in it.
+	panes := []agentPane{
+		{Target: "api:1", Session: "api", Pane: 1, Window: 1, Index: 1},
+		{Target: "api:4", Session: "api", Pane: 4, Window: 2, Index: 1},
+		{Target: "api:5", Session: "api", Pane: 5, Window: 2, Index: 2},
+		{Target: "web:5", Session: "web", Pane: 5, Window: 2, Index: 2},
+	}
+	var got []string
+	for _, p := range panes {
+		if (target{Session: "api", Window: 2}).matches(p) {
+			got = append(got, p.Target)
+		}
+	}
+	if strings.Join(got, " ") != "api:4 api:5" {
+		t.Fatalf("window 2 matched %v", got)
+	}
+	if !(target{Session: "api", Window: 2, Index: 2}).matches(panes[2]) || (target{Session: "api", Window: 2, Index: 2}).matches(panes[1]) {
+		t.Fatal("api:2.2 matched the wrong pane")
 	}
 }
 
