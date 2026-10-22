@@ -196,10 +196,14 @@ func (s *session) input(r protocol.Request) error {
 		return s.closeWindow(r.Window)
 	}
 	// The new pane's directory is read from the OS before taking session.mu;
-	// the split then targets the pane that was sampled.
+	// the split then targets the pane that was sampled. Dir, from bmux split
+	// -c or new-window -c, replaces it.
 	dir := ""
 	if r.Op == "split" || r.Op == "new-window" {
 		r.PaneID, dir = s.splitSource(r.PaneID)
+		if r.Dir != "" {
+			dir = r.Dir
+		}
 	}
 	s.mu.Lock()
 	if s.stopped || s.stopping.Load() {
@@ -321,7 +325,11 @@ func (s *session) input(r protocol.Request) error {
 		if r.Direction != "left" && r.Direction != "right" && r.Direction != "up" && r.Direction != "down" {
 			return fmt.Errorf("unknown resize direction")
 		}
-		w.root.resize(id, r.Direction, 5, rect{0, 0, s.width, s.height})
+		amount := 5 // Ctrl-a h/j/k/l; bmux resize gives its cells in Delta
+		if r.Delta > 0 {
+			amount = r.Delta
+		}
+		w.root.resize(id, r.Direction, amount, rect{0, 0, s.width, s.height})
 	case "drag-divider":
 		// A mouse drag puts the divider between PaneID (left/top) and
 		// NeighborID at column X of a side-by-side split, or row Y of a
