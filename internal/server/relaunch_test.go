@@ -15,8 +15,9 @@ func TestRelaunchSavesAllowlistedJobsAndStartsThemAgain(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
-	// sh as a job leader stands in for a program with children, like man.
-	useConfig(t, srv, "[restore]\nrelaunch = [\"tail\", \"sh\"]\n")
+	// bash as a job leader stands in for a program with children, like man.
+	// Not sh: macOS's /bin/sh is a shim that runs bash, so its name is bash.
+	useConfig(t, srv, "[restore]\nrelaunch = [\"tail\", \"bash\"]\n")
 	dir := realDir(t, t.TempDir())
 	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("NOTE_LINE\n"), 0600); err != nil {
 		t.Fatal(err)
@@ -30,9 +31,9 @@ func TestRelaunchSavesAllowlistedJobsAndStartsThemAgain(t *testing.T) {
 	}
 	jobs := map[int]string{
 		1: "tail -f notes.txt",
-		2: "tail -f notes.txt | cat",     // a pipeline: tail's output went to cat
-		3: "sleep 30",                    // not allowlisted
-		4: "sh -c 'sleep 30; echo done'", // allowlisted, with a child
+		2: "tail -f notes.txt | cat",       // a pipeline: tail's output went to cat
+		3: "sleep 30",                      // not allowlisted
+		4: "bash -c 'sleep 30; echo done'", // allowlisted, with a child
 	}
 	for id, job := range jobs {
 		mustInput(t, s, protocol.Request{Op: "paste", PaneID: id, Text: job + "\n"})
@@ -61,7 +62,7 @@ func TestRelaunchSavesAllowlistedJobsAndStartsThemAgain(t *testing.T) {
 	if !ok {
 		t.Fatal("no snapshot")
 	}
-	want := map[int][]string{1: {"tail", "-f", "notes.txt"}, 2: nil, 3: nil, 4: {"sh", "-c", "sleep 30; echo done"}}
+	want := map[int][]string{1: {"tail", "-f", "notes.txt"}, 2: nil, 3: nil, 4: {"bash", "-c", "sleep 30; echo done"}}
 	for _, p := range snap.Panes {
 		if !reflect.DeepEqual(p.Relaunch, want[p.ID]) {
 			t.Errorf("pane %d (%s) saved relaunch %q, want %q", p.ID, jobs[p.ID], p.Relaunch, want[p.ID])
