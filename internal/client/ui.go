@@ -80,6 +80,8 @@ type ui struct {
 	sidebarResults                  chan sidebarResult
 	edge                            uint64 // last seen Frame.Edge for this attachment
 	edgeKnown                       bool
+	messageSeq                      uint64 // last seen Frame.MessageSeq for this attachment
+	messageKnown                    bool
 	alertsKnown                     bool
 	sound                           func(blocked bool)
 	reconnects                      chan string
@@ -279,7 +281,7 @@ func (u *ui) endSession(name string) {
 	u.pending = 0
 	u.workspace, u.frame = nil, nil
 	u.focused = 0
-	u.edgeKnown, u.configKnown = false, false
+	u.edgeKnown, u.configKnown, u.messageKnown = false, false, false
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}
@@ -369,7 +371,7 @@ func (u *ui) switchTo(name string) error {
 	u.paneSizes = make(map[int][2]int)
 	u.pending = 0
 	u.resizeUntil = time.Time{}
-	u.edgeKnown, u.configKnown = false, false
+	u.edgeKnown, u.configKnown, u.messageKnown = false, false, false
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}

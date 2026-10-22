@@ -60,6 +60,9 @@ func init() {
 		{"resize", "[TARGET] left|right|up|down [CELLS]", "Move a pane's divider, 5 cells unless CELLS says", noServer, runLayoutCommand(resizeRequest, false)},
 		{"zoom", "[TARGET]", "Zoom or unzoom a pane", noServer, runLayoutCommand(targetOnly("zoom", false), false)},
 		{"rename-window", "[TARGET] NAME", "Rename the target's window; an empty NAME shows its pane's title", noServer, runLayoutCommand(renameWindowRequest, false)},
+		{"list-panes", "[TARGET] [-a] [-F FORMAT | --json]", "List the panes of a window (SESSION:WINDOW. or a pane), a session, or every session (-a); -F formats each line with #{...} variables", noServer, runListPanes},
+		{"list-windows", "[TARGET] [-a] [-F FORMAT | --json]", "List a session's windows, or every session's (-a)", noServer, runListWindows},
+		{"display-message", "[TARGET] [-p] FORMAT", "Expand FORMAT's #{...} variables for a pane; -p prints it, otherwise it shows in the status line of the session's clients", noServer, runDisplayMessage},
 		{"agent", "STATE [NAME] [-- CMD...]", "Report this pane's agent: working, blocked, idle, clear", noServer, reportAgent},
 		{"integration", "status|install|uninstall [AGENT]", "Make claude, codex, omp, opencode and pi report exact state", noServer, func(socket string, args []string) error {
 			// Writes agents' config files and reports from their hooks.

@@ -30,6 +30,8 @@ type session struct {
 	shell         string
 	revision      uint64
 	notice        string // for the first client to attach, e.g. a layout file problem
+	message       string // the latest bmux display-message, for attached clients
+	messageSeq    uint64
 	viewers       int    // attached clients whose terminal has focus
 	edges         uint64 // directional moves that found no neighbor pane
 	edgeDirection string
@@ -481,7 +483,8 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 		return nil, revision
 	}
 	f := &protocol.Frame{Name: s.info.Name, Focused: s.focusedLocked(), Width: s.width, Height: s.height, Generation: protocol.SessionGeneration(s.info.Created),
-		Edge: s.edges, EdgeDirection: s.edgeDirection, Config: configRevision.Load(), Update: updateHint.Load(), Windows: s.windowsLocked()}
+		Edge: s.edges, EdgeDirection: s.edgeDirection, Config: configRevision.Load(), Update: updateHint.Load(), Windows: s.windowsLocked(),
+		Message: s.message, MessageSeq: s.messageSeq}
 	if w := s.activeLocked(); w != nil {
 		f.Zoomed = w.zoomed
 	}
