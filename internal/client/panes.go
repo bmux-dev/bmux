@@ -62,6 +62,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 	u.workspace, u.name = f, f.Name
 	u.activatePane(f.Focused)
 	u.noteEdge(f)
+	u.noteMessage(f)
 	u.noteConfig(f)
 	u.noteFirstAttach()
 	if f.Notice != "" {
@@ -129,6 +130,21 @@ func (u *ui) noteEdge(f *protocol.Frame) {
 	if w, _ := u.screen.Size(); u.sidebarShown(w) {
 		u.focusSidebar()
 	}
+}
+
+// noteMessage shows a bmux display-message in the status line. Like edges,
+// the first frame of an attachment only records the count, so a message
+// sent before this client attached isn't shown.
+func (u *ui) noteMessage(f *protocol.Frame) {
+	if !u.messageKnown {
+		u.messageSeq, u.messageKnown = f.MessageSeq, true
+		return
+	}
+	if f.MessageSeq == u.messageSeq {
+		return
+	}
+	u.messageSeq = f.MessageSeq
+	u.notice(f.Message)
 }
 
 func (u *ui) focusedPlacement() protocol.PaneFrame {
