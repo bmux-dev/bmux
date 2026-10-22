@@ -30,7 +30,7 @@ theme = "dark"
 prefix = "C-a"
 
 [ui]
-accent = "cyan"
+accent = "amber"
 
 [sidebar]
 width = 24
@@ -38,13 +38,15 @@ width = 24
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `theme` | `"dark"` | `"dark"` or `"light"` |
+| `theme` | `"dark"` | Colors for bmux's chrome: status bars, sidebar, window tabs, pickers, dividers and selection. `dark`, `light`, or a Neovim colorscheme: [see the list below](#themes) |
 | `prefix` | `"C-a"` | The command key, written like Helix keys: `C-a` to `C-z`, except `C-h/j/k/l` (navigation) and `C-i`/`C-m` (Tab and Enter). `ctrl-a` also works. Status-line help follows it. |
 | `onboarding` | `true` | Show the welcome screen on the next attach; bmux sets `false` once it has been seen |
-| `ui.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
+| `ui.accent` | `"theme"` | `theme` uses the theme's own accent; `cyan`, `amber`, `green` or `"#RRGGBB"` override it |
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
 | `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
+| `ui.theme-panes` | `true` | Draw panes in a named theme's background and foreground wherever the program sets none, such as a plain shell prompt; `false` keeps your terminal's colors. `dark` and `light` never recolor panes. See [Themes](#themes). |
+| `ui.pane-background` | `"theme"` | `"terminal"` keeps your terminal's own background in panes and blank space, with the theme's text colors, for a terminal background you like better than the theme's. Chrome (bars, sidebar, pickers) keeps the theme's. |
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
@@ -72,6 +74,81 @@ the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
 is invalid, the status line (or `bmux reload`) says which, and that setting
 keeps its default, so a typo never leaves you without keys. Unknown settings
 are reported too.
+
+## Themes
+
+`theme` colors bmux's own chrome with a colorscheme's published palette:
+foreground, background, muted text, status bars, accent, selection, and the
+working, waiting, blocked and idle agent colors.
+
+:::note
+A theme works like a terminal theme: it supplies the default text and background
+colors, and nothing a program chose. With a named theme, panes use its
+foreground and background wherever a program sets none, so a plain shell matches
+the status bars and sidebar. Colors a program sets itself are left alone: Neovim's
+colorscheme, a CLI's own theme, `ls --color`, and ANSI palette colors, which
+still come from your terminal (set it to the same colorscheme for those to
+match).
+
+Programs that ask the terminal for its colors (OSC 10 and 11, which Neovim and
+omp use to pick a dark or light theme) are told the colors panes really show: the
+theme's, or your terminal's own where bmux leaves them alone.
+
+`ui.theme-panes = false` keeps your terminal's colors in panes, and `dark` and
+`light` always do.
+:::
+
+| Scheme | `theme` values |
+| --- | --- |
+| bmux | `dark` (default), `light` |
+| Catppuccin | `catppuccin-mocha`, `catppuccin-macchiato`, `catppuccin-frappe`, `catppuccin-latte` |
+| Tokyo Night | `tokyonight-night`, `tokyonight-storm`, `tokyonight-moon`, `tokyonight-day` |
+| Gruvbox | `gruvbox-dark`, `gruvbox-light` |
+| Nord | `nord` |
+| Rosé Pine | `rose-pine`, `rose-pine-moon`, `rose-pine-dawn` |
+| Kanagawa | `kanagawa-wave`, `kanagawa-dragon`, `kanagawa-lotus` |
+| One Dark | `onedark` |
+| Dracula | `dracula` |
+| Everforest | `everforest-dark`, `everforest-light` |
+| Solarized | `solarized-dark`, `solarized-light` |
+
+A scheme name without a variant picks its default: `catppuccin` is
+`catppuccin-mocha`, `tokyonight` is `tokyonight-night`, `gruvbox` is
+`gruvbox-dark`, `kanagawa` is `kanagawa-wave`, `everforest` is
+`everforest-dark` and `solarized` is `solarized-dark`.
+
+`ui.accent` and `ui.agent-colors` override the theme's colors when set. The
+default accent, `theme`, keeps the theme's own; `cyan`, `amber` and `green`
+pick a fixed shade suited to dark or light themes. An unknown theme name is
+reported in the status line and falls back to `dark`. The `BMUX_THEME`
+environment variable takes the same names.
+
+### Switching themes from a script or Neovim
+
+`bmux theme NAME` saves the theme to `config.toml` and reloads the server, so
+attached clients change at once; the rest of the file is left as it is. Run it
+without a name to print the current theme, or with `--list` to print every
+name. An unknown name is an error and changes nothing. If `BMUX_THEME` is set
+it still overrides the file, and `bmux theme` warns about it.
+
+To follow Neovim's colorscheme, add an autocmd. This runs only inside bmux, and
+Neovim's name for most schemes (`catppuccin-latte`, `tokyonight-storm`,
+`rose-pine-moon`, `kanagawa-dragon`, ...) is already a bmux theme name:
+
+```lua
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function(args)
+    if not vim.env.BMUX_SESSION then return end
+    local name = args.match
+    -- gruvbox has one colorscheme name; its variant is the background.
+    if name == "gruvbox" then name = "gruvbox-" .. vim.o.background end
+    vim.system({ "bmux", "theme", name }) -- needs Neovim 0.10+
+  end,
+})
+```
+
+A colorscheme bmux has no theme for, such as `habamax`, makes `bmux theme`
+fail without changing anything.
 
 ## Hooks
 

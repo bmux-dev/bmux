@@ -80,12 +80,14 @@ func listSetting(key, label, help string, field func(*Config) *[]string) Setting
 // commands and onboarding stay in the config file; see Config.
 var SettingTabs = []SettingTab{
 	{"General", []Setting{
-		enumSetting("theme", "Theme", "Colors for the bars and overlays", []string{"dark", "light"}, false, func(c *Config) *string { return &c.Theme }),
 		textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
 		boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
 	}},
 	{"Appearance", []Setting{
-		enumSetting("ui.accent", "Accent color", "Enter cycles; e types a #RRGGBB color", []string{"cyan", "amber", "green"}, true, func(c *Config) *string { return &c.UI.Accent }),
+		enumSetting("theme", "Theme", "Colors for the bars and overlays; Enter cycles", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
+		boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
+		enumSetting("ui.pane-background", "Pane background", "theme: the theme's background fills panes; terminal: keep your terminal's own", []string{"theme", "terminal"}, false, func(c *Config) *string { return &c.UI.PaneBackground }),
+		enumSetting("ui.accent", "Accent color", "Enter cycles; e types a #RRGGBB color", []string{"theme", "cyan", "amber", "green"}, true, func(c *Config) *string { return &c.UI.Accent }),
 		boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
 		boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
 		boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),

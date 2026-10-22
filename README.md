@@ -34,7 +34,7 @@ works out of the box, with no plugin manager.
 | (no tmux equivalent) | Images programs draw in a pane (an agent sharing a screenshot) with the Kitty graphics protocol, kept per pane so they survive scrolling, splits, windows and detaching; see [images](https://bmux-dev.github.io/bmux/reference/troubleshooting/#images-in-panes) |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
-| tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
+| tmux-powerline, tmux themes | Powerline status bars, accent colors, a light theme and presets for [Neovim colorschemes](#configuration) (Catppuccin, Tokyo Night, Gruvbox, Nord, ...) |
 | herdr (separate app) | [Agent sidebar](#agents): every coding agent across sessions with working, waiting and blocked state |
 
 The picker starts as a list: browse first, press **/** to search. See what's
@@ -245,7 +245,7 @@ prefix at the top, one table per area, kebab-case keys, and only the lines you
 change. `bmux default-config` prints every setting with its default.
 
 ```toml
-theme = "light"
+theme = "catppuccin-mocha"  # or tokyonight, gruvbox-light, nord, dracula, ...
 prefix = "C-b"            # tmux's prefix instead of Ctrl-a
 
 [ui]
@@ -278,6 +278,29 @@ turning agent detection or restore off, whether to show images (`ui.graphics`), 
 
 The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
 and `BMUX_SOUND` environment variables still work and override the file.
+
+`theme` colors bmux's own chrome (status bars, sidebar, tabs, pickers, dividers,
+selection) with a scheme's published palette. Like a terminal theme it only sets
+defaults: panes use the theme's background and foreground wherever a program sets
+none (a plain shell), and colors a program sets itself, such as Neovim's or
+another CLI's own theme, and the ANSI palette, are left alone, so set the
+terminal to the same scheme for those. Programs that ask for the terminal's colors
+are told what panes show. `ui.pane-background = "terminal"` keeps your terminal's
+background in panes, `ui.theme-panes = false` keeps its colors there entirely,
+and `dark` and `light` always do.
+The names are `dark` (the default), `light`,
+`catppuccin-{mocha,macchiato,frappe,latte}`, `tokyonight-{night,storm,moon,day}`,
+`gruvbox-{dark,light}`, `nord`, `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`,
+`kanagawa-{wave,dragon,lotus}`, `onedark`, `dracula`,
+`everforest-{dark,light}` and `solarized-{dark,light}`. A scheme name without a
+variant picks its default: `catppuccin` is mocha, `tokyonight` night, `gruvbox`
+dark, `kanagawa` wave, `everforest` dark and `solarized` dark. `ui.accent` and
+`ui.agent-colors` still override the theme's colors.
+
+`bmux theme NAME` switches theme from a script: it saves the name to the config
+file and reloads, so attached clients change at once. In Neovim, a `ColorScheme`
+autocmd can call it; see [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/#switching-themes-from-a-script-or-neovim)
+for an example.
 
 ## Status
 

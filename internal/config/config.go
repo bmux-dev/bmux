@@ -45,6 +45,12 @@ type UI struct {
 	PowerlineASCII  bool   `toml:"powerline-ascii"`
 	TerminalPadding bool   `toml:"terminal-padding"`
 	SetTitle        bool   `toml:"set-title"`
+	// ThemePanes draws cells that use the terminal's default colors in a named
+	// theme's foreground and background. dark and light never do.
+	ThemePanes bool `toml:"theme-panes"`
+	// PaneBackground is "theme" (a named theme's background fills panes
+	// and blank space) or "terminal" (the terminal's own background does).
+	PaneBackground string `toml:"pane-background"`
 	// Graphics is "auto" (show images in terminals that support the Kitty
 	// graphics protocol), "on" (assume the terminal does) or "off".
 	Graphics    string      `toml:"graphics"`
@@ -134,7 +140,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "cyan", SetTitle: true, Graphics: "auto"},
+		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -193,10 +199,7 @@ func applyEnv(cfg *Config, env func(string) string) {
 		return
 	}
 	if v := env("BMUX_THEME"); v != "" {
-		cfg.Theme = strings.ToLower(v)
-		if cfg.Theme != "light" {
-			cfg.Theme = "dark"
-		}
+		cfg.Theme = v
 	}
 	if v := env("BMUX_ACCENT"); v != "" {
 		cfg.UI.Accent = v
@@ -260,10 +263,16 @@ func (c *Config) repair() []string {
 		bad("%v", err)
 		c.Prefix = d.Prefix
 	}
-	c.Theme = strings.ToLower(c.Theme)
-	if c.Theme != "dark" && c.Theme != "light" {
-		bad("theme %q must be \"dark\" or \"light\"", c.Theme)
+	if theme, ok := ResolveTheme(c.Theme); ok {
+		c.Theme = theme
+	} else {
+		bad("theme %q must be %s", c.Theme, themeChoices)
 		c.Theme = d.Theme
+	}
+	c.UI.PaneBackground = strings.ToLower(c.UI.PaneBackground)
+	if c.UI.PaneBackground != "theme" && c.UI.PaneBackground != "terminal" {
+		bad("ui.pane-background %q must be \"theme\" or \"terminal\"", c.UI.PaneBackground)
+		c.UI.PaneBackground = d.UI.PaneBackground
 	}
 	c.UI.Graphics = strings.ToLower(c.UI.Graphics)
 	if c.UI.Graphics != "auto" && c.UI.Graphics != "on" && c.UI.Graphics != "off" {
@@ -271,10 +280,10 @@ func (c *Config) repair() []string {
 		c.UI.Graphics = d.UI.Graphics
 	}
 	switch accent := strings.ToLower(c.UI.Accent); {
-	case accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
+	case accent == "theme", accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
 		c.UI.Accent = accent
 	default:
-		bad("ui.accent %q must be cyan, amber, green or #RRGGBB", c.UI.Accent)
+		bad("ui.accent %q must be theme, cyan, amber, green or #RRGGBB", c.UI.Accent)
 		c.UI.Accent = d.UI.Accent
 	}
 	for _, color := range []*string{&c.UI.AgentColors.Working, &c.UI.AgentColors.Waiting, &c.UI.AgentColors.Blocked, &c.UI.AgentColors.Idle} {
@@ -382,15 +391,24 @@ func expandHome(path string) (string, error) {
 const DefaultFile = `# ~/.config/bmux/config.toml
 # Uncomment only what you change. Reload with Ctrl-a r or bmux reload.
 
-# theme = "dark"            # "dark" or "light"
+# theme = "dark"            # dark, light, catppuccin-{mocha,macchiato,frappe,latte},
+                            # tokyonight-{night,storm,moon,day}, gruvbox-{dark,light}, nord,
+                            # rose-pine[-moon|-dawn], kanagawa-{wave,dragon,lotus}, onedark,
+                            # dracula, everforest-{dark,light}, solarized-{dark,light};
+                            # a family name alone (catppuccin, tokyonight, gruvbox, kanagawa,
+                            # everforest, solarized) picks its default variant
 # prefix = "C-a"            # any C-letter except C-h/j/k/l, C-i, C-m
 # onboarding = true         # welcome screen on the next attach; bmux sets false
 
 [ui]
-# accent = "cyan"           # cyan, amber, green or "#RRGGBB"
+# accent = "theme"          # theme (the theme's own), cyan, amber, green or "#RRGGBB"
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
 # set-title = true          # name the terminal window after the session and pane
+# theme-panes = true        # panes use a named theme's background and foreground
+                            # where programs set none; false keeps the terminal's
+# pane-background = "theme"  # "terminal" keeps your terminal's own background in panes
+                            # and blank space, with the theme's text colors
 # graphics = "auto"         # show images programs draw: "auto" detects Kitty
                             # graphics support, "on" assumes it, "off" never
 

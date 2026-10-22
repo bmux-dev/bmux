@@ -19,13 +19,13 @@ type connection struct {
 	dec *json.Decoder
 }
 
-func attach(socket, name string, w, h int, graphics *protocol.Graphics) (*connection, error) {
+func attach(socket, name string, w, h int, graphics *protocol.Graphics, colors *protocol.TerminalColors) (*connection, error) {
 	c, err := net.DialTimeout("unix", socket, time.Second)
 	if err != nil {
 		return nil, err
 	}
 	conn := &connection{Conn: c, enc: json.NewEncoder(c), dec: json.NewDecoder(c)}
-	if err := conn.send(protocol.Request{Version: protocol.Version, Op: "attach", Name: name, Width: w, Height: h, Graphics: graphics}); err != nil {
+	if err := conn.send(protocol.Request{Version: protocol.Version, Op: "attach", Name: name, Width: w, Height: h, Graphics: graphics, Colors: colors}); err != nil {
 		c.Close()
 		return nil, err
 	}

@@ -81,6 +81,9 @@ type Request struct {
 	// and again with every resize. nil means no images and an unknown cell
 	// size.
 	Graphics *Graphics `json:"graphics,omitempty"`
+	// Colors are the attaching terminal's default colors, when it answered
+	// the query.
+	Colors *TerminalColors `json:"colors,omitempty"`
 	// ImageID and Offset select the bytes image-data returns: up to Size of
 	// them (MaxImageChunk when 0) from Offset into the image.
 	ImageID uint32 `json:"image_id,omitempty"`
@@ -90,6 +93,13 @@ type Request struct {
 // MaxImageChunk bounds one image-data reply, so a large image never holds up
 // the connection for long.
 const MaxImageChunk = 192 << 10
+
+// TerminalColors are a terminal's default foreground and background as
+// "#rrggbb", "" where unknown.
+type TerminalColors struct {
+	Foreground string `json:"foreground,omitempty"`
+	Background string `json:"background,omitempty"`
+}
 
 // Graphics is a terminal's image support.
 type Graphics struct {

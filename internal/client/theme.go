@@ -1,34 +1,48 @@
 package client
 
 import (
-	"image/color"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
 )
 
 // Chrome has its own palette; application cells keep their supplied colors.
-// Agent state colors follow herdr's Catppuccin defaults (Mocha, or Latte for
-// the light theme): working yellow, blocked red, done teal, idle green.
+// Agent state colors follow herdr's Catppuccin defaults: working yellow,
+// blocked red, done teal, idle green. Named themes use their scheme's own
+// equivalents; see palettes.
 type chromeTheme struct {
 	foreground, background, muted, bar, accent, selection, selectionText tcell.Color
 	working, blocked, done, idle, unknown                                tcell.Color
+	light                                                                bool
+	// paneForeground and paneBackground replace the terminal's default colors
+	// in panes, dividers and blank space; ColorDefault leaves them alone.
+	paneForeground, paneBackground tcell.Color
 }
 
+// themeFor builds the chrome palette for a theme name, then applies the ui
+// accent and agent color overrides. An unrecognised name gets the default.
 func themeFor(name string, settings config.UI) chromeTheme {
-	light := name == "light"
-	t := chromeTheme{tcell.NewHexColor(0xe7e7e7), tcell.NewHexColor(0x0b0b0b), tcell.NewHexColor(0x929292), tcell.NewHexColor(0x202020), tcell.NewHexColor(0x83c8dc), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xeeeeee),
-		tcell.NewHexColor(0xf9e2af), tcell.NewHexColor(0xf38ba8), tcell.NewHexColor(0x94e2d5), tcell.NewHexColor(0xa6e3a1), tcell.NewHexColor(0x6c7086)}
-	if light {
-		t = chromeTheme{tcell.NewHexColor(0x202020), tcell.NewHexColor(0xf5f5f5), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xe4e4e4), tcell.NewHexColor(0x00657c), tcell.NewHexColor(0xc7c7c7), tcell.NewHexColor(0x202020),
-			tcell.NewHexColor(0xdf8e1d), tcell.NewHexColor(0xd20f39), tcell.NewHexColor(0x179299), tcell.NewHexColor(0x40a02b), tcell.NewHexColor(0x9ca0b0)}
+	name, _ = config.ResolveTheme(name)
+	t, ok := palettes[name]
+	if !ok {
+		name = config.Default().Theme
+		t = palettes[name]
 	}
+	t.paneForeground, t.paneBackground = tcell.ColorDefault, tcell.ColorDefault
+	if p, foreground, background := (config.Config{Theme: name, UI: settings}).PaneColors(); foreground {
+		t.paneForeground = tcell.NewHexColor(p.Foreground)
+		if background {
+			t.paneBackground = tcell.NewHexColor(p.Background)
+		}
+	}
+	light := t.light
 	switch settings.Accent {
+	case "cyan":
+		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0x83c8dc), true: tcell.NewHexColor(0x00657c)}[light]
 	case "amber":
 		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0xd4b483), true: tcell.NewHexColor(0x855500)}[light]
 	case "green":
 		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0xa4c987), true: tcell.NewHexColor(0x326320)}[light]
-	case "", "cyan":
+	case "", "theme":
 	default:
 		if c := tcell.GetColor(settings.Accent); c.Valid() {
 			t.accent = c
@@ -50,6 +64,7 @@ func themeFor(name string, settings config.UI) chromeTheme {
 var (
 	chrome                                   chromeTheme
 	accentColor                              tcell.Color
+	paneStyle                                tcell.Style
 	barStyle, uiBaseStyle, uiMutedStyle      tcell.Style
 	uiAccentStyle, dividerStyle              tcell.Style
 	selectionBackground, selectionForeground tcell.Color
@@ -68,7 +83,10 @@ func applyTheme(t chromeTheme) {
 	uiBaseStyle = tcell.StyleDefault.Foreground(t.foreground).Background(t.background)
 	uiMutedStyle = uiBaseStyle.Foreground(t.muted)
 	uiAccentStyle = uiBaseStyle.Foreground(t.accent).Bold(true)
-	dividerStyle = tcell.StyleDefault.Foreground(t.muted)
+	// Pane cells without a color of their own start from paneStyle: the
+	// terminal's defaults, or the theme's when it paints the panes.
+	paneStyle = tcell.StyleDefault.Foreground(t.paneForeground).Background(t.paneBackground)
+	dividerStyle = paneStyle.Foreground(t.muted)
 	selectionBackground, selectionForeground = t.selection, t.selectionText
 	// The sidebar uses the bar background so it reads as chrome, apart from panes.
 	sidebarBaseStyle = barStyle
@@ -85,13 +103,3 @@ func applyTheme(t chromeTheme) {
 const paneOriginY = 1
 
 func paneViewportHeight(height int) int { return max(1, height-2) }
-
-func previewDefaultColors() (color.RGBA, color.RGBA) {
-	r, g, b := chrome.foreground.RGB()
-	fg := color.RGBA{uint8(r), uint8(g), uint8(b), 255}
-	background := color.RGBA{8, 8, 8, 255}
-	if chrome.background == tcell.NewHexColor(0xf5f5f5) {
-		background = color.RGBA{245, 245, 245, 255}
-	}
-	return background, fg
-}
