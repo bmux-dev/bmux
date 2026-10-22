@@ -53,8 +53,10 @@ type UI struct {
 	PaneBackground string `toml:"pane-background"`
 	// Graphics is "auto" (show images in terminals that support the Kitty
 	// graphics protocol), "on" (assume the terminal does) or "off".
-	Graphics    string      `toml:"graphics"`
-	AgentColors AgentColors `toml:"agent-colors"`
+	Graphics string `toml:"graphics"`
+	// NoticePosition is where the box for notices sits; see NoticePositions.
+	NoticePosition string      `toml:"notice-position"`
+	AgentColors    AgentColors `toml:"agent-colors"`
 }
 
 // AgentColors override the sidebar's state colors; "" keeps herdr's palette.
@@ -118,6 +120,9 @@ var HookEvents = []string{
 	"client-attached", "client-detached", "agent-blocked", "agent-idle",
 }
 
+// NoticePositions are the values ui.notice-position accepts.
+var NoticePositions = []string{"top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"}
+
 // Bounds for scrollback.lines; each line holds a row of cells.
 const (
 	MinScrollbackLines = 100
@@ -140,7 +145,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto"},
+		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto", NoticePosition: "top-right"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -279,6 +284,11 @@ func (c *Config) repair() []string {
 		bad("ui.graphics %q must be \"auto\", \"on\" or \"off\"", c.UI.Graphics)
 		c.UI.Graphics = d.UI.Graphics
 	}
+	c.UI.NoticePosition = strings.ToLower(c.UI.NoticePosition)
+	if !slices.Contains(NoticePositions, c.UI.NoticePosition) {
+		bad("ui.notice-position %q must be %s", c.UI.NoticePosition, strings.Join(NoticePositions, ", "))
+		c.UI.NoticePosition = d.UI.NoticePosition
+	}
 	switch accent := strings.ToLower(c.UI.Accent); {
 	case accent == "theme", accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
 		c.UI.Accent = accent
@@ -411,6 +421,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
                             # and blank space, with the theme's text colors
 # graphics = "auto"         # show images programs draw: "auto" detects Kitty
                             # graphics support, "on" assumes it, "off" never
+# notice-position = "top-right"  # where notices appear: top-left, top-center, top-right,
+                            # bottom-left, bottom-center or bottom-right
 
 [ui.agent-colors]           # "#RRGGBB"; empty keeps herdr's palette
 # working = ""
