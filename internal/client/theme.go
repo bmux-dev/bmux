@@ -13,9 +13,9 @@ type chromeTheme struct {
 	foreground, background, muted, bar, accent, selection, selectionText tcell.Color
 	working, blocked, done, idle, unknown                                tcell.Color
 	light                                                                bool
-	// themePanes draws cells and dividers that use the terminal's default
-	// colors in foreground and background. Only named themes ask for it.
-	themePanes bool
+	// paneForeground and paneBackground replace the terminal's default colors
+	// in panes, dividers and blank space; ColorDefault leaves them alone.
+	paneForeground, paneBackground tcell.Color
 }
 
 // themeFor builds the chrome palette for a theme name, then applies the ui
@@ -27,7 +27,13 @@ func themeFor(name string, settings config.UI) chromeTheme {
 		name = config.Default().Theme
 		t = palettes[name]
 	}
-	t.themePanes = settings.ThemePanes && name != "dark" && name != "light"
+	t.paneForeground, t.paneBackground = tcell.ColorDefault, tcell.ColorDefault
+	if p, foreground, background := (config.Config{Theme: name, UI: settings}).PaneColors(); foreground {
+		t.paneForeground = tcell.NewHexColor(p.Foreground)
+		if background {
+			t.paneBackground = tcell.NewHexColor(p.Background)
+		}
+	}
 	light := t.light
 	switch settings.Accent {
 	case "cyan":
@@ -79,10 +85,7 @@ func applyTheme(t chromeTheme) {
 	uiAccentStyle = uiBaseStyle.Foreground(t.accent).Bold(true)
 	// Pane cells without a color of their own start from paneStyle: the
 	// terminal's defaults, or the theme's when it paints the panes.
-	paneStyle = tcell.StyleDefault
-	if t.themePanes {
-		paneStyle = paneStyle.Foreground(t.foreground).Background(t.background)
-	}
+	paneStyle = tcell.StyleDefault.Foreground(t.paneForeground).Background(t.paneBackground)
 	dividerStyle = paneStyle.Foreground(t.muted)
 	selectionBackground, selectionForeground = t.selection, t.selectionText
 	// The sidebar uses the bar background so it reads as chrome, apart from panes.

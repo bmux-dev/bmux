@@ -86,6 +86,7 @@ var SettingTabs = []SettingTab{
 	{"Appearance", []Setting{
 		enumSetting("theme", "Theme", "Colors for the bars and overlays; Enter cycles", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
 		boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
+		enumSetting("ui.pane-background", "Pane background", "theme: the theme's background fills panes; terminal: keep your terminal's own", []string{"theme", "terminal"}, false, func(c *Config) *string { return &c.UI.PaneBackground }),
 		enumSetting("ui.accent", "Accent color", "Enter cycles; e types a #RRGGBB color", []string{"theme", "cyan", "amber", "green"}, true, func(c *Config) *string { return &c.UI.Accent }),
 		boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
 		boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),

@@ -48,6 +48,9 @@ type UI struct {
 	// ThemePanes draws cells that use the terminal's default colors in a named
 	// theme's foreground and background. dark and light never do.
 	ThemePanes bool `toml:"theme-panes"`
+	// PaneBackground is "theme" (a named theme's background fills panes
+	// and blank space) or "terminal" (the terminal's own background does).
+	PaneBackground string `toml:"pane-background"`
 	// Graphics is "auto" (show images in terminals that support the Kitty
 	// graphics protocol), "on" (assume the terminal does) or "off".
 	Graphics    string      `toml:"graphics"`
@@ -137,7 +140,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, Graphics: "auto"},
+		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -265,6 +268,11 @@ func (c *Config) repair() []string {
 	} else {
 		bad("theme %q must be %s", c.Theme, themeChoices)
 		c.Theme = d.Theme
+	}
+	c.UI.PaneBackground = strings.ToLower(c.UI.PaneBackground)
+	if c.UI.PaneBackground != "theme" && c.UI.PaneBackground != "terminal" {
+		bad("ui.pane-background %q must be \"theme\" or \"terminal\"", c.UI.PaneBackground)
+		c.UI.PaneBackground = d.UI.PaneBackground
 	}
 	c.UI.Graphics = strings.ToLower(c.UI.Graphics)
 	if c.UI.Graphics != "auto" && c.UI.Graphics != "on" && c.UI.Graphics != "off" {
@@ -399,6 +407,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # set-title = true          # name the terminal window after the session and pane
 # theme-panes = true        # panes use a named theme's background and foreground
                             # where programs set none; false keeps the terminal's
+# pane-background = "theme"  # "terminal" keeps your terminal's own background in panes
+                            # and blank space, with the theme's text colors
 # graphics = "auto"         # show images programs draw: "auto" detects Kitty
                             # graphics support, "on" assumes it, "off" never
 

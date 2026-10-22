@@ -76,6 +76,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		modes: make(map[int]bool), done: make(chan struct{}), stopDone: make(chan struct{}), revision: 1, epoch: 1,
 	}
 	s.term.SetScrollbackSize(currentSettings().scrollback)
+	s.applyDefaultColors()
 	// Make DECRQM report synchronized updates as supported (reset), not unknown.
 	_, _ = s.term.WriteString(syncEnd)
 	s.term.SetCallbacks(vt.Callbacks{

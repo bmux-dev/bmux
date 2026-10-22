@@ -259,3 +259,51 @@ func TestAccentDefaultsToTheThemeAndCyanIsItsOwnChoice(t *testing.T) {
 		t.Fatalf("bad accent: %q %v", cfg.UI.Accent, err)
 	}
 }
+
+func TestPaneColorsFollowThemeAndOptions(t *testing.T) {
+	cfg := Default()
+	if _, fg, bg := cfg.PaneColors(); fg || bg {
+		t.Fatalf("dark themes panes: fg %v bg %v", fg, bg)
+	}
+	cfg.Theme = "catppuccin-mocha"
+	if p, fg, bg := cfg.PaneColors(); !fg || !bg || p.Foreground != 0xcdd6f4 || p.Background != 0x1e1e2e {
+		t.Fatalf("named theme: %+v fg %v bg %v", p, fg, bg)
+	}
+	cfg.UI.PaneBackground = "terminal"
+	if p, fg, bg := cfg.PaneColors(); !fg || bg || p.Foreground != 0xcdd6f4 {
+		t.Fatalf("terminal background: %+v fg %v bg %v", p, fg, bg)
+	}
+	cfg.UI.ThemePanes = false
+	if _, fg, bg := cfg.PaneColors(); fg || bg {
+		t.Fatalf("theme-panes off: fg %v bg %v", fg, bg)
+	}
+	for _, name := range []string{"light"} {
+		cfg = Default()
+		cfg.Theme = name
+		if _, fg, bg := cfg.PaneColors(); fg || bg {
+			t.Fatalf("%s themes panes", name)
+		}
+	}
+}
+
+func TestEveryThemeNameHasAPalette(t *testing.T) {
+	for _, name := range ThemeNames {
+		if _, ok := Palettes[name]; !ok {
+			t.Errorf("%s has no palette", name)
+		}
+	}
+	if len(Palettes) != len(ThemeNames) {
+		t.Errorf("%d palettes for %d names", len(Palettes), len(ThemeNames))
+	}
+}
+
+func TestPaneBackgroundIsValidated(t *testing.T) {
+	cfg, err := Load(write(t, "[ui]\npane-background = \"Terminal\"\n"), noEnv)
+	if err != nil || cfg.UI.PaneBackground != "terminal" {
+		t.Fatalf("%q %v", cfg.UI.PaneBackground, err)
+	}
+	cfg, err = Load(write(t, "[ui]\npane-background = \"clear\"\n"), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "ui.pane-background") || cfg.UI.PaneBackground != "theme" {
+		t.Fatalf("%q %v", cfg.UI.PaneBackground, err)
+	}
+}
