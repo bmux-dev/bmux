@@ -190,7 +190,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | `.tmux.conf`, `source-file` | `~/.config/bmux/config.toml` (Helix layout), reload with Ctrl-a r, `bmux reload` or SIGUSR1; `bmux default-config` |
 | `bind-key`, `unbind-key`, `list-keys` (`C-b ?`) | `[keys.root]` and `[keys.prefix]` in the config file; Ctrl-a ? lists the bindings in effect |
 | `send-keys`, `capture-pane`, `split-window`, `new-window`, `list-panes`, `display-message -p`, formats, `set-hook`, `run-shell`, `if-shell`, `pipe-pane` | `bmux send`, `capture`, `split`, `new-window`, `list-panes`, `display-message`, `#{...}` variables, `[hooks]`, `run-shell`, `if-shell`, `pipe-pane`, with `session:window.pane` targets |
-| Status themes | Powerline status bars, accent colors, light theme, and presets for common Neovim colorschemes: Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Kanagawa, One Dark, Dracula, Everforest, Solarized ([#45](https://github.com/bmux-dev/bmux/issues/45)) |
+| Status themes | Powerline status bars, accent colors, light theme, and presets for common Neovim colorschemes: Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Kanagawa, One Dark, Dracula, Everforest, Solarized, and `bmux theme NAME` to switch from a Neovim autocmd ([#45](https://github.com/bmux-dev/bmux/issues/45)) |
 | (no tmux equivalent) | Images programs draw in panes (Kitty graphics), kept per pane through scrolling, splits and detaching |
 
 v0.1.1 fixed palette colors ignoring the terminal theme, `bmux focus` after a

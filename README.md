@@ -290,6 +290,11 @@ variant picks its default: `catppuccin` is mocha, `tokyonight` night, `gruvbox`
 dark, `kanagawa` wave, `everforest` dark and `solarized` dark. `ui.accent` and
 `ui.agent-colors` still override the theme's colors.
 
+`bmux theme NAME` switches theme from a script: it saves the name to the config
+file and reloads, so attached clients change at once. In Neovim, a `ColorScheme`
+autocmd can call it; see [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/#switching-themes-from-a-script-or-neovim)
+for an example.
+
 ## Status
 
 This is an early prototype. CI runs on macOS and Ubuntu; it's used day to day
