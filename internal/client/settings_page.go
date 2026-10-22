@@ -26,6 +26,9 @@ type settingsPage struct {
 	choosing     bool // the list of choices for the selected setting is open
 	choice       int  // highlighted choice; len(Options) is the Custom row
 	choiceOffset int  // first choice shown
+	// previewIcons is the ui.icons choice being scrolled over, shown on the
+	// tabs until Enter saves it or Esc drops it.
+	previewIcons string
 }
 
 // customChoice is the last row of a choice list that also takes a typed value.
@@ -173,17 +176,31 @@ func (u *ui) choiceKey(e *tcell.EventKey) {
 	}
 }
 
+// previews says whether the look of a setting's choices can be shown before
+// one is saved: the colors and the icons. Anything else waits for Enter.
+func previews(key string) bool {
+	switch key {
+	case "theme", "ui.accent", "ui.pane-background", "ui.icons":
+		return true
+	}
+	return false
+}
+
 // previewChoice shows the highlighted choice without saving it, for the
-// settings that change colors. Anything else waits for Enter.
+// settings that previews lists.
 func (u *ui) previewChoice() {
 	p := &u.settingsPage
 	s := u.pageSetting()
+	p.previewIcons = ""
 	if p.choice >= len(s.Options) {
 		u.applySaved() // Custom: nothing to show until a value is typed
 		return
 	}
 	c := u.settings
 	switch s.Key {
+	case "ui.icons":
+		p.previewIcons = s.Options[p.choice]
+		return
 	case "theme":
 		c.Theme = s.Options[p.choice]
 	case "ui.accent":
@@ -202,7 +219,7 @@ func (u *ui) applySaved() { applyTheme(themeFor(u.settings.Theme, u.settings.UI)
 // revertPreview leaves the list of choices and puts back the applied theme.
 func (u *ui) revertPreview() {
 	if u.settingsPage.choosing {
-		u.settingsPage.choosing = false
+		u.settingsPage.choosing, u.settingsPage.previewIcons = false, ""
 		u.applySaved()
 	}
 }
@@ -217,7 +234,7 @@ func (u *ui) saveSetting(input string) {
 		p.message, p.failed = err.Error(), true
 		return
 	}
-	p.editing, p.choosing, p.failed = false, false, false
+	p.editing, p.choosing, p.previewIcons, p.failed = false, false, "", false
 	p.message = "Saved " + s.Key
 	u.requestReload()
 	u.loadSettingsPage()
@@ -269,8 +286,8 @@ func (u *ui) drawSettingsFooter(x, y, inner, rows int, hint string) {
 
 // drawSettings draws the page. A list of choices takes the place of the
 // tab's options inside the same box, title and footer rows, with the tabs
-// shown but not selectable. It leaves the screen behind undimmed, so a theme
-// shows its true colors while you scroll.
+// shown but not selectable. A list that previews its choices leaves the
+// screen behind undimmed, so a theme shows its true colors while you scroll.
 func (u *ui) drawSettings(w, h int) {
 	p := &u.settingsPage
 	tabs := config.SettingTabs
@@ -282,7 +299,7 @@ func (u *ui) drawSettings(w, h int) {
 		}
 	}
 	// Tab bar, rule, lines, blank, help, message, rule, keys.
-	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", max(70, u.tabsWidth()), tallest+7, !p.choosing)
+	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", max(70, u.tabsWidth()), tallest+7, !(p.choosing && previews(u.pageSetting().Key)))
 	if !ok {
 		return
 	}
@@ -401,7 +418,11 @@ const tabGap = 1
 // nerdIcons says whether to draw Nerd Font icons. A terminal can't report its
 // font, so auto trusts the same assumption as the powerline separators.
 func (u *ui) nerdIcons() bool {
-	switch u.settings.UI.Icons {
+	icons := u.settings.UI.Icons
+	if u.settingsPage.choosing && u.settingsPage.previewIcons != "" {
+		icons = u.settingsPage.previewIcons
+	}
+	switch icons {
 	case "nerd":
 		return true
 	case "plain":
