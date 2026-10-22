@@ -23,6 +23,13 @@ sidebar:
 | `bmux capture [--json] TARGET` | Print a pane's visible text; `TARGET` is `SESSION`, `SESSION:PANE`, `SESSION:WINDOW.` or `SESSION:WINDOW.N` (see [targets](/bmux/agents/scripting/)) |
 | `bmux send TARGET [--if-seq N] (--key KEY \| --text TEXT)...` | Type keys and text into one pane, in order; with `--if-seq`, only if its agent hasn't changed state |
 | `bmux wait-agent [--state S,...] [--since SEQ] [--timeout D \| --notify SESSION:PANE] [TARGET...]` | Wait until another agent pane is `blocked` or `idle` and print it as JSON; with `--notify`, keep running and type each change into a supervising agent's pane while it's idle |
+| `bmux split [TARGET] [-h \| -v] [-c DIR] [-d] [-- COMMAND...]` | Split a pane side by side (`-h`) or stacked (`-v`, the default), in its directory or `DIR`, type `COMMAND` into the new shell and print the new pane's target; `-d` keeps focus where it was. Without `TARGET`, the calling pane |
+| `bmux new-window [TARGET] [-n NAME] [-c DIR] [-d] [-- COMMAND...]` | Open a window in the target's session, with the same options as `split`; prints the new pane |
+| `bmux select TARGET` | Focus a pane, bringing its window forward, or select a window (`SESSION:WINDOW.`) |
+| `bmux kill-pane TARGET`, `bmux kill-window TARGET` | Close a pane, or the target's window, and their programs without asking |
+| `bmux resize [TARGET] left\|right\|up\|down [CELLS]` | Move a pane's divider, 5 cells unless `CELLS` says |
+| `bmux zoom [TARGET]` | Zoom or unzoom a pane |
+| `bmux rename-window [TARGET] NAME` | Rename the target's window; an empty name shows its focused pane's title |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
 | `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |

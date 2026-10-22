@@ -38,7 +38,10 @@ type Request struct {
 	NewName    string `json:"new_name,omitempty"`
 	Dir        string `json:"dir,omitempty"`
 	// MakeDir makes create build Dir, parents included, when it is missing.
-	MakeDir bool   `json:"make_dir,omitempty"`
+	MakeDir bool `json:"make_dir,omitempty"`
+	// Detach keeps focus and the active window where they were after a
+	// layout-command split or new-window (bmux split -d), like tmux's -d.
+	Detach  bool   `json:"detach,omitempty"`
 	Width   int    `json:"width,omitempty"`
 	Height  int    `json:"height,omitempty"`
 	Text    string `json:"text,omitempty"`

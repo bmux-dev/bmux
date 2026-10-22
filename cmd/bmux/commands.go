@@ -49,9 +49,17 @@ func init() {
 		{"focus", "left|right|up|down", "Move pane focus (for editors at an edge)", startServer, runFocus},
 		{"zoomed", "", "Print true if the calling pane's window is zoomed, else false (for editors)", startServer, runZoomed},
 		{"agents", "[--json]", "List agent panes as SESSION:PANE targets, with state and seq", startServer, runAgents},
-		{"capture", "[--json] TARGET", "Print a pane's visible text; TARGET is SESSION or SESSION:PANE", startServer, runCapture},
+		{"capture", "[--json] TARGET", "Print a pane's visible text; TARGET is SESSION, SESSION:PANE, SESSION:WINDOW. or SESSION:WINDOW.N", startServer, runCapture},
 		{"send", "TARGET [--if-seq N] (--key KEY | --text TEXT)...", "Type into a pane: keys like enter, down or C-c, and text", startServer, runSend},
 		{"wait-agent", "[--state S,...] [--since SEQ] [--timeout D | --notify SESSION:PANE] [TARGET...]", "Wait until an agent pane is blocked or idle; print it, or with --notify type it into a supervising agent", startServer, runWaitAgent},
+		{"split", "[TARGET] [-h | -v] [-c DIR] [-d] [-- COMMAND...]", "Split a pane (-h side by side, -v stacked) in its directory or DIR, type COMMAND into the new shell, print the new pane", noServer, runLayoutCommand(splitRequest, true)},
+		{"new-window", "[TARGET] [-n NAME] [-c DIR] [-d] [-- COMMAND...]", "Open a window in the target's session; prints the new pane", noServer, runLayoutCommand(newWindowRequest, true)},
+		{"select", "TARGET", "Focus a pane, bringing its window forward, or a window (SESSION:WINDOW.)", noServer, runLayoutCommand(targetOnly("select", true), false)},
+		{"kill-pane", "TARGET", "Close a pane and its programs without asking", noServer, runLayoutCommand(targetOnly("kill-pane", true), false)},
+		{"kill-window", "TARGET", "Close the target's window and its programs without asking", noServer, runLayoutCommand(targetOnly("kill-window", true), false)},
+		{"resize", "[TARGET] left|right|up|down [CELLS]", "Move a pane's divider, 5 cells unless CELLS says", noServer, runLayoutCommand(resizeRequest, false)},
+		{"zoom", "[TARGET]", "Zoom or unzoom a pane", noServer, runLayoutCommand(targetOnly("zoom", false), false)},
+		{"rename-window", "[TARGET] NAME", "Rename the target's window; an empty NAME shows its pane's title", noServer, runLayoutCommand(renameWindowRequest, false)},
 		{"agent", "STATE [NAME] [-- CMD...]", "Report this pane's agent: working, blocked, idle, clear", noServer, reportAgent},
 		{"integration", "status|install|uninstall [AGENT]", "Make claude, codex, omp, opencode and pi report exact state", noServer, func(socket string, args []string) error {
 			// Writes agents' config files and reports from their hooks.
