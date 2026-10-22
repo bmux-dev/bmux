@@ -8,7 +8,7 @@ bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, watch your coding agents from a sidebar, copy text with the
 mouse, and keep your layout across restarts, without a plugin manager.
 
-**v0.5.1 pre-release for macOS and Linux.**
+**v0.5.2 pre-release for macOS and Linux.**
 
 **[Documentation](https://bmux-dev.github.io/bmux/)**
 
@@ -303,11 +303,10 @@ go vet ./...
 Read [AGENTS.md](AGENTS.md) and the [architecture guide](https://bmux-dev.github.io/bmux/project/architecture/)
 before changing terminal or session behavior.
 
-Releases are built by [GoReleaser](.goreleaser.yaml). Pushing a `vX.Y.Z` tag
-runs CI, then uploads the archives and `checksums.txt` to a draft release;
-write the notes and publish it. The version comes from the tag, so a release
-commit only updates the README and ROADMAP. `goreleaser release --snapshot
---clean` builds the same archives locally into `dist/`.
+Releases are built by [GoReleaser](.goreleaser.yaml) from a tag on `main`;
+[Releasing](https://bmux-dev.github.io/bmux/project/contributing/#releasing)
+walks through cutting one. `goreleaser release --snapshot --clean` builds the
+same archives locally into `dist/`.
 
 ## License
 
