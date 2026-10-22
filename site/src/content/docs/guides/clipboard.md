@@ -5,8 +5,9 @@ sidebar:
   order: 6
 ---
 
-bmux highlights selections and copies them on mouse release. Clipboard access
-happens on the machine running the attached client.
+bmux highlights selections and copies them on mouse release, then clears the
+selection and shows the result in a notice box. A copy that fails keeps the
+selection. Clipboard access happens on the machine running the attached client.
 
 | Environment | Clipboard method |
 | --- | --- |
@@ -20,7 +21,7 @@ On Linux, install a clipboard tool for your desktop and make it available on
 A helper failure is reported in the status line.
 
 Over SSH, bmux uses OSC 52 rather than the remote machine's desktop clipboard.
-Enable OSC 52 clipboard writes in your local terminal. The status line says
+Enable OSC 52 clipboard writes in your local terminal. The notice says
 the copy was **requested** because bmux cannot verify that the terminal accepted
 it. Terminal-specific size limits apply.
 

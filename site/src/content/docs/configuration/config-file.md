@@ -48,6 +48,7 @@ width = 24
 | `ui.theme-panes` | `true` | Draw panes in a named theme's background and foreground wherever the program sets none, such as a plain shell prompt; `false` keeps your terminal's colors. `dark` and `light` never recolor panes. See [Themes](#themes). |
 | `ui.pane-background` | `"theme"` | `"terminal"` keeps your terminal's own background in panes and blank space, with the theme's text colors, for a terminal background you like better than the theme's. Chrome (bars, sidebar, pickers) keeps the theme's. |
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
+| `ui.notice-position` | `"top-right"` | Where notices (copy results, errors, hints) appear, in a small box with an accent-colored border over the panes: `"top-left"`, `"top-center"`, `"top-right"`, `"bottom-left"`, `"bottom-center"` or `"bottom-right"`. Also on the settings page. |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
 | `sidebar.width` | `24` | Columns including its border, 12 to 60 |
@@ -71,7 +72,7 @@ width = 24
 **Ctrl-a r** reloads the file in your client and the server; `bmux reload` does
 the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
 (`pkill -USR1 -f 'bmux --serve'`). Every attached client follows. If a setting
-is invalid, the status line (or `bmux reload`) says which, and that setting
+is invalid, the notice box (or `bmux reload`) says which, and that setting
 keeps its default, so a typo never leaves you without keys. Unknown settings
 are reported too.
 
@@ -120,7 +121,7 @@ A scheme name without a variant picks its default: `catppuccin` is
 `ui.accent` and `ui.agent-colors` override the theme's colors when set. The
 default accent, `theme`, keeps the theme's own; `cyan`, `amber` and `green`
 pick a fixed shade suited to dark or light themes. An unknown theme name is
-reported in the status line and falls back to `dark`. The `BMUX_THEME`
+reported in the notice box and falls back to `dark`. The `BMUX_THEME`
 environment variable takes the same names.
 
 ### Switching themes from a script or Neovim

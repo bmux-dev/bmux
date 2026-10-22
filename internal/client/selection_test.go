@@ -128,8 +128,11 @@ func TestModelessSelectionAndPickerRendering(t *testing.T) {
 		t.Fatal("selection is not highlighted")
 	}
 	u.mouse(tcell.NewEventMouse(4, 11, tcell.ButtonNone, tcell.ModNone))
-	if u.selection.dragging || !u.selection.active {
-		t.Fatal("release outside the pane did not end selection")
+	if u.selection.dragging || u.selection.active {
+		t.Fatal("release outside the pane did not copy and clear the selection")
+	}
+	if got := string(screen.GetClipboardData()); got != "hello" {
+		t.Fatalf("released drag copied %q", got)
 	}
 	u.picker = true
 	u.sessions = []protocol.Session{{Name: "api", Dir: "/projects/api"}, {Name: "frontend", Dir: "/projects/web"}}
