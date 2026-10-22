@@ -22,7 +22,7 @@ func mkdirs(t *testing.T, paths ...string) {
 	}
 }
 
-func TestFindProjectsListsSessionsZoxideThenRepositories(t *testing.T) {
+func TestFindProjectsListsSessionsThenRepositories(t *testing.T) {
 	home := t.TempDir()
 	code := filepath.Join(home, "code")
 	mkdirs(t,
@@ -40,13 +40,11 @@ func TestFindProjectsListsSessionsZoxideThenRepositories(t *testing.T) {
 		t.Fatal(err)
 	}
 	sessions := []protocol.Session{{Name: "web", Dir: filepath.Join(code, "group", "web")}, {Name: "scratch", Dir: "/tmp"}}
-	zoxide := []string{"/srv/site", filepath.Join(code, "api")}
 	settings := config.Projects{Roots: []string{"~/code", "~/missing"}, Depth: 2}
-	got := findProjects(settings, home, sessions, zoxide)
+	got := findProjects(settings, home, sessions)
 	want := []project{
 		{filepath.Join(code, "group", "web"), "web"},
 		{"/tmp", "scratch"},
-		{"/srv/site", ""},
 		{filepath.Join(code, "api"), ""},
 		{filepath.Join(code, "worktree"), ""},
 	}
@@ -54,7 +52,7 @@ func TestFindProjectsListsSessionsZoxideThenRepositories(t *testing.T) {
 		t.Fatalf("projects:\n got %+v\nwant %+v", got, want)
 	}
 	settings.Depth = 4
-	if got := findProjects(settings, home, nil, nil); len(got) != 4 {
+	if got := findProjects(settings, home, nil); len(got) != 4 {
 		t.Fatalf("depth 4 should reach the deeper tool: %+v", got)
 	}
 }

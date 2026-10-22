@@ -80,13 +80,11 @@ type Restore struct {
 
 // Projects configures the new-session popup (Ctrl-a n, bmux project). Roots are
 // searched for git repositories down to Depth levels; paths may start with
-// ~/. Zoxide adds the directories zoxide knows, when it's installed.
-// StartDir is where the Create tab starts and what its relative paths are
+// ~/. StartDir is where the Create tab starts and what its relative paths are
 // relative to; "" means the directory bmux was started in.
 type Projects struct {
 	Roots    []string `toml:"roots"`
 	Depth    int      `toml:"depth"`
-	Zoxide   bool     `toml:"zoxide"`
 	StartDir string   `toml:"start-dir"`
 }
 
@@ -128,7 +126,7 @@ func Default() Config {
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
 		Restore:    Restore{Enabled: true},
-		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3, Zoxide: true},
+		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3},
 		Scrollback: Scrollback{Lines: 10000},
 		Update:     Update{Check: true},
 	}
@@ -397,7 +395,6 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 [projects]                  # folders the new-session popup lists, Ctrl-a n and bmux project
 # roots = ["~/code", "~/src", "~/projects", "~/dev"]  # searched for git repositories
 # depth = 3                 # how many levels down each root to look
-# zoxide = true             # also list zoxide's directories, when installed
 # start-dir = ""            # where the Create tab starts, e.g. "~"; empty = the current directory
 
 [scrollback]
