@@ -12,7 +12,7 @@ export them in your shell startup file.
 | --- | --- |
 | `BMUX_CONFIG` | Path of the config file |
 | `BMUX_ACCENT` | Overrides `ui.accent` |
-| `BMUX_THEME` | `light` selects a light palette; any other value uses dark |
+| `BMUX_THEME` | Overrides `theme`; takes the same names, such as `light` or `catppuccin-latte`. An unknown name is reported and uses `dark` |
 | `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators |
 | `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding |
 | `BMUX_SOUND` | `0` turns off agent alert sounds |

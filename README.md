@@ -34,7 +34,7 @@ works out of the box, with no plugin manager.
 | (no tmux equivalent) | Images programs draw in a pane (an agent sharing a screenshot) with the Kitty graphics protocol, kept per pane so they survive scrolling, splits, windows and detaching; see [images](https://bmux-dev.github.io/bmux/reference/troubleshooting/#images-in-panes) |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
-| tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
+| tmux-powerline, tmux themes | Powerline status bars, accent colors, a light theme and presets for [Neovim colorschemes](#configuration) (Catppuccin, Tokyo Night, Gruvbox, Nord, ...) |
 | herdr (separate app) | [Agent sidebar](#agents): every coding agent across sessions with working, waiting and blocked state |
 
 The picker starts as a list: browse first, press **/** to search. See what's
@@ -245,7 +245,7 @@ prefix at the top, one table per area, kebab-case keys, and only the lines you
 change. `bmux default-config` prints every setting with its default.
 
 ```toml
-theme = "light"
+theme = "catppuccin-mocha"  # or tokyonight, gruvbox-light, nord, dracula, ...
 prefix = "C-b"            # tmux's prefix instead of Ctrl-a
 
 [ui]
@@ -278,6 +278,17 @@ turning agent detection or restore off, whether to show images (`ui.graphics`), 
 
 The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
 and `BMUX_SOUND` environment variables still work and override the file.
+
+`theme` colors bmux's own chrome (status bars, sidebar, tabs, pickers, dividers,
+selection) with a scheme's published palette. Programs inside panes keep your
+terminal's colors. The names are `dark` (the default), `light`,
+`catppuccin-{mocha,macchiato,frappe,latte}`, `tokyonight-{night,storm,moon,day}`,
+`gruvbox-{dark,light}`, `nord`, `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`,
+`kanagawa-{wave,dragon,lotus}`, `onedark`, `dracula`,
+`everforest-{dark,light}` and `solarized-{dark,light}`. A scheme name without a
+variant picks its default: `catppuccin` is mocha, `tokyonight` night, `gruvbox`
+dark, `kanagawa` wave, `everforest` dark and `solarized` dark. `ui.accent` and
+`ui.agent-colors` still override the theme's colors.
 
 ## Status
 

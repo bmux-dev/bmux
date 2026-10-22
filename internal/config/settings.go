@@ -80,7 +80,7 @@ func listSetting(key, label, help string, field func(*Config) *[]string) Setting
 // commands and onboarding stay in the config file; see Config.
 var SettingTabs = []SettingTab{
 	{"General", []Setting{
-		enumSetting("theme", "Theme", "Colors for the bars and overlays", []string{"dark", "light"}, false, func(c *Config) *string { return &c.Theme }),
+		enumSetting("theme", "Theme", "Colors for the bars and overlays; Enter cycles", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
 		textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
 		boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
 	}},

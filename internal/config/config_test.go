@@ -189,3 +189,57 @@ client-attached = ["  "]
 		t.Fatalf("hooks: %+v", cfg.Hooks)
 	}
 }
+
+func TestResolveTheme(t *testing.T) {
+	for name, want := range map[string]string{
+		"dark": "dark", "light": "light",
+		"catppuccin": "catppuccin-mocha", "tokyonight": "tokyonight-night", "gruvbox": "gruvbox-dark",
+		"kanagawa": "kanagawa-wave", "everforest": "everforest-dark", "solarized": "solarized-dark",
+		"nord": "nord", "onedark": "onedark", "dracula": "dracula", "rose-pine": "rose-pine",
+		"catppuccin-latte": "catppuccin-latte", "Tokyonight-Storm": "tokyonight-storm", "  Nord ": "nord",
+	} {
+		if got, ok := ResolveTheme(name); !ok || got != want {
+			t.Errorf("ResolveTheme(%q) = %q, %v; want %q", name, got, ok, want)
+		}
+	}
+	for _, name := range []string{"", "neon", "catppuccin-", "catppuccin-dawn", "rose", "solarized-mocha"} {
+		if got, ok := ResolveTheme(name); ok {
+			t.Errorf("ResolveTheme(%q) = %q; want no match", name, got)
+		}
+	}
+	for _, name := range ThemeNames {
+		if got, ok := ResolveTheme(name); !ok || got != name {
+			t.Errorf("listed theme %q resolves to %q, %v", name, got, ok)
+		}
+	}
+}
+
+func TestNamedThemesFromFileAndEnvironment(t *testing.T) {
+	cfg, err := Load(write(t, "theme = \"Catppuccin\"\n"), noEnv)
+	if err != nil || cfg.Theme != "catppuccin-mocha" {
+		t.Fatalf("family name in the file: %q %v", cfg.Theme, err)
+	}
+	// The environment overrides the file and accepts the same names.
+	env := func(k string) string { return map[string]string{"BMUX_THEME": "gruvbox-light"}[k] }
+	if cfg, err = Load(write(t, "theme = \"nord\"\n"), env); err != nil || cfg.Theme != "gruvbox-light" {
+		t.Fatalf("environment name: %q %v", cfg.Theme, err)
+	}
+	env = func(k string) string { return map[string]string{"BMUX_THEME": "Solarized"}[k] }
+	if cfg, err = Load(write(t, ""), env); err != nil || cfg.Theme != "solarized-dark" {
+		t.Fatalf("environment family: %q %v", cfg.Theme, err)
+	}
+	// An unknown name, from either source, is reported and falls back to dark.
+	for name, env := range map[string]func(string) string{
+		"file": noEnv,
+		"env":  func(k string) string { return map[string]string{"BMUX_THEME": "neon"}[k] },
+	} {
+		content := ""
+		if name == "file" {
+			content = "theme = \"neon\"\n"
+		}
+		cfg, err := Load(write(t, content), env)
+		if err == nil || !strings.Contains(err.Error(), `theme "neon"`) || cfg.Theme != "dark" {
+			t.Errorf("unknown theme from %s: %q %v", name, cfg.Theme, err)
+		}
+	}
+}
