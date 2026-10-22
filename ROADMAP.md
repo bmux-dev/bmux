@@ -8,7 +8,7 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.6.0 | Scripting and automation, images in panes ([already built](#already-built)) |
-| **Now** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
+| **Now** | [v0.7](#v07-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.7, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -121,16 +121,14 @@ Shipped in v0.6.0:
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
 | Images in panes | L | Done: the Kitty graphics protocol with Unicode placeholders, stored per pane so images survive scrolling, splits, windows and reattaching; `ui.graphics` ([#47](https://github.com/bmux-dev/bmux/issues/47)) |
 
-## v0.7: alerts and hardening
+## v0.7: hardening
 
-**Goal:** the last feature release before 1.0, so that 1.0 itself changes nothing.
+**Goal:** everything 1.0 needs, so that 1.0 itself changes nothing.
 **Done when:** everything below is in place and nothing in a release breaks
 existing sessions without warning.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
-| Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
 | Compatibility promise | M | Stable CLI, config format and snapshot format, pinned by tests. Protocol changes never silently cost sessions (builds on `bmux restart`) |
 | Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
