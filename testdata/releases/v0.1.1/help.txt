@@ -1,0 +1,35 @@
+bmux — persistent workspaces, ordinary terminal interaction.
+
+Usage:
+  bmux                                   Create and attach a fresh session in this directory
+  bmux new [--dir PATH] [--detach] NAME  Create a shell session
+  bmux attach [NAME]                     Attach by name, or to the first listed session
+  bmux list                              List sessions
+  bmux rename OLD NEW                    Rename a session
+  bmux kill NAME                         Terminate a session and all its panes
+  bmux focus left|right|up|down          Move pane focus (for editors at an edge)
+  bmux version                           Print the version
+
+Inside a session:
+  Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
+  Ctrl-a n   New session          Ctrl-a p   Last session
+  Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
+  Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
+  Ctrl-a h/j/k/l   Resize divider by five cells
+                  Repeat plain h/j/k/l until a one-second pause
+  Ctrl-h/j/k/l    Navigate bmux panes, or forward to foreground Neovim/Vim
+  Ctrl-a arrows   Focus pane      Ctrl-a o   Cycle visible panes
+  Ctrl-a m   Zoom / unzoom        Click a pane to focus it
+
+Session picker:
+  j/k or arrows   Select          Enter   Attach
+  n   New session                d       Delete session (confirmation required)
+  r   Rename                     /       Optional search
+  The highlighted session's live terminal is shown below the list, read-only.
+  Native text, source colors, and your terminal's font; no image protocols.
+
+Drag to select and copy. Double-click words; triple-click lines.
+Mouse wheel scrolls history. Paste using your terminal's normal shortcut.
+Hold Alt to select instead of sending mouse events to a mouse-aware app.
+
+This is an early prototype. Sessions survive detach, not server exit or reboot.
