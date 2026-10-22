@@ -16,8 +16,12 @@ bmux send api:1 --text "use Postgres" --key enter
 bmux wait-agent --since 57                    # blocks; prints the next pane that needs you
 ```
 
-A target is `SESSION` (its focused pane) or `SESSION:PANE`; `send` requires
-the pane, so input never lands in whatever happens to be focused. Keys use the
+A target is `SESSION` (its active window's focused pane), `SESSION:PANE` (a
+pane number, as `bmux agents` prints it), `SESSION:WINDOW.` (a window's focused
+pane) or `SESSION:WINDOW.N` (the Nth pane in that window's layout); start with
+`:` for the session you're in, as in `:2.1`. `api:N` is pane N, not window N
+as in tmux. `send` requires a pane, so input never lands in whatever happens
+to be focused. Keys use the
 config file's names (`enter`, `esc`, `down`, `C-c`, `A-x`, `F5`); `--text`
 pastes. Input is sent in order as one batch, without attaching: the session
 isn't resized, focus doesn't move and the pane isn't marked seen.

@@ -20,7 +20,7 @@ sidebar:
 | `bmux zoomed` | Print `true` if the calling pane's window is zoomed, otherwise `false`; used by editor mappings to stay in a zoomed pane |
 | `bmux agent STATE [NAME] [-- COMMAND...]` | Report the calling pane's agent as `working`, `blocked`, `idle`, or `clear`, optionally with the command that resumes its conversation; used by agent hooks |
 | `bmux agents [--json]` | List panes running a coding agent as `SESSION:PANE` targets, with state and [seq](/bmux/agents/scripting/) |
-| `bmux capture [--json] TARGET` | Print a pane's visible text; `TARGET` is `SESSION` (its focused pane) or `SESSION:PANE` |
+| `bmux capture [--json] TARGET` | Print a pane's visible text; `TARGET` is `SESSION`, `SESSION:PANE`, `SESSION:WINDOW.` or `SESSION:WINDOW.N` (see [targets](/bmux/agents/scripting/)) |
 | `bmux send TARGET [--if-seq N] (--key KEY \| --text TEXT)...` | Type keys and text into one pane, in order; with `--if-seq`, only if its agent hasn't changed state |
 | `bmux wait-agent [--state S,...] [--since SEQ] [--timeout D \| --notify SESSION:PANE] [TARGET...]` | Wait until another agent pane is `blocked` or `idle` and print it as JSON; with `--notify`, keep running and type each change into a supervising agent's pane while it's idle |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |

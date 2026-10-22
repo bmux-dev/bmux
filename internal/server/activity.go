@@ -365,10 +365,10 @@ func (s *session) reportAgent(paneID int, state, label string, resume []string) 
 // order, so background windows' agents still show.
 func (s *session) activityLocked() []protocol.PaneActivity {
 	var result []protocol.PaneActivity
-	for _, w := range s.windows {
+	for i, w := range s.windows {
 		var ids []int
 		w.root.leaves(&ids)
-		for _, id := range ids {
+		for j, id := range ids {
 			p := s.panes[id]
 			if p == nil {
 				continue
@@ -377,6 +377,7 @@ func (s *session) activityLocked() []protocol.PaneActivity {
 			a, ok := p.activityLocked(id)
 			p.mu.Unlock()
 			if ok {
+				a.Window, a.Index = i+1, j+1
 				result = append(result, a)
 			}
 		}

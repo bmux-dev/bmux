@@ -283,7 +283,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = "session not found"
 			break
 		}
-		a, text, err := item.capturePane(r.PaneID)
+		a, text, err := item.capturePane(targetOf(r))
 		if err != nil {
 			result.Error = err.Error()
 			break
@@ -294,7 +294,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = "session not found"
 			break
 		}
-		a, err := item.sendInput(r.PaneID, r.IfSeq, r.Input)
+		a, err := item.sendInput(targetOf(r), r.IfSeq, r.Input)
 		if err != nil {
 			result.Error = err.Error()
 		}

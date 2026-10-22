@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Version = 8
+const Version = 9
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -56,8 +56,12 @@ type Request struct {
 	SessionID  uint64 `json:"session_id,omitempty"`
 	Direction  string `json:"direction,omitempty"`
 	// Window is a 1-based window number for select-window, rename-window and
-	// close-window; 0 means the active window.
+	// close-window; 0 means the active window. In a target (capture-pane,
+	// send-input) it names the window PaneIndex counts in.
 	Window int `json:"window,omitempty"`
+	// PaneIndex is a 1-based position in Window's layout, for targets written
+	// SESSION:WINDOW.N; 0 means the window's focused pane.
+	PaneIndex int `json:"pane_index,omitempty"`
 	// Args is the command an agent reports for resuming its conversation.
 	Args []string `json:"args,omitempty"`
 	// IfSeq makes send-input conditional: it is refused unless the pane's
@@ -125,6 +129,10 @@ type PaneActivity struct {
 	// Seq changes whenever Agent or State does. It is unique across all panes
 	// of a server, so a stale value never matches a different pane.
 	Seq uint64 `json:"seq,omitempty"`
+	// Window and Index place the pane: its 1-based window number and its
+	// 1-based position in that window's layout (target SESSION:WINDOW.INDEX).
+	Window int `json:"window,omitempty"`
+	Index  int `json:"index,omitempty"`
 }
 
 // Cell colors are "" for the terminal default, "#rrggbb" for an exact color, or

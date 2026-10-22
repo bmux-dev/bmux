@@ -88,11 +88,11 @@ func TestAgentReportsDriveStateAndAttention(t *testing.T) {
 		}
 	}
 	report(1, protocol.AgentWorking, "claude")
-	if got := activity(t, s)[1]; got != (protocol.PaneActivity{Pane: 1, Agent: "claude", State: protocol.AgentWorking}) {
+	if got := activity(t, s)[1]; got != (protocol.PaneActivity{Pane: 1, Agent: "claude", State: protocol.AgentWorking, Window: 1, Index: 1}) {
 		t.Fatalf("working: %+v", got)
 	}
 	report(1, protocol.AgentIdle, "")
-	if got := activity(t, s)[1]; got != (protocol.PaneActivity{Pane: 1, Agent: "claude", State: protocol.AgentIdle, Attention: true}) {
+	if got := activity(t, s)[1]; got != (protocol.PaneActivity{Pane: 1, Agent: "claude", State: protocol.AgentIdle, Attention: true, Window: 1, Index: 1}) {
 		t.Fatalf("finished turn: %+v", got)
 	}
 	report(1, protocol.AgentWorking, "")
@@ -188,7 +188,7 @@ func TestAgentReportRequestTargetsSessionIDWithoutTouchingRecency(t *testing.T) 
 		t.Fatal(r.Error)
 	}
 	after := srv.request(protocol.Request{Op: "list"}).Sessions[0]
-	want := []protocol.PaneActivity{{Pane: 1, Agent: "claude", State: protocol.AgentBlocked, Attention: true}}
+	want := []protocol.PaneActivity{{Pane: 1, Agent: "claude", State: protocol.AgentBlocked, Attention: true, Window: 1, Index: 1}}
 	if len(after.Activity) == 1 {
 		after.Activity[0].Seq = 0
 	}
