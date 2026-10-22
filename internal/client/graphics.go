@@ -42,6 +42,16 @@ func (u *ui) graphicsReport() *protocol.Graphics {
 	return &protocol.Graphics{Kitty: on, CellWidth: width, CellHeight: height}
 }
 
+// terminalColors is the terminal's default foreground and background, which
+// the server hands to programs that ask for them; nil when it didn't answer.
+func (u *ui) terminalColors() *protocol.TerminalColors {
+	p := u.graphics.probe
+	if p.foreground == "" && p.background == "" {
+		return nil
+	}
+	return &protocol.TerminalColors{Foreground: p.foreground, Background: p.background}
+}
+
 // sendResize tells the server the size of the pane area and of one cell.
 func (u *ui) sendResize() {
 	w, h := u.screen.Size()

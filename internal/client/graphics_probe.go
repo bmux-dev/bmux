@@ -2,9 +2,12 @@ package client
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // probeTimeout bounds how long startup waits for a terminal that doesn't
@@ -18,6 +21,7 @@ const probeTimeout = 300 * time.Millisecond
 const (
 	kittyProbe  = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"
 	cellProbe   = "\x1b[16t"
+	colorProbe  = "\x1b]10;?\x1b\\\x1b]11;?\x1b\\"
 	attributes  = "\x1b[c"
 	probeKittyI = "i=31;"
 )
@@ -27,6 +31,9 @@ type terminalProbe struct {
 	kitty                 bool // answered the Kitty graphics query with OK
 	cellWidth, cellHeight int  // from CSI 16t; 0 when unanswered
 	done                  bool // the device attributes reply arrived
+	// foreground and background are the terminal's default colors as
+	// "#rrggbb" (OSC 10 and 11); "" when unanswered.
+	foreground, background string
 }
 
 // probeParser reads terminal replies out of whatever else arrives, such as
@@ -57,6 +64,12 @@ func (p *probeParser) feed(data []byte) {
 				return
 			}
 			p.apc(string(p.buf[2 : end-stLength(p.buf[:end])]))
+		case ']': // OSC, ends with ESC \ or BEL
+			end = apcEnd(p.buf)
+			if end < 0 {
+				return
+			}
+			p.osc(string(p.buf[2 : end-stLength(p.buf[:end])]))
 		case '[':
 			end = csiEnd(p.buf)
 			if end == -1 {
@@ -119,6 +132,24 @@ func (p *probeParser) apc(payload string) {
 	}
 }
 
+func (p *probeParser) osc(payload string) {
+	code, value, _ := strings.Cut(payload, ";")
+	if code != "10" && code != "11" {
+		return
+	}
+	c := ansi.XParseColor(value)
+	if c == nil {
+		return
+	}
+	r, g, b, _ := c.RGBA()
+	hex := fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+	if code == "10" {
+		p.foreground = hex
+	} else {
+		p.background = hex
+	}
+}
+
 func (p *probeParser) csi(params string, final byte) {
 	switch {
 	case final == 'c' && strings.HasPrefix(params, "?"):
@@ -150,12 +181,9 @@ const maxCellPixels = 512
 
 // probeTerminal asks the terminal what it can show. It runs before the screen
 // starts, so replies are read here and tcell never sees them. mode is
-// ui.graphics: "off" skips the probe, and "on" skips the Kitty query since the
-// answer is assumed.
+// ui.graphics: "off" asks only for the terminal's colors, and "on" skips the
+// Kitty query since the answer is assumed.
 func probeTerminal(tty *navigationTty, mode string) terminalProbe {
-	if mode == "off" {
-		return terminalProbe{}
-	}
 	if err := tty.Start(); err != nil {
 		return terminalProbe{}
 	}
@@ -163,9 +191,12 @@ func probeTerminal(tty *navigationTty, mode string) terminalProbe {
 		_ = tty.Drain()
 		_ = tty.Stop()
 	}()
-	query := cellProbe + attributes
-	if mode == "auto" {
-		query = kittyProbe + query
+	query := colorProbe + attributes
+	switch mode {
+	case "auto":
+		query = kittyProbe + cellProbe + query
+	case "on":
+		query = cellProbe + query
 	}
 	if _, err := tty.Write([]byte(query)); err != nil {
 		return terminalProbe{}

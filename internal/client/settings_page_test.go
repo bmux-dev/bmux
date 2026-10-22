@@ -48,12 +48,17 @@ func TestSettingsPageShowsTabsAndSavesChoices(t *testing.T) {
 	u, path := settingsPageUI(t, "# my notes\n")
 	u.draw()
 	text := screenText(u)
-	for _, want := range []string{"Settings", "General", "Appearance", "Sidebar", "Sessions", "Theme", "dark", "Check for updates", "on"} {
+	for _, want := range []string{"Settings", "General", "Appearance", "Sidebar", "Sessions", "Prefix key", "Check for updates", "on"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("page doesn't show %q:\n%s", want, text)
 		}
 	}
-	// Enter on Theme cycles dark -> light, saves, and applies at once.
+	// Theme leads the Appearance tab. Enter cycles dark -> light, saves, and applies at once.
+	u.key(runeKey('l'))
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "Theme") || !strings.Contains(text, "dark") {
+		t.Fatalf("Appearance doesn't lead with Theme:\n%s", text)
+	}
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if got := fileText(t, path); !strings.Contains(got, "# my notes\n") || !strings.Contains(got, `theme = "light"`) {
 		t.Fatalf("file after Enter:\n%s", got)
@@ -65,8 +70,8 @@ func TestSettingsPageShowsTabsAndSavesChoices(t *testing.T) {
 	if text := screenText(u); !strings.Contains(text, "light") || !strings.Contains(text, "Saved theme") {
 		t.Fatalf("page after saving:\n%s", text)
 	}
-	// Space toggles a bool: Check for updates is two rows down.
-	u.key(runeKey('j'))
+	// Space toggles a bool: Check for updates is on General, below the prefix.
+	u.key(runeKey('h'))
 	u.key(runeKey('j'))
 	u.key(runeKey(' '))
 	if got := fileText(t, path); !strings.Contains(got, "[update]\ncheck = false") {
@@ -137,11 +142,13 @@ func TestSettingsPageTakesKeysAndPasteInsteadOfPanes(t *testing.T) {
 	u.handleRawPaste(&rawPasteEvent{Text: "pasted"})
 	noRequest(t, requests)
 	u.key(runeKey('l'))
-	u.key(runeKey('j'))
-	u.key(runeKey('j'))
-	u.key(runeKey('j'))
-	u.key(runeKey('j'))
-	u.key(runeKey('j'))                                        // past Images
+	for i, setting := range config.SettingTabs[1].Settings {
+		if setting.Key == "ui.agent-colors.working" {
+			for range i {
+				u.key(runeKey('j'))
+			}
+		}
+	}
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)) // Appearance: working color
 	u.handleRawPaste(&rawPasteEvent{Text: "#12ab\n34"})
 	if u.settingsPage.input != "#12ab34" {

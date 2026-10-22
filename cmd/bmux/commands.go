@@ -75,6 +75,7 @@ func init() {
 		{"restart", "", "Save sessions, restart the server, restore them", noServer, runRestart},
 		{"update", "[--check]", "Install the newest release, checked against its checksums; --check only reports", noServer, runUpdate},
 		{"reload", "", "Reread the config file (also Ctrl-a r)", noServer, runReload},
+		{"theme", "[NAME | --list]", "Switch the chrome theme: save NAME (a name from --list, or a scheme such as catppuccin) to the config file and reload; no NAME prints the current theme. Fits a Neovim ColorScheme autocmd", noServer, runTheme},
 		{"guide", "", "How agents read, drive and watch panes (Markdown)", noSocket, runGuide},
 		{"capabilities", "", "Commands, protocol version and the calling pane, as JSON", noSocket, runCapabilities},
 		{"default-config", "", "Print every setting with its default", noSocket, func(string, []string) error {
