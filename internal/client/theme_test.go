@@ -33,7 +33,7 @@ func TestEveryListedThemeHasItsOwnPalette(t *testing.T) {
 }
 
 func TestNamedThemeUsesItsSchemePalette(t *testing.T) {
-	got := themeFor("catppuccin-latte", config.UI{Accent: "cyan"})
+	got := themeFor("catppuccin-latte", config.UI{Accent: "theme"})
 	want := chromeTheme{hex(0x4c4f69), hex(0xeff1f5), hex(0x7c7f93), hex(0xe6e9ef), hex(0x1e66f5), hex(0xbcc0cc), hex(0x4c4f69),
 		hex(0xdf8e1d), hex(0xd20f39), hex(0x179299), hex(0x40a02b), hex(0x9ca0b0), true, false}
 	if got != want {
@@ -62,9 +62,9 @@ func TestUnknownThemeFallsBackToDark(t *testing.T) {
 }
 
 func TestUIOverridesApplyToANamedTheme(t *testing.T) {
-	base := themeFor("tokyonight-storm", config.UI{Accent: "cyan"})
+	base := themeFor("tokyonight-storm", config.UI{Accent: "theme"})
 	if base.accent != hex(0x7aa2f7) {
-		t.Fatalf("cyan keeps the theme's accent: %v", base.accent)
+		t.Fatalf("the theme accent keeps the theme's own: %v", base.accent)
 	}
 	got := themeFor("tokyonight-storm", config.UI{
 		Accent:      "#112233",
@@ -77,18 +77,22 @@ func TestUIOverridesApplyToANamedTheme(t *testing.T) {
 	if got.foreground != base.foreground || got.background != base.background || got.bar != base.bar || got.selection != base.selection || got.unknown != base.unknown {
 		t.Fatalf("overrides changed other colors: %+v", got)
 	}
-	// Named accents pick the shade that suits the theme's lightness.
+	// Named accents pick the shade that suits the theme's lightness; cyan is
+	// its own color, not the theme's.
+	if dark, light := themeFor("nord", config.UI{Accent: "cyan"}), themeFor("gruvbox-light", config.UI{Accent: "cyan"}); dark.accent != hex(0x83c8dc) || light.accent != hex(0x00657c) {
+		t.Fatalf("cyan: dark theme %v, light theme %v", dark.accent, light.accent)
+	}
 	if dark, light := themeFor("nord", config.UI{Accent: "amber"}), themeFor("gruvbox-light", config.UI{Accent: "amber"}); dark.accent != hex(0xd4b483) || light.accent != hex(0x855500) {
 		t.Fatalf("amber: dark theme %v, light theme %v", dark.accent, light.accent)
 	}
 }
 
 func TestDefaultThemesAreUnchanged(t *testing.T) {
-	d := themeFor("dark", config.UI{Accent: "cyan"})
+	d := themeFor("dark", config.UI{Accent: "theme"})
 	if d.background != hex(0x0b0b0b) || d.accent != hex(0x83c8dc) || d.bar != hex(0x202020) || d.light {
 		t.Fatalf("dark: %+v", d)
 	}
-	l := themeFor("light", config.UI{Accent: "cyan"})
+	l := themeFor("light", config.UI{Accent: "theme"})
 	if l.background != hex(0xf5f5f5) || l.accent != hex(0x00657c) || l.bar != hex(0xe4e4e4) || !l.light {
 		t.Fatalf("light: %+v", l)
 	}

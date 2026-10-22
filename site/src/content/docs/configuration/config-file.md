@@ -30,7 +30,7 @@ theme = "dark"
 prefix = "C-a"
 
 [ui]
-accent = "cyan"
+accent = "amber"
 
 [sidebar]
 width = 24
@@ -41,7 +41,7 @@ width = 24
 | `theme` | `"dark"` | Colors for bmux's chrome: status bars, sidebar, window tabs, pickers, dividers and selection. `dark`, `light`, or a Neovim colorscheme: [see the list below](#themes) |
 | `prefix` | `"C-a"` | The command key, written like Helix keys: `C-a` to `C-z`, except `C-h/j/k/l` (navigation) and `C-i`/`C-m` (Tab and Enter). `ctrl-a` also works. Status-line help follows it. |
 | `onboarding` | `true` | Show the welcome screen on the next attach; bmux sets `false` once it has been seen |
-| `ui.accent` | `"cyan"` | `cyan` (the theme's own accent), `amber`, `green` or `"#RRGGBB"`; overrides the theme's accent |
+| `ui.accent` | `"theme"` | `theme` uses the theme's own accent; `cyan`, `amber`, `green` or `"#RRGGBB"` override it |
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
 | `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
@@ -110,7 +110,8 @@ A scheme name without a variant picks its default: `catppuccin` is
 `everforest-dark` and `solarized` is `solarized-dark`.
 
 `ui.accent` and `ui.agent-colors` override the theme's colors when set. The
-default accent, `cyan`, keeps the theme's own. An unknown theme name is
+default accent, `theme`, keeps the theme's own; `cyan`, `amber` and `green`
+pick a fixed shade suited to dark or light themes. An unknown theme name is
 reported in the status line and falls back to `dark`. The `BMUX_THEME`
 environment variable takes the same names.
 

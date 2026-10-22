@@ -243,3 +243,19 @@ func TestNamedThemesFromFileAndEnvironment(t *testing.T) {
 		}
 	}
 }
+
+func TestAccentDefaultsToTheThemeAndCyanIsItsOwnChoice(t *testing.T) {
+	if got := Default().UI.Accent; got != "theme" {
+		t.Fatalf("default accent %q", got)
+	}
+	for _, accent := range []string{"theme", "Cyan", "amber", "green", "#AABBCC"} {
+		cfg, err := Load(write(t, "[ui]\naccent = \""+accent+"\"\n"), noEnv)
+		if err != nil || cfg.UI.Accent != strings.ToLower(accent) {
+			t.Errorf("accent %q: %q %v", accent, cfg.UI.Accent, err)
+		}
+	}
+	cfg, err := Load(write(t, "[ui]\naccent = \"pink\"\n"), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "theme, cyan, amber, green") || cfg.UI.Accent != "theme" {
+		t.Fatalf("bad accent: %q %v", cfg.UI.Accent, err)
+	}
+}

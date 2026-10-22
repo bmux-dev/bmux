@@ -137,7 +137,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "cyan", SetTitle: true, ThemePanes: true, Graphics: "auto"},
+		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, Graphics: "auto"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -272,10 +272,10 @@ func (c *Config) repair() []string {
 		c.UI.Graphics = d.UI.Graphics
 	}
 	switch accent := strings.ToLower(c.UI.Accent); {
-	case accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
+	case accent == "theme", accent == "cyan", accent == "amber", accent == "green", hexColor.MatchString(accent):
 		c.UI.Accent = accent
 	default:
-		bad("ui.accent %q must be cyan, amber, green or #RRGGBB", c.UI.Accent)
+		bad("ui.accent %q must be theme, cyan, amber, green or #RRGGBB", c.UI.Accent)
 		c.UI.Accent = d.UI.Accent
 	}
 	for _, color := range []*string{&c.UI.AgentColors.Working, &c.UI.AgentColors.Waiting, &c.UI.AgentColors.Blocked, &c.UI.AgentColors.Idle} {
@@ -393,7 +393,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # onboarding = true         # welcome screen on the next attach; bmux sets false
 
 [ui]
-# accent = "cyan"           # cyan, amber, green or "#RRGGBB"
+# accent = "theme"          # theme (the theme's own), cyan, amber, green or "#RRGGBB"
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
 # set-title = true          # name the terminal window after the session and pane
