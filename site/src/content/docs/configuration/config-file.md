@@ -77,8 +77,14 @@ are reported too.
 
 `theme` colors bmux's own chrome with a colorscheme's published palette:
 foreground, background, muted text, status bars, accent, selection, and the
-working, waiting, blocked and idle agent colors. Programs inside panes keep the
-outer terminal's palette, so set the terminal to the same scheme to match.
+working, waiting, blocked and idle agent colors.
+
+:::note
+The theme does not recolor the panes. Text that uses the terminal's default
+colors, such as a plain shell prompt, keeps your terminal's own background and
+foreground, and programs that draw their own colors, like Neovim, show those.
+To match the panes to a theme, set your terminal to the same colorscheme.
+:::
 
 | Scheme | `theme` values |
 | --- | --- |
