@@ -65,6 +65,7 @@ type pane struct {
 	// agentHook runs the agent-blocked and agent-idle hooks; set by the
 	// session that owns the pane. Called under pane.mu.
 	agentHook func(state string)
+	pipe      *panePipe // bmux pipe-pane's command; see pipe.go
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {
@@ -197,6 +198,9 @@ func (s *pane) apply(output []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.trackHistory(func() { _, _ = s.term.Write(output) })
+	if s.pipe != nil {
+		s.pipe.write(output)
+	}
 	// Fence the fast drain before another state-serialized operation
 	// can classify its input as user data.
 	_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
