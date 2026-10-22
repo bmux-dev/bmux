@@ -13,10 +13,16 @@ The file and every line in it are optional; write only what you change.
 
 You don't have to edit the file by hand for the common settings: **Ctrl-a ,**
 opens a settings page with one tab per area (General, Appearance, Sidebar,
-Sound, Agents, Projects, Sessions). Move with **←/→** (or **h/l**) and
-**j/k**. **Enter** or **Space** flips a switch or cycles a choice; on a number,
-path, list or duration it opens an editor (**Enter** saves, **Esc** cancels).
-On the accent color, **e** types a `#RRGGBB` value. Each change is written to
+Sound, Agents, Projects, Sessions), each split into labeled groups. Move with
+**←/→** (or **h/l**) and **j/k**. **Enter** or **Space** flips a switch; on a
+choice it opens a list you scroll with **↑/↓**, where **Enter** picks the
+highlighted choice and returns to the page, and **Esc** goes back without
+changing anything. On a number, path, list or duration it opens an editor
+(**Enter** saves, **Esc** cancels). The theme, accent color and pane background
+lists preview each choice as you scroll, without dimming the screen so the
+colors are true; **Esc** puts the saved look back. The accent list ends with
+**Custom…**, which types a `#RRGGBB` value. A footer inside the page lists the
+keys. Each change is written to
 the config file at once and applied without a restart. Comments and the other
 lines are kept, and a value the file's rules reject isn't saved; the page says
 why. Keybindings, per-agent resume commands and `onboarding` stay in the file.

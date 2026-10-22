@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +17,7 @@ type Kind int
 
 const (
 	KindBool     Kind = iota // toggled
-	KindEnum                 // cycled through Options
+	KindEnum                 // picked from a list of Options
 	KindInt                  // typed
 	KindText                 // typed
 	KindDuration             // typed, like "2s"
@@ -31,7 +32,10 @@ type Setting struct {
 	Label string
 	Help  string
 	Kind  Kind
-	// Options are the values an enum cycles through. Custom lets the user
+	// Group is the header the page shows above this setting and the ones
+	// next to it in the same group.
+	Group string
+	// Options are the values an enum offers as a list. Custom lets the user
 	// type another value as well, such as an accent color; the config
 	// rules still decide whether it's valid.
 	Options []string
@@ -76,53 +80,88 @@ func listSetting(key, label, help string, field func(*Config) *[]string) Setting
 		Get: func(c Config) string { return strings.Join(*field(&c), ", ") }}
 }
 
+// group labels settings with the header the page draws above them. Settings
+// in a tab that follow one another with the same group share the header.
+func group(name string, settings ...Setting) []Setting {
+	for i := range settings {
+		settings[i].Group = name
+	}
+	return settings
+}
+
 // SettingTabs lists the settings the page edits. Keys, the per-agent resume
 // commands and onboarding stay in the config file; see Config.
 var SettingTabs = []SettingTab{
-	{"General", []Setting{
-		textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
-		boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
-	}},
-	{"Appearance", []Setting{
-		enumSetting("theme", "Theme", "Colors for the bars and overlays; Enter cycles", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
-		boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
-		enumSetting("ui.pane-background", "Pane background", "theme: the theme's background fills panes; terminal: keep your terminal's own", []string{"theme", "terminal"}, false, func(c *Config) *string { return &c.UI.PaneBackground }),
-		enumSetting("ui.accent", "Accent color", "Enter cycles; e types a #RRGGBB color", []string{"theme", "cyan", "amber", "green"}, true, func(c *Config) *string { return &c.UI.Accent }),
-		boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
-		boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
-		boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),
-		enumSetting("ui.graphics", "Images", "Show images programs draw: auto detects Kitty graphics, on assumes it, off never", []string{"auto", "on", "off"}, false, func(c *Config) *string { return &c.UI.Graphics }),
-		enumSetting("ui.notice-position", "Notice position", "Where notices appear; Enter cycles", NoticePositions, false, func(c *Config) *string { return &c.UI.NoticePosition }),
-		textSetting("ui.agent-colors.working", "Working color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Working }),
-		textSetting("ui.agent-colors.waiting", "Waiting color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Waiting }),
-		textSetting("ui.agent-colors.blocked", "Blocked color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Blocked }),
-		textSetting("ui.agent-colors.idle", "Idle color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Idle }),
-	}},
-	{"Sidebar", []Setting{
-		boolSetting("sidebar.show", "Show sidebar", "The prefix key then b toggles it", func(c *Config) *bool { return &c.Sidebar.Show }),
-		intSetting("sidebar.width", "Width", "Columns, 12-60", func(c *Config) *int { return &c.Sidebar.Width }),
-		intSetting("sidebar.min-screen-width", "Minimum screen width", "Hide the sidebar on narrower terminals; at least width + 20", func(c *Config) *int { return &c.Sidebar.MinScreenWidth }),
-	}},
-	{"Sound", []Setting{
+	{"General", slices.Concat(
+		group("Keys",
+			textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
+		),
+		group("Updates",
+			boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
+		),
+	)},
+	{"Appearance", slices.Concat(
+		group("Theme",
+			enumSetting("theme", "Theme", "Colors for the bars and overlays", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
+			boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
+			enumSetting("ui.pane-background", "Pane background", "theme: the theme's background fills panes; terminal: keep your terminal's own", []string{"theme", "terminal"}, false, func(c *Config) *string { return &c.UI.PaneBackground }),
+			enumSetting("ui.accent", "Accent color", "Pick a preset, or Custom for a #RRGGBB color", []string{"theme", "cyan", "amber", "green"}, true, func(c *Config) *string { return &c.UI.Accent }),
+		),
+		group("Display",
+			boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
+			boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
+			boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),
+			enumSetting("ui.graphics", "Images", "Show images programs draw: auto detects Kitty graphics, on assumes it, off never", []string{"auto", "on", "off"}, false, func(c *Config) *string { return &c.UI.Graphics }),
+			enumSetting("ui.notice-position", "Notice position", "Where notices appear", NoticePositions, false, func(c *Config) *string { return &c.UI.NoticePosition }),
+		),
+		group("Agent colors",
+			textSetting("ui.agent-colors.working", "Working color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Working }),
+			textSetting("ui.agent-colors.waiting", "Waiting color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Waiting }),
+			textSetting("ui.agent-colors.blocked", "Blocked color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Blocked }),
+			textSetting("ui.agent-colors.idle", "Idle color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Idle }),
+		),
+	)},
+	{"Sidebar", slices.Concat(
+		group("Visibility",
+			boolSetting("sidebar.show", "Show sidebar", "The prefix key then b toggles it", func(c *Config) *bool { return &c.Sidebar.Show }),
+		),
+		group("Size",
+			intSetting("sidebar.width", "Width", "Columns, 12-60", func(c *Config) *int { return &c.Sidebar.Width }),
+			intSetting("sidebar.min-screen-width", "Minimum screen width", "Hide the sidebar on narrower terminals; at least width + 20", func(c *Config) *int { return &c.Sidebar.MinScreenWidth }),
+		),
+	)},
+	{"Sound", group("Alerts",
 		boolSetting("sound.enabled", "Alert sounds", "When a background agent is ready or blocked", func(c *Config) *bool { return &c.Sound.Enabled }),
 		textSetting("sound.ready", "Ready sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Ready }),
 		textSetting("sound.blocked", "Blocked sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Blocked }),
-	}},
-	{"Agents", []Setting{
-		boolSetting("agents.detect", "Detect agents", "Recognize agents running in panes", func(c *Config) *bool { return &c.Agents.Detect }),
-		listSetting("agents.extra", "Extra programs", "More program names to treat as agents, comma separated", func(c *Config) *[]string { return &c.Agents.Extra }),
-		durationSetting("agents.working-after", "Working after", "Drawing this long means working, 1s-1m", func(c *Config) *Duration { return &c.Agents.WorkingAfter }),
-		durationSetting("agents.waiting-after", "Waiting after", "Quiet this long means waiting, 1s-1m", func(c *Config) *Duration { return &c.Agents.WaitingAfter }),
-	}},
-	{"Projects", []Setting{
-		listSetting("projects.roots", "Roots", "Folders searched for git repositories, comma separated", func(c *Config) *[]string { return &c.Projects.Roots }),
-		intSetting("projects.depth", "Depth", "Levels to search below each root, 1-6", func(c *Config) *int { return &c.Projects.Depth }),
-		textSetting("projects.start-dir", "Start directory", "Where the new-session Create tab starts, such as ~; empty uses the current directory", func(c *Config) *string { return &c.Projects.StartDir }),
-	}},
-	{"Sessions", []Setting{
-		boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
-		intSetting("scrollback.lines", "Scrollback lines", "History kept per pane, 100-200000", func(c *Config) *int { return &c.Scrollback.Lines }),
-	}},
+	)},
+	{"Agents", slices.Concat(
+		group("Detection",
+			boolSetting("agents.detect", "Detect agents", "Recognize agents running in panes", func(c *Config) *bool { return &c.Agents.Detect }),
+			listSetting("agents.extra", "Extra programs", "More program names to treat as agents, comma separated", func(c *Config) *[]string { return &c.Agents.Extra }),
+		),
+		group("Timing",
+			durationSetting("agents.working-after", "Working after", "Drawing this long means working, 1s-1m", func(c *Config) *Duration { return &c.Agents.WorkingAfter }),
+			durationSetting("agents.waiting-after", "Waiting after", "Quiet this long means waiting, 1s-1m", func(c *Config) *Duration { return &c.Agents.WaitingAfter }),
+		),
+	)},
+	{"Projects", slices.Concat(
+		group("Search",
+			listSetting("projects.roots", "Roots", "Folders searched for git repositories, comma separated", func(c *Config) *[]string { return &c.Projects.Roots }),
+			intSetting("projects.depth", "Depth", "Levels to search below each root, 1-6", func(c *Config) *int { return &c.Projects.Depth }),
+		),
+		group("New sessions",
+			textSetting("projects.start-dir", "Start directory", "Where the new-session Create tab starts, such as ~; empty uses the current directory", func(c *Config) *string { return &c.Projects.StartDir }),
+		),
+	)},
+	{"Sessions", slices.Concat(
+		group("Restore",
+			boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
+		),
+		group("History",
+			intSetting("scrollback.lines", "Scrollback lines", "History kept per pane, 100-200000", func(c *Config) *int { return &c.Scrollback.Lines }),
+		),
+	)},
 }
 
 // Literal turns what the user typed into a TOML value for this setting.
