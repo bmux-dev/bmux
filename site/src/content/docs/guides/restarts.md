@@ -23,6 +23,11 @@ Nothing else that was running comes back: no scrollback, no editors, servers
 or other programs. Resumed agents are new processes reopening their saved
 conversation, not the processes that were running.
 
+Until you attach to a restored session, the session picker and the sidebar
+mark it `restored`, so you can see which sessions lost their running programs
+without opening each one. Sessions you've attached to since, and sessions
+created after the server started, aren't marked.
+
 `bmux restart` from inside a pane finishes in the background, because stopping
 the server ends that pane's jobs. Attached clients reconnect to the session
 they showed once the new server is up. Run `bmux attach`, not bare `bmux`, to

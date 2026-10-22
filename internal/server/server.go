@@ -408,6 +408,7 @@ func (s *Server) handle(conn net.Conn) {
 		item.mu.Lock()
 		item.info.Clients++
 		item.info.Used = time.Now()
+		item.info.Restored = false // you've seen it
 		item.mu.Unlock()
 	}
 	if item == nil {

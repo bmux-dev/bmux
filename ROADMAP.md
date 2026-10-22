@@ -51,7 +51,7 @@ changes and reconnects clients. With an [agent integration](#already-built)
 | --- | --- | --- |
 | Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
-| Mark restored sessions | S | In the picker and sidebar. |
+| Mark restored sessions | S | Done: `restored` in the picker and sidebar until you attach ([#94](https://github.com/bmux-dev/bmux/issues/94)) |
 
 ## Install and updates
 
