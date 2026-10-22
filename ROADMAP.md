@@ -7,9 +7,9 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.6.0 | Scripting and automation, images in panes ([already built](#already-built)) |
-| **Now** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
-| **Later** | [v1.0](#v10-stable) | v0.7, once it's stable: no new features |
+| **Shipped** | v0.7.0 | Theme presets, a reworked settings page, notices in a box ([already built](#already-built)) |
+| **Now** | [v0.8](#v08-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
+| **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
 Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
@@ -121,7 +121,7 @@ Shipped in v0.6.0:
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
 | Images in panes | L | Done: the Kitty graphics protocol with Unicode placeholders, stored per pane so images survive scrolling, splits, windows and reattaching; `ui.graphics` ([#47](https://github.com/bmux-dev/bmux/issues/47)) |
 
-## v0.7: alerts and hardening
+## v0.8: alerts and hardening
 
 **Goal:** the last feature release before 1.0, so that 1.0 itself changes nothing.
 **Done when:** everything below is in place and nothing in a release breaks
@@ -141,7 +141,7 @@ existing sessions without warning.
 ## v1.0: stable
 
 **Goal:** safe to recommend to anyone.
-**Done when:** v0.7 has been stable and working as expected in daily use. 1.0
+**Done when:** v0.8 has been stable and working as expected in daily use. 1.0
 adds no features and no changes beyond fixes; it marks the CLI, config and
 snapshot formats as stable.
 
@@ -236,3 +236,12 @@ window, pane, client and agent events, `run-shell`, `if-shell` and keys bound to
 shell commands, `pipe-pane`, `restored` marks on sessions in the picker and
 sidebar, and images in panes with the Kitty graphics protocol (`ui.graphics`).
 Protocol version 10: run `bmux restart` after upgrading.
+
+v0.7.0 added theme presets for common Neovim colorschemes (Catppuccin, Tokyo
+Night, Gruvbox, Nord and more) with `bmux theme NAME` to switch from a script or
+autocmd, panes drawn in the theme's colors (`ui.theme-panes`,
+`ui.pane-background`) with honest answers to programs that ask for the
+terminal's colors (OSC 10/11), notices in a bordered box (`ui.notice-position`),
+and a reworked settings page with tabs, icons (`ui.icons`), group headers and
+live previews. Protocol version 10 is unchanged: run `bmux restart` after
+upgrading to get the new server behavior.
