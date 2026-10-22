@@ -28,6 +28,7 @@ var hookSlots = make(chan struct{}, maxHooks)
 // runHooks starts every command configured for event, expanding #{...}
 // with info, the event's pane. It returns at once.
 func runHooks(event string, info protocol.PaneInfo) {
+	timeout := hookTimeout
 	for _, command := range currentSettings().hooks[event] {
 		select {
 		case hookSlots <- struct{}{}:
@@ -37,14 +38,14 @@ func runHooks(event string, info protocol.PaneInfo) {
 		}
 		go func() {
 			defer func() { <-hookSlots }()
-			runHook(event, command, info)
+			runHook(event, command, info, timeout)
 		}()
 	}
 }
 
 // runHook runs one hook and logs its output and failure.
-func runHook(event, command string, info protocol.PaneInfo) {
-	output, err := runCommand(command, info, "BMUX_HOOK="+event)
+func runHook(event, command string, info protocol.PaneInfo, timeout time.Duration) {
+	output, err := runCommand(command, info, timeout, "BMUX_HOOK="+event)
 	if len(output) > 0 {
 		fmt.Fprintf(os.Stderr, "bmux: hook %s: %s", event, output)
 	}
@@ -56,9 +57,10 @@ func runHook(event, command string, info protocol.PaneInfo) {
 // runCommand runs command with /bin/sh for the pane info describes: its
 // #{...} variables, its directory and its BMUX_* environment (so bmux
 // commands in it act on that pane), plus extra variables. It waits, killing
-// the command's process group after hookTimeout.
-func runCommand(command string, info protocol.PaneInfo, extra ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), hookTimeout)
+// the command's process group after timeout. Callers read hookTimeout before
+// starting the goroutine that calls this, so a test restoring it never races.
+func runCommand(command string, info protocol.PaneInfo, timeout time.Duration, extra ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", format.Expand(command, format.Vars(info)))
 	cmd.Dir = hookDir(info)
@@ -82,6 +84,7 @@ func (s *session) runShell(id int, command string) error {
 		s.showMessage(fmt.Sprintf("run-shell skipped: %d commands are already running", maxHooks))
 		return nil
 	}
+	timeout := hookTimeout
 	go func() {
 		defer func() { <-hookSlots }()
 		panes, err := s.describe(paneTarget{pane: id}, "pane")
@@ -89,7 +92,7 @@ func (s *session) runShell(id int, command string) error {
 			s.showMessage("run-shell: pane not found")
 			return
 		}
-		output, err := runCommand(command, panes[0], "BMUX_RUN_SHELL=1")
+		output, err := runCommand(command, panes[0], timeout, "BMUX_RUN_SHELL=1")
 		last := lastLine(output)
 		switch {
 		case err != nil && last != "":

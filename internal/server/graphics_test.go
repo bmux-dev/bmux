@@ -82,12 +82,21 @@ func TestQueryIsRefusedWithoutAGraphicsClient(t *testing.T) {
 	}
 }
 
+// useImageStore makes panes created afterwards keep their images in store.
+// newPane sets a pane's store before its output goroutine starts; replacing
+// it on a running pane would race with that goroutine's cleanup.
+func useImageStore(t *testing.T, store *graphics.Store) {
+	t.Helper()
+	saved := images
+	images = store
+	t.Cleanup(func() { images = saved })
+}
+
 func TestEvictionPrefersImagesNoCellShows(t *testing.T) {
 	// Room for two images of this size, not three.
 	size := int64(len(testImage(t, 0)))
-	store := graphics.NewStore(graphics.Limits{Pane: 1 << 20, Total: size*2 + size/2})
+	useImageStore(t, graphics.NewStore(graphics.Limits{Pane: 1 << 20, Total: size*2 + size/2}))
 	p, _ := scriptedPane(t, "sleep 30")
-	p.trackGraphics(store)
 	p.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=1,c=1,r=1,q=2", 1) + "\x1b[38;2;0;0;1m\U0010EEEE\x1b[0m"))
 	p.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=2,c=1,r=1,q=2", 2)))
 	p.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=3,c=1,r=1,q=2", 3)))
@@ -100,12 +109,10 @@ func TestEvictionPrefersImagesNoCellShows(t *testing.T) {
 
 func TestEvictionDoesNotWaitForABusyPane(t *testing.T) {
 	size := int64(len(testImage(t, 0)))
-	store := graphics.NewStore(graphics.Limits{Pane: 1 << 20, Total: size*2 + size/2})
+	useImageStore(t, graphics.NewStore(graphics.Limits{Pane: 1 << 20, Total: size*2 + size/2}))
 	busy, _ := scriptedPane(t, "sleep 30")
-	busy.trackGraphics(store)
 	busy.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=1,c=1,r=1,q=2", 0)))
 	active, _ := scriptedPane(t, "sleep 30")
-	active.trackGraphics(store)
 	active.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=1,c=1,r=1,q=2", 0)))
 
 	// busy is mid-output: its lock is taken. Evicting for active's next image
