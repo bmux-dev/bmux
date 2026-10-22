@@ -940,6 +940,7 @@ func (u *ui) draw() {
 	if w <= 0 || h <= 0 {
 		return
 	}
+	u.screen.SetStyle(paneStyle) // what Clear paints, and so the blank space between panes
 	u.screen.Clear()
 	u.screen.HideCursor()
 	if u.projects.open && u.conn == nil && !u.picker {
@@ -1097,7 +1098,7 @@ func cellColor(name string) tcell.Color {
 }
 
 func cellStyle(c protocol.Cell) tcell.Style {
-	s := tcell.StyleDefault
+	s := paneStyle
 	if c.FG != "" {
 		s = s.Foreground(cellColor(c.FG))
 	}

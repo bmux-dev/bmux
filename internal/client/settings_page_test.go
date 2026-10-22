@@ -142,7 +142,7 @@ func TestSettingsPageTakesKeysAndPasteInsteadOfPanes(t *testing.T) {
 	u.handleRawPaste(&rawPasteEvent{Text: "pasted"})
 	noRequest(t, requests)
 	u.key(runeKey('l'))
-	for range 6 {
+	for range 7 {
 		u.key(runeKey('j')) // from Theme, past Images, to Working color
 	}
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)) // Appearance: working color
