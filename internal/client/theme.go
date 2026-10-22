@@ -30,11 +30,13 @@ func themeFor(name string, settings config.UI) chromeTheme {
 	t.themePanes = settings.ThemePanes && name != "dark" && name != "light"
 	light := t.light
 	switch settings.Accent {
+	case "cyan":
+		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0x83c8dc), true: tcell.NewHexColor(0x00657c)}[light]
 	case "amber":
 		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0xd4b483), true: tcell.NewHexColor(0x855500)}[light]
 	case "green":
 		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0xa4c987), true: tcell.NewHexColor(0x326320)}[light]
-	case "", "cyan":
+	case "", "theme":
 	default:
 		if c := tcell.GetColor(settings.Accent); c.Valid() {
 			t.accent = c
