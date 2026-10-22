@@ -9,7 +9,8 @@ with everything built in and no plugin manager.
 | --- | --- | --- |
 | **Shipped** | v0.5.2 | A settings page, one popup to find or create a session, clickable links, modified keys ([already built](#already-built)) |
 | **Now** | [v0.6](#v06-scripting) | Scripting and automation |
-| **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
+| **Next** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, graphics passthrough, and everything 1.0 needs |
+| **Later** | [v1.0](#v10-stable) | v0.7, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
 Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
@@ -118,21 +119,30 @@ Targets depend on windows from v0.4.
 | `run-shell`, `if-shell` | S | Done: `bmux run-shell` and `bmux if-shell` for a pane, and keys bound to `run-shell COMMAND` ([#90](https://github.com/bmux-dev/bmux/issues/90)) |
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
 
-## v1.0: stable
+## v0.7: alerts and hardening
 
-**Goal:** safe to recommend to anyone.
+**Goal:** the last feature release before 1.0, so that 1.0 itself changes nothing.
 **Done when:** everything below is in place and nothing in a release breaks
 existing sessions without warning.
 
-| Area | Items |
-| --- | --- |
-| Compatibility promise | Stable CLI, config format and snapshot format. Protocol changes never silently cost sessions (builds on `bmux restart`). |
-| Terminal support | Activity alerts, opt-in graphics passthrough. |
-| Quality | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux. |
-| Linux | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked. |
-| Distribution | Homebrew tap, signed and notarized macOS binaries, release signatures. |
-| Docs | Demo GIF, tmux migration guide (config and plugin equivalents), CHANGELOG. |
-| Project | CONTRIBUTING.md, issue and PR templates. |
+| Item | Size | Notes |
+| --- | --- | --- |
+| Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
+| Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
+| Graphics passthrough | M | Opt-in: images from a pane's program reach your terminal |
+| Compatibility promise | M | Stable CLI, config format and snapshot format, pinned by tests. Protocol changes never silently cost sessions (builds on `bmux restart`) |
+| Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
+| Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
+| Distribution | M | Homebrew tap, signed and notarized macOS binaries, release signatures |
+| Docs | M | Demo GIF, tmux migration guide (config and plugin equivalents), CHANGELOG |
+| Project | S | CONTRIBUTING.md, issue and PR templates |
+
+## v1.0: stable
+
+**Goal:** safe to recommend to anyone.
+**Done when:** v0.7 has been stable and working as expected in daily use. 1.0
+adds no features and no changes beyond fixes; it marks the CLI, config and
+snapshot formats as stable.
 
 ## Ideas
 
