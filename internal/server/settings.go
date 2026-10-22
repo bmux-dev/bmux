@@ -21,6 +21,7 @@ type serverSettings struct {
 	passThrough               map[string]bool     // programs that get navigation keys
 	scrollback                int                 // history lines kept per pane
 	updateCheck               bool                // look for new releases
+	hooks                     map[string][]string // event -> shell commands
 }
 
 var (
@@ -59,6 +60,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		passThrough:  passThrough,
 		scrollback:   cfg.Scrollback.Lines,
 		updateCheck:  cfg.Update.Check,
+		hooks:        cfg.Hooks,
 	}
 }
 

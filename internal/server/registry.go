@@ -92,6 +92,7 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 		}
 		s.adoptLocked(r.Name, created)
 		s.mu.Unlock()
+		created.hook("session-created", 0)
 	case "rename":
 		if err := validateName(r.NewName); err != nil {
 			result.Error = err.Error()

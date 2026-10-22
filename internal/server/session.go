@@ -64,6 +64,9 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 
 func (s *session) watchPane(id int, p *pane) {
 	s.watchers.Add(1)
+	p.mu.Lock()
+	p.agentHook = func(state string) { s.hook("agent-"+state, id) }
+	p.mu.Unlock()
 	go func() {
 		defer s.watchers.Done()
 		<-p.done
@@ -89,6 +92,7 @@ func (s *session) watchPane(id int, p *pane) {
 			return
 		}
 		w := s.windows[i]
+		gone := s.goneInfo(id, i+1)
 		root, neighbor := w.root.remove(id)
 		w.root = root
 		if w.last == id {
@@ -102,6 +106,14 @@ func (s *session) watchPane(id int, p *pane) {
 		}
 		if root != nil && root.id != 0 {
 			w.zoomed = false // one pane left
+		}
+		// Hooks, unless the session is shutting down (bmux restart, a
+		// server stop): those panes didn't exit on their own.
+		if !s.stopping.Load() {
+			runHooks("pane-exited", gone)
+			if len(s.windows) == 0 {
+				runHooks("session-closed", gone)
+			}
 		}
 		if len(s.windows) == 0 {
 			s.stopped = true
@@ -288,6 +300,7 @@ func (s *session) input(r protocol.Request) error {
 		}
 		s.windows = append(s.windows, &window{name: r.NewName, root: &layout{id: created}, focused: created})
 		s.selectWindowLocked(len(s.windows) - 1)
+		s.hook("window-created", created)
 	case "select-window":
 		i, err := s.windowTargetLocked(r.Window, r.Direction)
 		if err != nil {
