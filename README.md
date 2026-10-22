@@ -8,7 +8,7 @@ bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, watch your coding agents from a sidebar, copy text with the
 mouse, and keep your layout across restarts, without a plugin manager.
 
-**v0.5.2 pre-release for macOS and Linux.**
+**v0.6.0 pre-release for macOS and Linux.**
 
 **[Documentation](https://bmux-dev.github.io/bmux/)**
 
@@ -218,7 +218,7 @@ processes, and resumed agents reopen their saved conversation rather than
 continuing the process that was running.
 
 When a newer release is out, a small **↑** appears at the right end of the
-status bar (`↑ 0.6.0` when there's room). To upgrade:
+status bar (`↑ 0.7.0` when there's room). To upgrade:
 
 ```sh
 bmux update     # downloads the release and checks it against its checksums
