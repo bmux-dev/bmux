@@ -18,9 +18,18 @@ and, under `pane`, where you are (`null` outside bmux).
 
 ## Targets
 
-Commands take a target: `SESSION` (the focused pane of its active window) or
-`SESSION:PANE`. Pane numbers are unique across a session's windows, so a
-`SESSION:PANE` target reaches a pane in a background window too.
+Commands take a target, written like tmux's `session:window.pane`:
+
+| Target | Means |
+| --- | --- |
+| `api` | session `api`: the focused pane of its active window |
+| `api:7` | pane 7. Pane numbers are unique across a session's windows, so this reaches a pane in a background window too; it's the form `bmux agents` prints |
+| `api:2.` | window 2: its focused pane |
+| `api:2.1` | window 2, the first pane in its layout |
+| `:2.1`, `:7`, `:` | the same, in the session you're running in |
+
+`api:N` always means pane N, not window N as in tmux; when no pane N exists
+but window N does, the error says to write `api:N.`.
 `bmux agents` lists every pane running a coding agent:
 
 ```
@@ -32,7 +41,8 @@ ops:1   omp     idle     12   (this pane)
 ```
 
 `--json` prints the same as a list of objects with `target`, `session`,
-`session_id`, `pane`, `agent`, `state`, `seq`, `attention` and `self`.
+`session_id`, `pane`, `window`, `index` (the pane's window and position in
+it), `agent`, `state`, `seq`, `attention` and `self`.
 
 States: `working` (busy), `blocked` (waiting on a decision: a question, a
 permission prompt), `idle` (turn finished, waiting for a prompt). Agents with
@@ -47,7 +57,7 @@ the state you looked at.
 
 ```
 bmux capture api:1          # visible text
-bmux capture --json api:1   # {"target","agent","state","seq","text"}
+bmux capture --json api:1   # {"target","window","index","agent","state","seq","text"}
 ```
 
 This is the screen as the user would see it: the question, its options and
@@ -67,7 +77,8 @@ bmux send api:1 --if-seq 57 --text "use Postgres" --key enter
 user's terminal would. Keys and text are sent in the order given, as one
 batch, without resizing the session, moving focus or marking it seen.
 
-`send` needs `SESSION:PANE`. With `--if-seq`, nothing is typed unless the
+`send` needs a target that names a pane: `SESSION:PANE` or
+`SESSION:WINDOW.N`, never just a session or window. With `--if-seq`, nothing is typed unless the
 pane's seq still matches; otherwise it fails with `stale`. Capture again and
 look at what changed instead of retrying the same keys.
 

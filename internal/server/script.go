@@ -18,21 +18,99 @@ import (
 // errStale refuses a send-input whose if_seq no longer matches the pane.
 var errStale = errors.New("stale")
 
-// capturePane returns a pane's agent activity and visible text. Pane 0 is
-// the focused pane.
-func (s *session) capturePane(id int) (protocol.PaneActivity, string, error) {
-	if id == 0 {
-		s.mu.Lock()
-		id = s.focusedLocked()
-		s.mu.Unlock()
+// paneTarget names a pane the way scripting targets do (SESSION:PANE,
+// SESSION:WINDOW., SESSION:WINDOW.INDEX): a session-wide pane number, a
+// window's focused pane, or a position in a window's layout. The zero value
+// is the active window's focused pane.
+type paneTarget struct{ window, index, pane int }
+
+func targetOf(r protocol.Request) paneTarget {
+	return paneTarget{window: r.Window, index: r.PaneIndex, pane: r.PaneID}
+}
+
+// named reports whether t picks one pane itself rather than whichever is
+// focused.
+func (t paneTarget) named() bool { return t.pane != 0 || t.index != 0 }
+
+// Caller holds session.mu. resolveLocked turns t into the pane ID it names.
+// The server resolves targets so a script never races a layout change
+// between looking a pane up and using it.
+func (s *session) resolveLocked(t paneTarget) (int, error) {
+	name := s.info.Name
+	switch {
+	case t.pane != 0:
+		if s.panes[t.pane] != nil && s.windowOfLocked(t.pane) >= 0 {
+			return t.pane, nil
+		}
+		if t.pane <= len(s.windows) {
+			// tmux's session:window; bmux numbers panes across the session.
+			return 0, fmt.Errorf("no pane %d in session %s; for window %d, write %s:%d.", t.pane, name, t.pane, name, t.pane)
+		}
+		return 0, fmt.Errorf("no pane %d in session %s", t.pane, name)
+	case t.window == 0 && t.index != 0:
+		return 0, fmt.Errorf("a pane position needs a window, as in %s:1.%d", name, t.index)
+	case t.window == 0:
+		if id := s.focusedLocked(); id != 0 {
+			return id, nil
+		}
+		return 0, fmt.Errorf("session %s has no panes", name)
+	case t.window < 0 || t.window > len(s.windows):
+		return 0, fmt.Errorf("no window %d in session %s, which has %d", t.window, name, len(s.windows))
 	}
-	p, err := s.livePane(id)
+	w := s.windows[t.window-1]
+	if t.index == 0 {
+		return w.focused, nil
+	}
+	var ids []int
+	w.root.leaves(&ids)
+	if t.index < 0 || t.index > len(ids) {
+		return 0, fmt.Errorf("window %d of session %s has %d panes, not %d", t.window, name, len(ids), t.index)
+	}
+	return ids[t.index-1], nil
+}
+
+// Caller holds session.mu. placeLocked is pane id's 1-based window number
+// and position in that window's layout, or 0, 0.
+func (s *session) placeLocked(id int) (window, index int) {
+	i := s.windowOfLocked(id)
+	if i < 0 {
+		return 0, 0
+	}
+	var ids []int
+	s.windows[i].root.leaves(&ids)
+	for j, leaf := range ids {
+		if leaf == id {
+			return i + 1, j + 1
+		}
+	}
+	return i + 1, 0
+}
+
+// targetPane resolves t on a live session.
+func (s *session) targetPane(t paneTarget) (int, *pane, int, int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped || s.stopping.Load() {
+		return 0, nil, 0, 0, fmt.Errorf("session has been terminated")
+	}
+	id, err := s.resolveLocked(t)
+	if err != nil {
+		return 0, nil, 0, 0, err
+	}
+	window, index := s.placeLocked(id)
+	return id, s.panes[id], window, index, nil
+}
+
+// capturePane returns the targeted pane's agent activity and visible text.
+func (s *session) capturePane(t paneTarget) (protocol.PaneActivity, string, error) {
+	id, p, window, index, err := s.targetPane(t)
 	if err != nil {
 		return protocol.PaneActivity{}, "", err
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	a, _ := p.activityLocked(id)
+	a.Window, a.Index = window, index
 	return a, p.textLocked(), nil
 }
 
@@ -58,16 +136,21 @@ func (s *session) paneZoomed(id int) (bool, error) {
 }
 
 // sendInput writes key presses and pastes to one pane. It never falls back
-// to the focused pane: input meant for an agent must not reach a shell.
-func (s *session) sendInput(id int, ifSeq uint64, input []protocol.Input) (protocol.PaneActivity, error) {
-	if id == 0 {
+// to the focused pane: input meant for an agent must not reach a shell, so
+// t must name a pane, not only a session or window.
+func (s *session) sendInput(t paneTarget, ifSeq uint64, input []protocol.Input) (protocol.PaneActivity, error) {
+	if !t.named() {
 		return protocol.PaneActivity{}, fmt.Errorf("send-input needs a pane")
 	}
-	p, err := s.livePane(id)
+	id, p, window, index, err := s.targetPane(t)
 	if err != nil {
 		return protocol.PaneActivity{}, err
 	}
-	return p.send(id, ifSeq, input)
+	a, err := p.send(id, ifSeq, input)
+	if a.Pane != 0 {
+		a.Window, a.Index = window, index
+	}
+	return a, err
 }
 
 // textLocked is the visible screen as plain text: one line per row without
