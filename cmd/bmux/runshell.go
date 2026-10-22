@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/josephferrero/bmux/internal/client"
 	"github.com/josephferrero/bmux/internal/format"
 	"github.com/josephferrero/bmux/internal/protocol"
 )
@@ -122,4 +123,31 @@ func runIfShell(socket string, args []string) error {
 		branch = a.words[2]
 	}
 	return commandError(paneShell(info, branch).Run())
+}
+
+func runPipePane(socket string, args []string) error {
+	const usage = "usage: bmux pipe-pane [-t TARGET] [-o] [COMMAND]"
+	a, err := parseLayoutArgs(args, usage, []string{"-t"}, []string{"-o"})
+	if err != nil {
+		return err
+	}
+	if len(a.words) > 1 {
+		return fmt.Errorf("%s (quote COMMAND)", usage)
+	}
+	r, err := layoutRequest("", a.values["-t"])
+	if err != nil {
+		return err
+	}
+	r.Op, r.Kind = "pipe-pane", ""
+	if a.flags["-o"] {
+		r.Kind = "toggle"
+	}
+	if len(a.words) == 1 {
+		if strings.TrimSpace(a.words[0]) == "" {
+			return fmt.Errorf("COMMAND is empty; leave it out to stop piping")
+		}
+		r.Text = a.words[0]
+	}
+	_, err = client.Request(socket, r)
+	return err
 }

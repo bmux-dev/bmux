@@ -296,4 +296,5 @@ type PaneInfo struct {
 	Height          int    `json:"height"`
 	Agent           string `json:"agent,omitempty"`
 	State           string `json:"state,omitempty"`
+	Pipe            bool   `json:"pipe,omitempty"` // bmux pipe-pane is copying its output
 }

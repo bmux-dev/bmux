@@ -83,6 +83,7 @@ func (s *session) describe(t paneTarget, scope string) ([]protocol.PaneInfo, err
 			info.Title = p.title
 			a, _ := p.activityLocked(id)
 			info.Agent, info.State = a.Agent, a.State
+			info.Pipe = p.pipe != nil
 			p.mu.Unlock()
 			entries = append(entries, entry{info, p})
 		}

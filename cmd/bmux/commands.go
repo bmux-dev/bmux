@@ -65,6 +65,7 @@ func init() {
 		{"display-message", "[TARGET] [-p] FORMAT", "Expand FORMAT's #{...} variables for a pane; -p prints it, otherwise it shows in the status line of the session's clients", noServer, runDisplayMessage},
 		{"run-shell", "[-t TARGET] [-b] COMMAND", "Run a shell command for a pane: its #{...} variables, directory and BMUX_* environment; -b doesn't wait", noServer, runRunShell},
 		{"if-shell", "[-t TARGET] CONDITION COMMAND [ELSE]", "Run CONDITION for a pane, then COMMAND if it succeeded or ELSE if not", noServer, runIfShell},
+		{"pipe-pane", "[-t TARGET] [-o] [COMMAND]", "Copy everything a pane prints into COMMAND's stdin, e.g. 'cat >> pane.log'; -o toggles; no COMMAND stops", noServer, runPipePane},
 		{"agent", "STATE [NAME] [-- CMD...]", "Report this pane's agent: working, blocked, idle, clear", noServer, reportAgent},
 		{"integration", "status|install|uninstall [AGENT]", "Make claude, codex, omp, opencode and pi report exact state", noServer, func(socket string, args []string) error {
 			// Writes agents' config files and reports from their hooks.

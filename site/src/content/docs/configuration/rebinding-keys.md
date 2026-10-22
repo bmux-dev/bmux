@@ -63,6 +63,7 @@ A key can run a shell command instead of an action, like tmux's
 "g" = "run-shell bmux split -h -- lazygit"   # lazygit in a new split
 "T" = "run-shell make test"                   # the last line shows in the status line
 "N" = "run-shell bmux new-window -c #{pane_current_path} -- nvim"
+"L" = "run-shell bmux pipe-pane -o 'cat >> ~/#{session_name}-#{pane_id}.log'"  # toggle logging
 ```
 
 The server runs the command for the focused pane, in the background, the way

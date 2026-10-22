@@ -35,6 +35,7 @@ sidebar:
 | `bmux display-message [TARGET] [-p] FORMAT` | Expand `FORMAT` for a pane (the calling pane by default): `-p` prints it; otherwise it shows in the status line of every client attached to that session |
 | `bmux run-shell [-t TARGET] [-b] COMMAND` | Run a shell command for a pane (the calling pane by default): its `#{...}` variables, directory and `BMUX_*` environment; exits with the command's status. `-b` doesn't wait |
 | `bmux if-shell [-t TARGET] CONDITION COMMAND [ELSE]` | Run `CONDITION` the same way, then `COMMAND` if it succeeded or `ELSE` if it failed |
+| `bmux pipe-pane [-t TARGET] [-o] [COMMAND]` | Copy everything the pane prints, escape sequences included, into `COMMAND`'s stdin, like tmux's `pipe-pane`: `bmux pipe-pane 'cat >> ~/#{session_name}-#{pane_id}.log'`. `COMMAND` runs like `run-shell`'s; a new one replaces the old. No `COMMAND` stops piping; `-o` stops a piped pane and starts an unpiped one, so one key can toggle logging. Piping stops when the command exits or the pane closes. A command that can't keep up loses output; the pane never waits for it |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
 | `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |
@@ -83,6 +84,7 @@ to nothing. Booleans are `1` or `0`.
 | `pane_current_path`, `pane_current_command` | The pane's directory and the program in front of its shell (empty at the prompt) |
 | `pane_title`, `pane_width`, `pane_height` | Its title and size |
 | `pane_agent`, `pane_agent_state` | Its coding agent and that agent's state, when it has one |
+| `pane_pipe` | Whether `bmux pipe-pane` is copying its output |
 
 ```sh
 bmux display-message -p '#{pane_current_path}'
