@@ -191,3 +191,20 @@ func TestSettingsMatchConfig(t *testing.T) {
 	}
 	walk("", reflect.TypeFor[Config]())
 }
+
+func TestEverySettingHasAGroupAndGroupsAreContiguous(t *testing.T) {
+	for _, tab := range SettingTabs {
+		seen := map[string]bool{}
+		for i, s := range tab.Settings {
+			if s.Group == "" {
+				t.Errorf("%s: no group", s.Key)
+			}
+			if i > 0 && s.Group != tab.Settings[i-1].Group {
+				if seen[s.Group] {
+					t.Errorf("%s: group %q is split in the %s tab", s.Key, s.Group, tab.Name)
+				}
+			}
+			seen[s.Group] = true
+		}
+	}
+}

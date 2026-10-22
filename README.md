@@ -105,7 +105,7 @@ including giving Ctrl-l back to the shell.
 | Reload config | Ctrl-a r |
 | List key bindings | Ctrl-a ? |
 | Agent integrations | Ctrl-a i; Enter installs every agent found |
-| Settings | Ctrl-a ,; ←/→ switch tabs, Enter or Space changes a value, saved to the config file |
+| Settings | Ctrl-a ,; ←/→ switch tabs, Enter or Space changes a value (a choice opens a list; Enter picks, Esc reverts), saved to the config file |
 | Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
 | Select and copy | Drag and release; Alt overrides mouse-aware apps. Or Ctrl-a v, move, v/V/Ctrl-v, y |
 | Scroll history | Mouse wheel or Shift-PageUp/PageDown |

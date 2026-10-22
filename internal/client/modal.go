@@ -16,11 +16,19 @@ type modalLine struct {
 // the screen. It returns where the content starts and how much of it shows;
 // ok is false when the screen is too small for any box.
 func (u *ui) modalFrame(w, h int, title string, contentWidth, contentLines int) (x, y, inner, rows int, ok bool) {
+	return u.modalBox(w, h, title, contentWidth, contentLines, true)
+}
+
+// modalBox is modalFrame with the choice of dimming the body. Leave it
+// undimmed when the user needs to judge the colors behind the box.
+func (u *ui) modalBox(w, h int, title string, contentWidth, contentLines int, dim bool) (x, y, inner, rows int, ok bool) {
 	u.screen.HideCursor()
 	if w < 10 || h < 6 {
 		return 0, 0, 0, 0, false
 	}
-	u.dimBody(w, h)
+	if dim {
+		u.dimBody(w, h)
+	}
 	width := min(max(contentWidth, displayWidth(title)+2)+4, w-4)
 	height := min(contentLines+2, h-2)
 	inner, rows = width-4, height-2
