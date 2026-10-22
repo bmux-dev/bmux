@@ -340,11 +340,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			result.Error = "session not found"
 			break
 		}
-		item.mu.Lock()
-		item.message = r.Text
-		item.messageSeq++
-		item.revision++
-		item.mu.Unlock()
+		item.showMessage(r.Text)
 	default:
 		if r.Op == "focus-pane" {
 			// Standalone CLI focus changes (bmux focus), e.g. Neovim

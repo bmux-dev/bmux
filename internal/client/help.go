@@ -1,6 +1,7 @@
 package client
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -27,6 +28,22 @@ func (u *ui) helpLines() []string {
 				label = u.prefixName() + " " + strings.Join(keys, " / ")
 			}
 			lines = append(lines, "  "+label+strings.Repeat(" ", max(1, 18-displayWidth(label)))+action.Help)
+		}
+		// Keys bound to run-shell COMMAND, by key.
+		keys := make([]string, 0, len(table))
+		for key, action := range table {
+			if _, ok := config.ShellCommand(action); ok {
+				keys = append(keys, key)
+			}
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			command, _ := config.ShellCommand(table[key])
+			label := key
+			if prefixed {
+				label = u.prefixName() + " " + key
+			}
+			lines = append(lines, "  "+label+strings.Repeat(" ", max(1, 18-displayWidth(label)))+"run: "+command)
 		}
 		lines = append(lines, "")
 	}

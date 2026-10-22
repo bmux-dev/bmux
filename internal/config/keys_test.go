@@ -73,3 +73,24 @@ pass-through = ["/usr/bin/fzf", "fzf"]
 		t.Fatalf("invalid bindings kept: root %v prefix %v", root, prefix)
 	}
 }
+
+func TestRunShellBindingsNeedACommand(t *testing.T) {
+	cfg, err := Load(write(t, `[keys.prefix]
+"g" = "run-shell bmux split -- lazygit"
+"x" = "run-shell"
+"y" = "run-shell   "
+"z" = "run-shelf ls"
+`), noEnv)
+	if err == nil || strings.Count(err.Error(), "run-shell needs a command") != 2 || !strings.Contains(err.Error(), `unknown action "run-shelf ls"`) {
+		t.Fatalf("problems: %v", err)
+	}
+	if cfg.Keys.Prefix["g"] != "run-shell bmux split -- lazygit" || len(cfg.Keys.Prefix) != 1 {
+		t.Fatalf("prefix keys: %+v", cfg.Keys.Prefix)
+	}
+	if command, ok := ShellCommand("run-shell  make test "); !ok || command != "make test" {
+		t.Fatalf("ShellCommand: %q %v", command, ok)
+	}
+	if _, ok := ShellCommand("split-right"); ok {
+		t.Fatal("an action read as a command")
+	}
+}
