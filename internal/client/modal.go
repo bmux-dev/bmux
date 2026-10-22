@@ -76,3 +76,24 @@ func (u *ui) dimBody(w, h int) {
 		}
 	}
 }
+
+// drawScrollbar draws a track of height cells at x, y with a thumb sized and
+// placed for the visible lines starting at offset out of total. It draws
+// nothing when everything fits, so a bar shows only when there's more to scroll to.
+func (u *ui) drawScrollbar(x, y, height, total, offset, visible int) {
+	if height < 1 || total <= visible {
+		return
+	}
+	thumb := max(1, height*visible/total)
+	pos := 0
+	if span := total - visible; span > 0 {
+		pos = min(height-thumb, offset*(height-thumb)/span)
+	}
+	for i := range height {
+		if i >= pos && i < pos+thumb {
+			u.screen.PutStrStyled(x, y+i, "█", uiAccentStyle)
+		} else {
+			u.screen.PutStrStyled(x, y+i, "░", uiMutedStyle)
+		}
+	}
+}

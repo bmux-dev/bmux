@@ -357,6 +357,7 @@ func (u *ui) drawSettingsList(x, y, inner, listHeight, labelWidth int) {
 		u.screen.PutStrStyled(x, row, fit("  "+marker+s.Label, labelWidth+5), label)
 		u.screen.PutStrStyled(x+labelWidth+5, row, fit(value, max(0, inner-labelWidth-5)), valueStyle)
 	}
+	u.drawScrollbar(x+inner, y, listHeight, len(lines), p.offset, listHeight)
 }
 
 // drawChoices draws the selected setting's name and its choices, scrolled so
@@ -391,6 +392,7 @@ func (u *ui) drawChoices(x, y, inner, listHeight int) {
 		}
 		u.screen.PutStrStyled(x, y+1+i-p.choiceOffset, fit(text, inner), style)
 	}
+	u.drawScrollbar(x+inner, y+1, height, len(labels), p.choiceOffset, height)
 }
 
 // drawSettingsTabs draws the tab names, scrolled so the current one shows.

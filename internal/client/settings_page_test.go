@@ -345,3 +345,38 @@ func TestSettingsPageClickRevertsAPreview(t *testing.T) {
 		t.Fatalf("click: open=%v, saved look back=%v", u.settingsPage.open, chrome == saved)
 	}
 }
+
+func TestSettingsPageScrollbarShowsOnlyWhenThereIsMoreToScrollTo(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	// A 24-row screen fits Sidebar's options but not the 25 themes.
+	u.key(runeKey('l'))
+	u.key(runeKey('l'))
+	u.draw()
+	text := screenText(u)
+	if strings.ContainsAny(text, "█░") {
+		t.Fatalf("a list that fits drew a scrollbar:\n%s", text)
+	}
+	u.key(runeKey('h'))
+	u.key(key(tcell.KeyEnter)) // Theme choices
+	column := func() (cells []string) {
+		for y := range 24 {
+			for x := range 110 {
+				if text, _, _ := u.screen.Get(x, y); text == "█" || text == "░" {
+					cells = append(cells, text)
+					break
+				}
+			}
+		}
+		return cells
+	}
+	u.draw()
+	top := column()
+	if len(top) < 3 || top[0] != "█" || top[len(top)-1] != "░" {
+		t.Fatalf("at the top the thumb should lead the track: %v", top)
+	}
+	u.key(runeKey('G'))
+	u.draw()
+	if bottom := column(); len(bottom) != len(top) || bottom[0] != "░" || bottom[len(bottom)-1] != "█" {
+		t.Fatalf("at the end the thumb should close the track: %v", bottom)
+	}
+}
