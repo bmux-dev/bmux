@@ -104,6 +104,33 @@ default accent, `cyan`, keeps the theme's own. An unknown theme name is
 reported in the status line and falls back to `dark`. The `BMUX_THEME`
 environment variable takes the same names.
 
+### Switching themes from a script or Neovim
+
+`bmux theme NAME` saves the theme to `config.toml` and reloads the server, so
+attached clients change at once; the rest of the file is left as it is. Run it
+without a name to print the current theme, or with `--list` to print every
+name. An unknown name is an error and changes nothing. If `BMUX_THEME` is set
+it still overrides the file, and `bmux theme` warns about it.
+
+To follow Neovim's colorscheme, add an autocmd. This runs only inside bmux, and
+Neovim's name for most schemes (`catppuccin-latte`, `tokyonight-storm`,
+`rose-pine-moon`, `kanagawa-dragon`, ...) is already a bmux theme name:
+
+```lua
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function(args)
+    if not vim.env.BMUX_SESSION then return end
+    local name = args.match
+    -- gruvbox has one colorscheme name; its variant is the background.
+    if name == "gruvbox" then name = "gruvbox-" .. vim.o.background end
+    vim.system({ "bmux", "theme", name }) -- needs Neovim 0.10+
+  end,
+})
+```
+
+A colorscheme bmux has no theme for, such as `habamax`, makes `bmux theme`
+fail without changing anything.
+
 ## Hooks
 
 `[hooks]` runs shell commands when something happens, like tmux's `set-hook`:

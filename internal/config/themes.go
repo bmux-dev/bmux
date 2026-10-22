@@ -1,6 +1,10 @@
 package config
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // ThemeNames lists every theme `theme` accepts, in the order the settings page
 // cycles them. The client holds a palette for each one.
@@ -49,3 +53,21 @@ func ResolveTheme(name string) (theme string, ok bool) {
 // doesn't.
 const themeChoices = "dark, light, catppuccin, tokyonight, gruvbox, nord, rose-pine, kanagawa, onedark, dracula, everforest or solarized, " +
 	"optionally with a variant such as catppuccin-latte"
+
+// SaveTheme writes the theme name selects to the config file at path, keeping
+// the rest of the file as it is, and returns the theme it saved. Unlike the
+// file's own `theme`, an unknown name is an error rather than a fallback.
+func SaveTheme(path, name string) (string, error) {
+	theme, ok := ResolveTheme(name)
+	if !ok {
+		return "", fmt.Errorf("unknown theme %q; bmux theme --list shows the names", name)
+	}
+	for _, tab := range SettingTabs {
+		for _, s := range tab.Settings {
+			if s.Key == "theme" {
+				return theme, s.Save(path, theme)
+			}
+		}
+	}
+	return "", errors.New("the theme setting is missing")
+}
