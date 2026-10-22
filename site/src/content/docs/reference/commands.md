@@ -30,6 +30,9 @@ sidebar:
 | `bmux resize [TARGET] left\|right\|up\|down [CELLS]` | Move a pane's divider, 5 cells unless `CELLS` says |
 | `bmux zoom [TARGET]` | Zoom or unzoom a pane |
 | `bmux rename-window [TARGET] NAME` | Rename the target's window; an empty name shows its focused pane's title |
+| `bmux list-panes [TARGET] [-a] [-F FORMAT \| --json]` | List the panes of the target's window (`SESSION:WINDOW.` or a pane), its whole session (`SESSION`), or every session (`-a`); without a target, the calling pane's window. `-F` prints each pane as a [format](#format-variables) |
+| `bmux list-windows [TARGET] [-a] [-F FORMAT \| --json]` | List the windows of the target's session, or every session's (`-a`); a window's variables come from its focused pane |
+| `bmux display-message [TARGET] [-p] FORMAT` | Expand `FORMAT` for a pane (the calling pane by default): `-p` prints it; otherwise it shows in the status line of every client attached to that session |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
 | `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |
@@ -61,3 +64,27 @@ Inside a bmux pane, `bmux`, `bmux attach` and `bmux new NAME` refuse to start a
 second client, like tmux checks `$TMUX`: a nested client would shrink into the
 pane and fight over keys. Switch with Ctrl-a s instead, create sessions with
 `bmux new --detach NAME`, or unset `BMUX_SESSION` to nest anyway.
+
+## Format variables
+
+`list-panes -F`, `list-windows -F` and `display-message` replace `#{name}`
+with the pane's value, like tmux. `##` is a literal `#`; unknown names expand
+to nothing. Booleans are `1` or `0`.
+
+| Variable | Value |
+| --- | --- |
+| `session_name`, `session_id`, `session_path` | The session's name, ID (`BMUX_SESSION_ID`) and starting directory |
+| `session_windows`, `session_attached` | Its window count and attached clients |
+| `window_index`, `window_name` | The pane's window number and name, as its tab shows it: the window's name, else its focused pane's title, else `shell` |
+| `window_active`, `window_zoomed`, `window_panes` | Whether the window is the active one or zoomed, and its pane count |
+| `pane_id`, `pane_index`, `pane_target`, `pane_active` | The pane number, its position in the window, `SESSION:PANE`, and whether it's the window's focused pane |
+| `pane_current_path`, `pane_current_command` | The pane's directory and the program in front of its shell (empty at the prompt) |
+| `pane_title`, `pane_width`, `pane_height` | Its title and size |
+| `pane_agent`, `pane_agent_state` | Its coding agent and that agent's state, when it has one |
+
+```sh
+bmux display-message -p '#{pane_current_path}'
+bmux list-panes api -F '#{pane_target} #{pane_current_command}'
+bmux list-windows -a -F '#{session_name}:#{window_index} #{window_name}'
+bmux display-message api 'tests passed in #{window_name}'
+```

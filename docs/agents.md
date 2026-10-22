@@ -102,6 +102,20 @@ command line, several are quoted as arguments), and print the new pane's
 target. `kill-pane` and `kill-window` always need a TARGET. Ask the user
 before closing a pane you didn't open.
 
+## Describe panes and windows
+
+```
+bmux list-panes api              # TARGET  WINDOW  SIZE  COMMAND  DIRECTORY
+bmux list-windows -a             # every session's windows
+bmux list-panes -a --json        # every pane: directory, command, agent, size
+bmux display-message -p '#{pane_current_path} #{pane_current_command}'
+```
+
+`-F FORMAT` prints each pane or window as a format such as
+`'#{pane_target} #{pane_current_path}'`; `bmux list-panes --json` shows every
+field. `bmux display-message TARGET 'text'` without `-p` shows text in the
+status line of everyone attached to that session; use it sparingly.
+
 ## Wait for a pane
 
 ```

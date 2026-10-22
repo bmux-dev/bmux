@@ -114,8 +114,8 @@ Targets depend on windows from v0.4.
 | Targets for every command | M | Done: `session:window.pane` (`api:2.1`, `api:2.`, `:2.1`); `api:7` stays pane 7 ([#82](https://github.com/bmux-dev/bmux/issues/82)) |
 | `send-keys`, `capture-pane` | M | Done: `bmux send` and `bmux capture` take every target form |
 | Layout commands | M | Done: `bmux split`, `new-window`, `select`, `kill-pane`, `kill-window`, `resize`, `zoom`, `rename-window`, with targets ([#84](https://github.com/bmux-dev/bmux/issues/84)) |
-| `list-panes`, `list-windows`, `display-message` | S | |
-| Format variables | M | `#{session_name}`, `#{pane_current_path}`, `#{pane_id}`, … |
+| `list-panes`, `list-windows`, `display-message` | S | Done: `-F` formats, `-a` for every session, `--json`; `display-message` without `-p` shows in the session's status lines ([#86](https://github.com/bmux-dev/bmux/issues/86)) |
+| Format variables | M | Done: `#{session_name}`, `#{window_index}`, `#{pane_current_path}`, `#{pane_current_command}` and 17 more |
 | Hooks | M | `session-created`, `pane-exited`, `client-attached`, … |
 | `run-shell`, `if-shell` | S | |
 | Log a pane to a file | S | Like tmux's `pipe-pane` and the tmux-logging plugin. |

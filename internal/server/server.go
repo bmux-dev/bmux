@@ -129,7 +129,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		}
 	}
 	item := s.sessions[r.Name]
-	if (r.Op == "focus-pane" || r.Op == "zoomed" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout-command" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history" || r.Op == "jump-prompt") && r.SessionID != 0 {
+	if (r.Op == "focus-pane" || r.Op == "zoomed" || r.Op == "agent-report" || r.Op == "capture-pane" || r.Op == "send-input" || r.Op == "layout-command" || r.Op == "describe" || r.Op == "display-message" || r.Op == "layout" || r.Op == "history-text" || r.Op == "search-history" || r.Op == "jump-prompt") && r.SessionID != 0 {
 		// Never fall back to the name: after a rename it may belong to another session.
 		item = nil
 		for _, candidate := range s.sessions {
@@ -312,6 +312,39 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			break
 		}
 		result.Pane = &a
+	case "describe":
+		// Kind is the scope: pane, window, session, or all sessions.
+		if r.Kind == "all" {
+			sort.Slice(items, func(i, j int) bool { return items[i].name < items[j].name })
+			for _, named := range items {
+				panes, err := named.item.describe(paneTarget{}, "session")
+				if err == nil {
+					result.Panes = append(result.Panes, panes...)
+				}
+			}
+			break
+		}
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		panes, err := item.describe(targetOf(r), r.Kind)
+		if err != nil {
+			result.Error = err.Error()
+			break
+		}
+		result.Panes = panes
+	case "display-message":
+		// Shown in the status line of every client attached to the session.
+		if item == nil {
+			result.Error = "session not found"
+			break
+		}
+		item.mu.Lock()
+		item.message = r.Text
+		item.messageSeq++
+		item.revision++
+		item.mu.Unlock()
 	default:
 		if r.Op == "focus-pane" {
 			// Standalone CLI focus changes (bmux focus), e.g. Neovim

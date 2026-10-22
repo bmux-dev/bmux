@@ -213,6 +213,11 @@ type Frame struct {
 	// Notice is something the client should show once, such as a layout
 	// file that couldn't be used; only the session's first attachment gets it.
 	Notice string `json:"notice,omitempty"`
+	// Message is the latest bmux display-message for the session, and
+	// MessageSeq counts them; clients show it when the count changes, never
+	// on the first frame of an attachment.
+	Message    string `json:"message,omitempty"`
+	MessageSeq uint64 `json:"message_seq,omitempty"`
 	// Update is a newer bmux release for the status bar's hint; nil when the
 	// server runs the newest one, or update checks are off.
 	Update *UpdateHint `json:"update,omitempty"`
@@ -262,4 +267,33 @@ type Response struct {
 	Range *TextRange `json:"range,omitempty"`
 	// Zoomed is zoomed's answer: whether the window showing the pane is zoomed.
 	Zoomed bool `json:"zoomed,omitempty"`
+	// Panes is describe's answer: one entry per pane, window by window in
+	// layout order.
+	Panes []PaneInfo `json:"panes,omitempty"`
+}
+
+// PaneInfo describes a pane and its window and session, for bmux
+// list-panes, list-windows and display-message and their #{...} format
+// variables.
+type PaneInfo struct {
+	Session         string `json:"session"`
+	SessionID       uint64 `json:"session_id"`
+	SessionPath     string `json:"session_path"`
+	SessionWindows  int    `json:"session_windows"`
+	SessionAttached int    `json:"session_attached"`
+	Window          int    `json:"window"`
+	WindowName      string `json:"window_name"`
+	WindowActive    bool   `json:"window_active"`
+	WindowZoomed    bool   `json:"window_zoomed"`
+	WindowPanes     int    `json:"window_panes"`
+	Pane            int    `json:"pane"`
+	Index           int    `json:"index"`
+	Active          bool   `json:"active"`
+	Path            string `json:"path"`
+	Command         string `json:"command"`
+	Title           string `json:"title"`
+	Width           int    `json:"width"`
+	Height          int    `json:"height"`
+	Agent           string `json:"agent,omitempty"`
+	State           string `json:"state,omitempty"`
 }
