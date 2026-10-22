@@ -76,6 +76,11 @@ func TestTrustedLayoutFileBuildsWindowsAndRunsCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := createIn(t, srv, "proj", dir)
+	for _, info := range srv.request(protocol.Request{Op: "list"}).Sessions {
+		if info.Restored {
+			t.Fatalf("a session built from a layout file is marked restored: %+v", info)
+		}
+	}
 	f := snapshot(s)
 	if got := windowPaneIDs(f); !reflect.DeepEqual(got, [][]int{{1, 2}, {3}}) || activeWindow(f) != 2 {
 		t.Fatalf("windows %v active %d", got, activeWindow(f))
