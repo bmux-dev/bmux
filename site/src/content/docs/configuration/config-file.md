@@ -13,7 +13,7 @@ The file and every line in it are optional; write only what you change.
 
 You don't have to edit the file by hand for the common settings: **Ctrl-a ,**
 opens a settings page with one tab per area (General, Appearance, Sidebar,
-Sound, Agents, Projects, Sessions), each split into labeled groups. Move with
+Alerts, Agents, Projects, Sessions), each split into labeled groups. Move with
 **←/→** (or **h/l**) and **j/k**. **Enter** or **Space** flips a switch; on a
 choice it opens a list you scroll with **↑/↓**, where **Enter** picks the
 highlighted choice and returns to the page, and **Esc** goes back without
