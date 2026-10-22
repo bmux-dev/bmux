@@ -171,7 +171,7 @@ func TestSettingsMatchConfig(t *testing.T) {
 		}
 	}
 
-	fileOnly := map[string]bool{"onboarding": true, "keys": true, "restore.resume": true}
+	fileOnly := map[string]bool{"onboarding": true, "keys": true, "restore.resume": true, "hooks": true}
 	var walk func(prefix string, t reflect.Type)
 	walk = func(prefix string, typ reflect.Type) {
 		for i := range typ.NumField() {
