@@ -390,8 +390,8 @@ func (s *pane) defaultBG() string {
 
 // cell converts an emulator cell; bg replaces the default background. A cell
 // inside an OSC 8 hyperlink is added to links, which may be nil to leave
-// links out.
-func (s *pane) cell(c *uv.Cell, bg string, links *[]string) protocol.Cell {
+// links out. A placeholder cell's image id is remapped through placed.
+func (s *pane) cell(c *uv.Cell, bg string, links *[]string, placed *frameImages) protocol.Cell {
 	cellBG := s.cellColor(c.Style.Bg)
 	if cellBG == "" {
 		cellBG = bg
@@ -401,7 +401,7 @@ func (s *pane) cell(c *uv.Cell, bg string, links *[]string) protocol.Cell {
 	if links != nil && c.Link.URL != "" {
 		out.Link = linkIndex(links, c.Link.URL)
 	}
-	return out
+	return placed.remap(out, c.Style.Fg)
 }
 
 // linkIndex returns 1 + the position of url in links, appending it when new.
@@ -460,6 +460,8 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 		Mouse: s.modes[9] || s.modes[1000] || s.modes[1002] || s.modes[1003],
 	}
 	bg := s.defaultBG()
+	placed := s.frameImages()
+	defer placed.finish(f)
 	f.Rows = make([][]protocol.Cell, s.term.Height())
 	for y := range f.Rows {
 		f.Rows[y] = make([]protocol.Cell, s.term.Width())
@@ -484,7 +486,7 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 				c = s.term.CellAt(x, row-history)
 			}
 			if c != nil {
-				f.Rows[y][x] = s.cell(c, bg, &f.Links)
+				f.Rows[y][x] = s.cell(c, bg, &f.Links, placed)
 			} else {
 				f.Rows[y][x].BG = bg
 			}
@@ -511,11 +513,13 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 	f.CursorVisible = visible && f.CursorX >= 0 && f.CursorX < width && f.CursorY >= 0 && f.CursorY < height
 	f.Base = max(s.historyTotal, s.term.ScrollbackLen()) + startY
 	bg := s.defaultBG()
+	placed := s.frameImages()
+	defer placed.finish(f)
 	for y := 0; y < height; y++ {
 		row := make([]protocol.Cell, width)
 		for x := range row {
 			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = s.cell(c, bg, nil)
+				row[x] = s.cell(c, bg, nil, placed)
 			} else {
 				row[x].BG = bg
 			}

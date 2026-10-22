@@ -184,8 +184,7 @@ func (u *ui) focusSidebar() {
 func (u *ui) toggleSidebar() {
 	u.sidebarHidden = !u.sidebarHidden
 	u.sidebarFocus = false
-	w, h := u.screen.Size()
-	u.send(protocol.Request{Op: "resize", Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
+	u.sendResize()
 	u.refreshSidebar()
 }
 

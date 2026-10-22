@@ -64,6 +64,9 @@ type position struct{ row, col int }
 // i (columns inside a wide character map to its first cell). end is just
 // past the last cell. A line always takes at least one row.
 func rewrap(line logicalLine, width int) (rows []uv.Line, flags []LineFlags, at []position, end position) {
+	if hasPlaceholder(line) {
+		return clip(line, width)
+	}
 	row := newRow(width)
 	col := 0
 	at = make([]position, len(line.cells))
@@ -101,6 +104,49 @@ func rewrap(line logicalLine, width int) (rows []uv.Line, flags []LineFlags, at 
 		flags[0] |= FlagPrompt
 	}
 	return rows, flags, at, end
+}
+
+// hasPlaceholder reports a line with image placeholder cells.
+func hasPlaceholder(line logicalLine) bool {
+	for _, c := range line.cells {
+		if IsPlaceholder(c.Content) {
+			return true
+		}
+	}
+	return false
+}
+
+// clip fits a line with image cells to one row, dropping what doesn't fit.
+// An image's cells name the part of the image they show, so wrapping the end
+// of a row onto the next would draw those parts under the wrong rows.
+func clip(line logicalLine, width int) (rows []uv.Line, flags []LineFlags, at []position, end position) {
+	row := newRow(width)
+	at = make([]position, len(line.cells))
+	col := 0
+	for i, c := range line.cells {
+		if c.IsZero() {
+			if i > 0 {
+				at[i] = at[i-1]
+			}
+			continue
+		}
+		w := max(1, c.Width)
+		if col+w > width {
+			at[i] = position{0, width - 1}
+			continue
+		}
+		at[i] = position{0, col}
+		row[col] = c
+		for j := 1; j < w; j++ {
+			row[col+j] = uv.Cell{}
+		}
+		col += w
+	}
+	flags = make([]LineFlags, 1)
+	if line.prompt {
+		flags[0] |= FlagPrompt
+	}
+	return []uv.Line{row}, flags, at, position{0, col}
 }
 
 func newRow(width int) uv.Line {

@@ -6,6 +6,7 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 // Give x/vt a bounded scratch margin during each output operation, then trim
@@ -123,7 +124,7 @@ func rowText(row uv.Line, lo, hi int) string {
 		c := row[x]
 		switch {
 		case c.IsZero():
-		case c.Style.Attrs&uv.AttrConceal != 0 || c.Content == "":
+		case c.Style.Attrs&uv.AttrConceal != 0 || c.Content == "" || vt.IsPlaceholder(c.Content):
 			b.WriteString(strings.Repeat(" ", max(1, c.Width)))
 		default:
 			b.WriteString(c.Content)

@@ -21,8 +21,7 @@ func (u *ui) applySettings(settings config.Config) {
 		u.sidebarHidden = !settings.Sidebar.Show
 	}
 	if !first && u.screen != nil && (previous != settings.Sidebar || wasHidden != u.sidebarHidden) {
-		w, h := u.screen.Size()
-		u.send(protocol.Request{Op: "resize", Width: u.paneViewportWidth(w), Height: paneViewportHeight(h)})
+		u.sendResize()
 	}
 }
 

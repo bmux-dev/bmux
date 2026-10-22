@@ -89,6 +89,7 @@ var SettingTabs = []SettingTab{
 		boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
 		boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
 		boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),
+		enumSetting("ui.graphics", "Images", "Show images programs draw: auto detects Kitty graphics, on assumes it, off never", []string{"auto", "on", "off"}, false, func(c *Config) *string { return &c.UI.Graphics }),
 		textSetting("ui.agent-colors.working", "Working color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Working }),
 		textSetting("ui.agent-colors.waiting", "Waiting color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Waiting }),
 		textSetting("ui.agent-colors.blocked", "Blocked color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Blocked }),

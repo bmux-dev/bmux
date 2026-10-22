@@ -149,6 +149,13 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 	s.mu.Unlock()
 	switch r.Op {
 	case "ping":
+	case "image-data":
+		chunk, err := imageChunk(r)
+		if err != nil {
+			result.Error = err.Error()
+			break
+		}
+		result.ImageChunk = chunk
 	case "preview":
 		if item == nil {
 			result.Error = "session not found"
@@ -425,6 +432,9 @@ func (s *Server) handle(conn net.Conn) {
 	if err := enc.Encode(protocol.Response{Version: protocol.Version}); err != nil {
 		return
 	}
+	display := &clientGraphics{}
+	item.reportGraphics(display, r.Graphics)
+	defer item.dropGraphics(display)
 	_ = item.input(protocol.Request{Op: "resize", Width: r.Width, Height: r.Height})
 	requests := make(chan protocol.Request, 1)
 	readErrors := make(chan error, 1)
@@ -498,6 +508,9 @@ func (s *Server) handle(conn net.Conn) {
 					item.setViewing(viewing)
 				}
 				continue
+			}
+			if next.Op == "resize" {
+				item.reportGraphics(display, next.Graphics)
 			}
 			if next.Op == "scroll" {
 				item.mu.Lock()

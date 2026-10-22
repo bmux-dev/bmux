@@ -126,7 +126,9 @@ func (v scrollView) selected(x, id int) bool {
 }
 
 // isBlank reports a cell that holds no text.
-func isBlank(c protocol.Cell) bool { return strings.TrimSpace(c.Text) == "" && c.Width != 0 }
+func isBlank(c protocol.Cell) bool {
+	return (strings.TrimSpace(c.Text) == "" || isPlaceholder(c)) && c.Width != 0
+}
 
 // viewKey handles every key while the view is open; none reach the pane.
 func (u *ui) viewKey(e *tcell.EventKey) {
@@ -414,7 +416,7 @@ func searchMatches(row []protocol.Cell, query string) []bool {
 			continue
 		}
 		t := c.Text
-		if t == "" {
+		if t == "" || isPlaceholder(c) {
 			t = " "
 		}
 		if fold {

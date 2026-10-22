@@ -141,6 +141,7 @@ func TestSettingsPageTakesKeysAndPasteInsteadOfPanes(t *testing.T) {
 	u.key(runeKey('j'))
 	u.key(runeKey('j'))
 	u.key(runeKey('j'))
+	u.key(runeKey('j'))                                        // past Images
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)) // Appearance: working color
 	u.handleRawPaste(&rawPasteEvent{Text: "#12ab\n34"})
 	if u.settingsPage.input != "#12ab34" {

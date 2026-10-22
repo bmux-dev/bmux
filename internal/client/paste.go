@@ -109,7 +109,8 @@ func (p *pasteParser) finish() ([]byte, *rawPasteEvent) {
 // race earlier ordinary keys still waiting for tcell interpretation.
 type rawPasteScreen struct {
 	tcell.Screen
-	pastes <-chan *rawPasteEvent
+	pastes   <-chan *rawPasteEvent
+	graphics graphicsEnv
 }
 
 func (s *rawPasteScreen) translate(event tcell.Event) tcell.Event {

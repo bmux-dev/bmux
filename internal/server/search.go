@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/josephferrero/bmux/internal/vt"
 )
 
 // Search runs over the pane's whole retained history, one printed line at a
@@ -54,7 +55,7 @@ func (p *pane) searchLineLocked(from, to int, fold bool) searchLine {
 				continue
 			}
 			content := c.Content
-			if content == "" {
+			if content == "" || vt.IsPlaceholder(content) {
 				content = " "
 			}
 			if fold {
