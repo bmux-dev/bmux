@@ -208,6 +208,9 @@ func (s *session) input(r protocol.Request) error {
 		return s.closePane(r.PaneID)
 	case "close-window":
 		return s.closeWindow(r.Window)
+	case "run-shell":
+		// A key bound to run-shell COMMAND; see hooks.go.
+		return s.runShell(r.PaneID, r.Text)
 	}
 	// The new pane's directory is read from the OS before taking session.mu;
 	// the split then targets the pane that was sampled. Dir, from bmux split

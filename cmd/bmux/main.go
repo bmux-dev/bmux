@@ -20,6 +20,10 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		// run-shell and if-shell exit with their command's status, quietly.
+		if status, ok := err.(exitStatus); ok {
+			os.Exit(int(status))
+		}
 		fmt.Fprintln(os.Stderr, "bmux:", err)
 		os.Exit(1)
 	}

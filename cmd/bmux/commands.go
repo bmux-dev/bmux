@@ -63,6 +63,8 @@ func init() {
 		{"list-panes", "[TARGET] [-a] [-F FORMAT | --json]", "List the panes of a window (SESSION:WINDOW. or a pane), a session, or every session (-a); -F formats each line with #{...} variables", noServer, runListPanes},
 		{"list-windows", "[TARGET] [-a] [-F FORMAT | --json]", "List a session's windows, or every session's (-a)", noServer, runListWindows},
 		{"display-message", "[TARGET] [-p] FORMAT", "Expand FORMAT's #{...} variables for a pane; -p prints it, otherwise it shows in the status line of the session's clients", noServer, runDisplayMessage},
+		{"run-shell", "[-t TARGET] [-b] COMMAND", "Run a shell command for a pane: its #{...} variables, directory and BMUX_* environment; -b doesn't wait", noServer, runRunShell},
+		{"if-shell", "[-t TARGET] CONDITION COMMAND [ELSE]", "Run CONDITION for a pane, then COMMAND if it succeeded or ELSE if not", noServer, runIfShell},
 		{"agent", "STATE [NAME] [-- CMD...]", "Report this pane's agent: working, blocked, idle, clear", noServer, reportAgent},
 		{"integration", "status|install|uninstall [AGENT]", "Make claude, codex, omp, opencode and pi report exact state", noServer, func(socket string, args []string) error {
 			// Writes agents' config files and reports from their hooks.

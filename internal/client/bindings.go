@@ -111,6 +111,12 @@ func actionDirection(action string) (string, string) {
 // run performs a bound action. Resize actions open the repeat window, in
 // which keys bound to resize in the prefix table repeat without the prefix.
 func (u *ui) run(action string, now time.Time) {
+	// run-shell COMMAND: the server runs it for the focused pane and shows
+	// what it printed in the status line.
+	if command, ok := config.ShellCommand(action); ok {
+		u.send(protocol.Request{Op: "run-shell", PaneID: u.focused, Text: command})
+		return
+	}
 	switch kind, direction := actionDirection(action); kind {
 	case "navigate":
 		u.resumeLive()
