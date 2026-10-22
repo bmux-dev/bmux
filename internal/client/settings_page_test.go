@@ -264,16 +264,16 @@ func TestSettingsPageThemePreviewsWhileScrollingAndEscapeReverts(t *testing.T) {
 }
 
 func TestSettingsPageChoiceHighlightsSavedValueAndKeepsPreviewOffAnyOtherSetting(t *testing.T) {
-	u, _ := settingsPageUI(t, "theme = \"nord\"\n[ui]\nnotice-position = \"bottom-left\"\n")
+	u, _ := settingsPageUI(t, "theme = \"nord\"\n[ui]\ngraphics = \"off\"\n")
 	u.key(runeKey('l'))
 	u.key(key(tcell.KeyEnter))
 	if got := config.SettingTabs[1].Settings[0].Options[u.settingsPage.choice]; got != "nord" {
 		t.Fatalf("choices open on %q, want the saved theme", got)
 	}
 	u.key(key(tcell.KeyEscape))
-	// Notice position is a choice too, but it has no look to preview.
+	// Images is a choice too, but it has no look to preview.
 	for i, s := range config.SettingTabs[1].Settings {
-		if s.Key == "ui.notice-position" {
+		if s.Key == "ui.graphics" {
 			for range i {
 				u.key(key(tcell.KeyDown))
 			}
@@ -281,12 +281,12 @@ func TestSettingsPageChoiceHighlightsSavedValueAndKeepsPreviewOffAnyOtherSetting
 	}
 	before := chrome
 	u.key(key(tcell.KeyEnter))
-	if got := u.pageSetting().Options[u.settingsPage.choice]; got != "bottom-left" {
-		t.Fatalf("notice choices open on %q", got)
+	if got := u.pageSetting().Options[u.settingsPage.choice]; got != "off" {
+		t.Fatalf("image choices open on %q", got)
 	}
 	u.key(key(tcell.KeyDown))
 	if chrome != before {
-		t.Fatal("scrolling notice positions changed the colors")
+		t.Fatal("scrolling image choices changed the colors")
 	}
 }
 
@@ -385,7 +385,7 @@ func TestSettingsTabsShowIconsWithSpaceBetween(t *testing.T) {
 	u, _ := settingsPageUI(t, "")
 	u.settings.UI.Icons = "plain"
 	u.draw()
-	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ≡ Sidebar   ♪ Sound ") {
+	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ≡ Sidebar   ♪ Alerts ") {
 		t.Fatalf("tabs lack icons or spacing:\n%s", text)
 	}
 	// On a terminal too narrow for every tab, the current one still shows.
@@ -423,16 +423,20 @@ func TestSettingsTabIconsFollowTheIconsSetting(t *testing.T) {
 	}
 }
 
-// selectSetting moves the cursor to the setting with this key on the Appearance tab.
+// selectSetting moves to the tab holding the setting with this key and puts the cursor on it.
 func selectSetting(t *testing.T, u *ui, key_ string) {
 	t.Helper()
-	u.key(runeKey('l'))
-	for i, s := range config.SettingTabs[1].Settings {
-		if s.Key == key_ {
-			for range i {
-				u.key(key(tcell.KeyDown))
+	for tab, tabSettings := range config.SettingTabs {
+		for i, s := range tabSettings.Settings {
+			if s.Key == key_ {
+				for range tab {
+					u.key(key(tcell.KeyRight))
+				}
+				for range i {
+					u.key(key(tcell.KeyDown))
+				}
+				return
 			}
-			return
 		}
 	}
 	t.Fatalf("no setting %s", key_)
