@@ -18,9 +18,10 @@ Sound, Agents, Projects, Sessions), each split into labeled groups. Move with
 choice it opens a list you scroll with **↑/↓**, where **Enter** picks the
 highlighted choice and returns to the page, and **Esc** goes back without
 changing anything. On a number, path, list or duration it opens an editor
-(**Enter** saves, **Esc** cancels). The theme, accent color and pane background
-lists preview each choice as you scroll, without dimming the screen so the
-colors are true; **Esc** puts the saved look back. The accent list ends with
+(**Enter** saves, **Esc** cancels). The theme, accent color, pane background and
+icons lists preview each choice as you scroll, and leave the screen undimmed so
+the colors are true; **Esc** puts the saved look back. Other lists dim the
+screen and apply on **Enter**. The accent list ends with
 **Custom…**, which types a `#RRGGBB` value. A footer inside the page lists the
 keys. Each change is written to
 the config file at once and applied without a restart. Comments and the other

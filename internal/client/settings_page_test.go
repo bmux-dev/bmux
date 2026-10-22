@@ -422,3 +422,73 @@ func TestSettingsTabIconsFollowTheIconsSetting(t *testing.T) {
 		})
 	}
 }
+
+// selectSetting moves the cursor to the setting with this key on the Appearance tab.
+func selectSetting(t *testing.T, u *ui, key_ string) {
+	t.Helper()
+	u.key(runeKey('l'))
+	for i, s := range config.SettingTabs[1].Settings {
+		if s.Key == key_ {
+			for range i {
+				u.key(key(tcell.KeyDown))
+			}
+			return
+		}
+	}
+	t.Fatalf("no setting %s", key_)
+}
+
+func TestSettingsPageOnlyClearsTheOverlayForChoicesItPreviews(t *testing.T) {
+	for _, tt := range []struct {
+		key     string
+		clears  bool
+		reasons string
+	}{
+		{"theme", true, "colors preview"},
+		{"ui.icons", true, "icons preview"},
+		{"ui.notice-position", false, "nothing to preview"},
+		{"ui.graphics", false, "nothing to preview"},
+	} {
+		t.Run(tt.key, func(t *testing.T) {
+			u, _ := settingsPageUI(t, "")
+			selectSetting(t, u, tt.key)
+			u.key(key(tcell.KeyEnter))
+			u.draw()
+			if got := !dimmed(u, 105, 5); got != tt.clears {
+				t.Fatalf("overlay cleared = %v, want %v (%s)", got, tt.clears, tt.reasons)
+			}
+		})
+	}
+}
+
+func TestSettingsPageIconsPreviewWhileScrollingAndEscapeReverts(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	selectSetting(t, u, "ui.icons")
+	u.key(key(tcell.KeyEnter)) // auto, so Nerd Font icons
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "\uf013 General") {
+		t.Fatalf("auto should start on Nerd Font icons:\n%s", text)
+	}
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown)) // plain
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "⌘ General") || strings.Contains(text, "\uf013") {
+		t.Fatalf("scrolling to plain didn't preview the tab icons:\n%s", text)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("previewing icons wrote the file")
+	}
+	u.key(key(tcell.KeyEscape))
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "\uf013 General") {
+		t.Fatalf("Esc didn't put the icons back:\n%s", text)
+	}
+	u.key(key(tcell.KeyEnter))
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyEnter))
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "⌘ General") || !strings.Contains(fileText(t, path), `icons = "plain"`) {
+		t.Fatalf("Enter didn't keep plain icons:\n%s", text)
+	}
+}
