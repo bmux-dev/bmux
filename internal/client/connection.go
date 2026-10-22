@@ -33,11 +33,13 @@ func attach(socket, name string, w, h int, graphics *protocol.Graphics, colors *
 	var response protocol.Response
 	err = conn.dec.Decode(&response)
 	_ = c.SetReadDeadline(time.Time{})
+	// The version first: an older server's own mismatch error doesn't say
+	// what to do.
+	if err == nil && response.Version != protocol.Version {
+		err = protocol.MismatchError{Server: response.Version}
+	}
 	if err == nil && response.Error != "" {
 		err = fmt.Errorf("%s", response.Error)
-	}
-	if err == nil && response.Version != protocol.Version {
-		err = fmt.Errorf("bmux protocol version mismatch")
 	}
 	if err != nil {
 		c.Close()

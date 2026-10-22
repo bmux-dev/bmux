@@ -7,11 +7,20 @@ sidebar:
 
 ## Protocol version mismatch
 
-An upgraded client may not work with a server started by an older binary.
+After `bmux update` (or any upgrade that changed the protocol), commands fail
+until the server runs the new version too, and say which side is older:
+
+```
+bmux: the running bmux server is an older version (protocol 8; this bmux speaks 10). Run bmux restart …
+```
+
 Run `bmux restart` with the new binary: it saves the sessions, stops the old
-server, and starts the new one, which restores them. Servers from before
-saving existed are stopped with SIGTERM and their sessions are not restored.
-Do not delete the socket to try to upgrade a running server.
+server, and starts the new one, which restores them. Programs running in panes
+end. When the server is the newer one, an older `bmux` is first on your
+`PATH`: use the binary that started the server, or `bmux restart` with the one
+you want. Servers from before v0.2, which didn't save sessions, are stopped
+with SIGTERM and their sessions are not restored. Do not delete the socket to
+try to upgrade a running server.
 
 ## Server does not start
 
