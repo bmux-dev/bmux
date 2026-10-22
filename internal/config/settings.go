@@ -117,6 +117,7 @@ var SettingTabs = []SettingTab{
 	}},
 	{"Sessions", []Setting{
 		boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
+		listSetting("restore.relaunch", "Relaunch programs", "Programs started again with their arguments in restored panes, comma separated", func(c *Config) *[]string { return &c.Restore.Relaunch }),
 		intSetting("scrollback.lines", "Scrollback lines", "History kept per pane, 100-200000", func(c *Config) *int { return &c.Scrollback.Lines }),
 	}},
 }

@@ -70,6 +70,9 @@ type paneSnapshot struct {
 	// built-in ones continue the agent's latest conversation in Dir.
 	Resume   []string `json:"resume,omitempty"`
 	Reported bool     `json:"reported,omitempty"`
+	// Relaunch is an allowlisted program's command line (restore.relaunch),
+	// typed into the restored shell when there's no agent to resume.
+	Relaunch []string `json:"relaunch,omitempty"`
 	// Command is a layout file's startup line, typed into the shell as is.
 	// Layout files only; never saved.
 	Command string `json:"-"`
@@ -170,6 +173,9 @@ func (s *session) persistentState() (sessionSnapshot, bool) {
 					entry.Dir = dir
 				}
 			}
+		}
+		if len(entry.Resume) == 0 && detected == "" {
+			entry.Relaunch = p.relaunchCommand(currentSettings().relaunch)
 		}
 		snap.Panes = append(snap.Panes, entry)
 	}
@@ -322,6 +328,10 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 			continue
 		}
 		if len(c.snap.Resume) == 0 || validateResume(c.snap.Resume) != nil {
+			if relaunchable(c.snap.Relaunch, currentSettings().relaunch) {
+				// A new process with the same arguments, not the old one.
+				_ = c.p.input(protocol.Request{Op: "type", Text: shellCommand(relaunchArgv(c.snap.Relaunch, c.dir)) + "\r"})
+			}
 			continue
 		}
 		if !c.snap.Reported {

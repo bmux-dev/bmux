@@ -83,6 +83,72 @@ func foregroundGroupCommand(group int, match func(string) string) (string, error
 	return "", nil
 }
 
+// jobLeader names a foreground job's leader: the process whose pid is the
+// group's, which the shell started. Its arguments aren't read.
+func jobLeader(group int) (comm, exe string, ok bool) {
+	dir := "/proc/" + strconv.Itoa(group)
+	data, err := os.ReadFile(dir + "/stat")
+	if err != nil {
+		return "", "", false
+	}
+	start, end := strings.IndexByte(string(data), '('), strings.LastIndexByte(string(data), ')')
+	if start < 0 || end <= start {
+		return "", "", false
+	}
+	fields := strings.Fields(string(data[end+1:]))
+	if len(fields) < 3 || fields[0] == "Z" || fields[0] == "T" || fields[0] == "t" || fields[2] != strconv.Itoa(group) {
+		return "", "", false
+	}
+	exe, _ = os.Readlink(dir + "/exe")
+	return string(data[start+1 : end]), exe, true
+}
+
+// processArgv is a process's command line. Call it only for processes whose
+// arguments are meant to be kept.
+func processArgv(pid int) ([]string, error) {
+	data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/cmdline")
+	if err != nil {
+		return nil, err
+	}
+	data = []byte(strings.TrimSuffix(string(data), "\x00"))
+	if len(data) == 0 {
+		return nil, unix.ESRCH // a kernel thread or an exiting process
+	}
+	return strings.Split(string(data), "\x00"), nil
+}
+
+// groupMembers lists the live processes in a process group with their
+// parents.
+func groupMembers(group int) ([]groupMember, error) {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil, err
+	}
+	var members []groupMember
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+		data, err := os.ReadFile("/proc/" + entry.Name() + "/stat")
+		if err != nil {
+			continue // exited during the scan
+		}
+		end := strings.LastIndexByte(string(data), ')')
+		if end < 0 {
+			continue
+		}
+		// After comm: state, ppid, pgrp.
+		fields := strings.Fields(string(data[end+1:]))
+		if len(fields) < 3 || fields[0] == "Z" || fields[2] != strconv.Itoa(group) {
+			continue
+		}
+		ppid, _ := strconv.Atoi(fields[1])
+		members = append(members, groupMember{pid: pid, ppid: ppid})
+	}
+	return members, nil
+}
+
 func listProcesses() ([]processIdentity, error) {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {

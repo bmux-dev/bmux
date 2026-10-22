@@ -80,6 +80,9 @@ type Restore struct {
 	// Resume replaces an agent's built-in resume command; an empty list
 	// restores that agent's panes as plain shells.
 	Resume map[string][]string `toml:"resume"`
+	// Relaunch names programs whose command line is saved and run again in
+	// a restored pane, like tmux-resurrect's @resurrect-processes.
+	Relaunch []string `toml:"relaunch"`
 }
 
 // Projects configures the new-session popup (Ctrl-a n, bmux project). Roots are
@@ -135,7 +138,7 @@ func Default() Config {
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
-		Restore:    Restore{Enabled: true},
+		Restore:    Restore{Enabled: true, Relaunch: append([]string(nil), DefaultRelaunch...)},
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3},
 		Scrollback: Scrollback{Lines: 10000},
 		Update:     Update{Check: true},
@@ -248,6 +251,11 @@ func ValidResume(argv []string) error {
 	return nil
 }
 
+// DefaultRelaunch is restore.relaunch's default: programs that are safe to
+// start again with the same arguments. Editors reopen their files, pagers
+// and man their page, monitors their view, ssh its connection.
+var DefaultRelaunch = []string{"vi", "vim", "nvim", "emacs", "nano", "hx", "man", "less", "more", "tail", "top", "htop", "btop", "ssh"}
+
 // repair resets invalid settings to their defaults and describes each one.
 func (c *Config) repair() []string {
 	d := Default()
@@ -319,6 +327,15 @@ func (c *Config) repair() []string {
 			delete(c.Restore.Resume, agent)
 		}
 	}
+	relaunch := c.Restore.Relaunch[:0]
+	for _, name := range c.Restore.Relaunch {
+		if name == "" || strings.ContainsRune(name, '/') {
+			bad("restore.relaunch %q must be a program name, not a path", name)
+			continue
+		}
+		relaunch = append(relaunch, name)
+	}
+	c.Restore.Relaunch = relaunch
 	roots := c.Projects.Roots[:0]
 	for _, root := range c.Projects.Roots {
 		if expanded, err := expandHome(root); err != nil || !filepath.IsAbs(expanded) {
@@ -408,6 +425,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 [restore]
 # enabled = true            # save sessions and restore them after restarts
+# relaunch = ["vi", "vim", "nvim", "emacs", "nano", "hx", "man", "less", "more", "tail", "top", "htop", "btop", "ssh"]
+#                           # programs started again, with their arguments, in restored panes; [] = none
 
 [restore.resume]            # per-agent resume command; [] = plain shell
 # claude = ["claude", "--continue"]

@@ -17,11 +17,24 @@ a crash or a reboot, restores them before accepting clients:
   conversation in that directory: `claude --continue`, `codex resume --last`,
   `opencode --continue`, `omp --continue`, `pi --continue`. When two panes
   would continue the same agent in the same directory, only the first does;
-  the other gets a shell, so one conversation never opens twice.
+  the other gets a shell, so one conversation never opens twice;
+- editors, pagers, `man`, monitors and `ssh` (`restore.relaunch`), by typing
+  the command line they were started with into the restored shell: `nvim
+  main.go`, `man tar`, `less build.log`, `ssh host`. Vim or Neovim started
+  without files loads the directory's `Session.vim` (`nvim -S`) when there is
+  one. Only the command the shell started counts, and only when nothing else
+  shares its job: `git log | less` or `tail -f log | grep error` restore as a
+  shell, since running one side of the pipe alone would show something else.
 
-Nothing else that was running comes back: no scrollback, no editors, servers
-or other programs. Resumed agents are new processes reopening their saved
-conversation, not the processes that were running.
+Nothing else that was running comes back: no scrollback, no servers, builds
+or other programs. Resumed agents and relaunched programs are new processes
+started with the same arguments, not the processes that were running: an
+editor's unsaved changes and a pager's position are gone.
+
+The default list is `vi`, `vim`, `nvim`, `emacs`, `nano`, `hx`, `man`,
+`less`, `more`, `tail`, `top`, `htop`, `btop` and `ssh`. Their command lines
+are saved in the sessions file, readable only by you; other programs'
+arguments are never read. `restore.relaunch = []` turns relaunching off.
 
 Until you attach to a restored session, the session picker and the sidebar
 mark it `restored`, so you can see which sessions lost their running programs

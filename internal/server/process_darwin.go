@@ -143,3 +143,65 @@ func listProcesses() ([]processIdentity, error) {
 	}
 	return result, nil
 }
+
+// jobLeader names a foreground job's leader: the process whose pid is the
+// group's, which the shell started. Its arguments aren't kept.
+func jobLeader(group int) (comm, exe string, ok bool) {
+	p, err := unix.SysctlKinfoProc("kern.proc.pid", group)
+	if err != nil || int(p.Proc.P_pid) != group || int(p.Eproc.Pgid) != group || p.Proc.P_stat == 4 || p.Proc.P_stat == 5 {
+		return "", "", false
+	}
+	comm, _, _ = strings.Cut(string(p.Proc.P_comm[:]), "\x00")
+	exe, _, _ = darwinCommandPaths(group)
+	return comm, exe, true
+}
+
+// processArgv is a process's command line from PROCARGS2: argc, the
+// executable path, NUL padding, then argc arguments. Call it only for
+// processes whose arguments are meant to be kept.
+func processArgv(pid int) ([]string, error) {
+	args, err := unix.SysctlRaw("kern.procargs2", pid)
+	if err != nil {
+		return nil, err
+	}
+	if len(args) < 5 {
+		return nil, fmt.Errorf("missing command line")
+	}
+	argc := int(binary.LittleEndian.Uint32(args[:4]))
+	rest := args[4:]
+	end := bytes.IndexByte(rest, 0)
+	if end < 0 {
+		return nil, fmt.Errorf("missing command line")
+	}
+	rest = bytes.TrimLeft(rest[end:], "\x00")
+	argv := make([]string, 0, argc)
+	for range argc {
+		end = bytes.IndexByte(rest, 0)
+		if end < 0 {
+			return nil, fmt.Errorf("truncated command line")
+		}
+		argv = append(argv, string(rest[:end]))
+		rest = rest[end+1:]
+	}
+	if len(argv) == 0 {
+		return nil, fmt.Errorf("missing command line")
+	}
+	return argv, nil
+}
+
+// groupMembers lists the live processes in a process group with their
+// parents.
+func groupMembers(group int) ([]groupMember, error) {
+	processes, err := unix.SysctlKinfoProcSlice("kern.proc.pgrp", group)
+	if err != nil {
+		return nil, err
+	}
+	var members []groupMember
+	for _, p := range processes {
+		if int(p.Eproc.Pgid) != group || p.Proc.P_stat == 5 {
+			continue
+		}
+		members = append(members, groupMember{pid: int(p.Proc.P_pid), ppid: int(p.Eproc.Ppid)})
+	}
+	return members, nil
+}

@@ -55,6 +55,7 @@ width = 24
 | `agents.extra` | `[]` | More program names to recognize as agents |
 | `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
+| `restore.relaunch` | editors, pagers, `man`, monitors, `ssh` | Programs started again with the same arguments in restored panes; see [Restarts](/bmux/guides/restarts/). `[]` turns it off |
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
 | `projects.roots` | `["~/code", "~/src", "~/projects", "~/dev"]` | Folders the [new-session popup](/bmux/guides/project-picker/) lists for git repositories; absolute or `~/` paths. Missing ones are skipped. |
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |

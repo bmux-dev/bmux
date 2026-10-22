@@ -23,7 +23,7 @@ works out of the box, with no plugin manager.
 | --- | --- |
 | tmux-sessionx, tmux-fzf (sessions) | List-first session picker with fuzzy filtering and a live preview of the running terminal |
 | tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p), step to the previous or next one (Ctrl-a ( / )); bare `bmux` opens a session named after the current directory |
-| tmux-resurrect + tmux-continuum | Sessions, windows, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations; [`bmux restart`](#restarts-and-upgrades) for upgrades |
+| tmux-resurrect + tmux-continuum | Sessions, windows, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations and editors, pagers, `man` and `ssh` started again with their arguments; [`bmux restart`](#restarts-and-upgrades) for upgrades |
 | sesh, tmux-sessionizer | [Project picker](https://bmux-dev.github.io/bmux/guides/project-picker/) (Ctrl-a n, `bmux project`): your sessions' folders and git repositories, landing in each folder's session or creating it |
 | tmuxinator, tmuxp | [Layout files](https://bmux-dev.github.io/bmux/guides/layout-files/): a `.bmux.toml` declares a folder's windows, splits and pane commands, which run once you trust the file; `bmux layout save` writes one |
 | vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
@@ -210,11 +210,13 @@ upgrade, a crash or a reboot, the next server brings back:
 - a fresh shell in each pane, in the directory that pane was in;
 - each agent, reopening its latest conversation in that directory
   (`claude --continue`, `codex resume --last`, `opencode --continue`,
-  `omp --continue`, `pi --continue`), or the exact session its hooks reported.
+  `omp --continue`, `pi --continue`), or the exact session its hooks reported;
+- editors, pagers, `man`, monitors and `ssh`, started again with the same
+  arguments (`nvim main.go`, `man tar`, `ssh host`; `restore.relaunch`).
 
 Scrollback and other running programs don't come back: restored panes are new
-processes, and resumed agents reopen their saved conversation rather than
-continuing the process that was running.
+processes, resumed agents reopen their saved conversation, and relaunched
+programs start fresh rather than continuing the process that was running.
 
 When a newer release is out, a small **↑** appears at the right end of the
 status bar (`↑ 0.6.0` when there's room). To upgrade:

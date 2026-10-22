@@ -18,6 +18,7 @@ type serverSettings struct {
 	busySamples, quietSamples int
 	restore                   bool
 	resume                    map[string][]string // per-agent override; empty = none
+	relaunch                  map[string]bool     // programs started again in restored panes
 	passThrough               map[string]bool     // programs that get navigation keys
 	scrollback                int                 // history lines kept per pane
 	updateCheck               bool                // look for new releases
@@ -50,6 +51,10 @@ func settingsFrom(cfg config.Config) *serverSettings {
 	for _, program := range cfg.Keys.PassThrough {
 		passThrough[program] = true
 	}
+	relaunch := make(map[string]bool, len(cfg.Restore.Relaunch))
+	for _, program := range cfg.Restore.Relaunch {
+		relaunch[program] = true
+	}
 	return &serverSettings{
 		detect:       cfg.Agents.Detect,
 		agents:       agents,
@@ -57,6 +62,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		quietSamples: samplesFor(cfg.Agents.WaitingAfter.Duration),
 		restore:      cfg.Restore.Enabled,
 		resume:       cfg.Restore.Resume,
+		relaunch:     relaunch,
 		passThrough:  passThrough,
 		scrollback:   cfg.Scrollback.Lines,
 		updateCheck:  cfg.Update.Check,

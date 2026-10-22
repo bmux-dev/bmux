@@ -49,7 +49,7 @@ changes and reconnects clients. With an [agent integration](#already-built)
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
+| Relaunch allowlist | M | Done: `restore.relaunch` (editors, pagers, `man`, monitors, `ssh`) types the job's command line again; `nvim -S` with a `Session.vim`; pipelines restore as shells ([#96](https://github.com/bmux-dev/bmux/issues/96)) |
 | Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
 | Mark restored sessions | S | Done: `restored` in the picker and sidebar until you attach ([#94](https://github.com/bmux-dev/bmux/issues/94)) |
 
@@ -159,7 +159,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | Sessions, detach/attach, `new`/`list`/`attach`/`rename`/`kill`, `kill-pane` (Ctrl-a x), refusing to nest | Built in |
 | tmux-sessionx / tmux-fzf session picker | Session picker with fuzzy filter and live preview |
 | tmux-sessionist | Create, rename and terminate from the picker; Ctrl-a n, Ctrl-a p last session, Ctrl-a ( / ) previous/next; bare `bmux` names sessions after the directory |
-| tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, `bmux restart` |
+| tmux-resurrect + tmux-continuum | Save every 5 seconds and on shutdown, restore on server start, agent resume, relaunching allowlisted programs (`@resurrect-processes`), `bmux restart` |
 | herdr-style agent overview | Sidebar of sessions and detected agents with working/waiting state; bell, OSC 9/777 and `bmux agent` reports mark panes that need you |
 | herdr's first run and agent integrations | A welcome screen on first attach leading into the integrations panel (Ctrl-a i); `bmux integration` for Claude Code, Codex, omp, opencode and pi, reporting exact working/blocked/idle and the session to resume |
 | Agents supervising agents | `bmux agents`, `bmux capture`, `bmux send --if-seq`, `bmux wait-agent`; `bmux guide`, `bmux capabilities` and an installed skill teach agents to use them |
