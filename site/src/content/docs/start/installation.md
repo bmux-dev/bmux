@@ -65,7 +65,7 @@ for your platform count; while bmux is 0.x, pre-releases do too. A failed check
 is logged in `server.log` and retried the next day.
 
 When one is newer than the server, the status bar shows **↑** at its right end,
-or `↑ 0.7.0` when there's room, in space the bar leaves free. Clicking it, or
+or `↑ 0.8.0` when there's room, in space the bar leaves free. Clicking it, or
 the top of the key list (Ctrl-a ?), says what to do:
 
 | Hint | Meaning |
