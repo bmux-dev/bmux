@@ -13,10 +13,20 @@ The file and every line in it are optional; write only what you change.
 
 You don't have to edit the file by hand for the common settings: **Ctrl-a ,**
 opens a settings page with one tab per area (General, Appearance, Sidebar,
-Sound, Agents, Projects, Sessions). Move with **←/→** (or **h/l**) and
-**j/k**. **Enter** or **Space** flips a switch or cycles a choice; on a number,
-path, list or duration it opens an editor (**Enter** saves, **Esc** cancels).
-On the accent color, **e** types a `#RRGGBB` value. Each change is written to
+Alerts, Agents, Projects, Sessions), each split into labeled groups. Move with
+**←/→** (or **h/l**) and **j/k**. **Enter** or **Space** flips a switch; on a
+choice it opens a list you scroll with **↑/↓**, where **Enter** picks the
+highlighted choice and returns to the page, and **Esc** goes back without
+changing anything. On a number, path, list or duration it opens an editor
+(**Enter** saves, **Esc** cancels); **←/→**, **Home/End**, **Delete**,
+**Ctrl-U** and **Ctrl-K** edit anywhere in the line, and pasted text goes in at
+the cursor. The theme, accent color, pane background, icons and notice position
+lists preview each choice as you scroll, and leave the screen undimmed so the
+colors are true; the notice position list keeps a sample notice at the
+highlighted place. **Esc** puts the saved look back. Other lists dim the screen
+and apply on **Enter**. The accent list ends with
+**Custom…**, which types a `#RRGGBB` value. A footer inside the page lists the
+keys. Each change is written to
 the config file at once and applied without a restart. Comments and the other
 lines are kept, and a value the file's rules reject isn't saved; the page says
 why. Keybindings, per-agent resume commands and `onboarding` stay in the file.
@@ -48,6 +58,7 @@ width = 24
 | `ui.theme-panes` | `true` | Draw panes in a named theme's background and foreground wherever the program sets none, such as a plain shell prompt; `false` keeps your terminal's colors. `dark` and `light` never recolor panes. See [Themes](#themes). |
 | `ui.pane-background` | `"theme"` | `"terminal"` keeps your terminal's own background in panes and blank space, with the theme's text colors, for a terminal background you like better than the theme's. Chrome (bars, sidebar, pickers) keeps the theme's. |
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
+| `ui.icons` | `"auto"` | Icons on the settings page tabs. `"nerd"` draws Nerd Font glyphs and `"plain"` uses Unicode symbols that need no special font. A terminal can't report its font, so `"auto"` uses Nerd Font icons unless `ui.powerline-ascii` is on, the same assumption the powerline separators make. Also on the settings page. |
 | `ui.notice-position` | `"top-right"` | Where notices (copy results, errors, hints) appear, in a small box with an accent-colored border over the panes: `"top-left"`, `"top-center"`, `"top-right"`, `"bottom-left"`, `"bottom-center"` or `"bottom-right"`. Also on the settings page. |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |

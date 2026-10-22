@@ -54,6 +54,10 @@ type UI struct {
 	// Graphics is "auto" (show images in terminals that support the Kitty
 	// graphics protocol), "on" (assume the terminal does) or "off".
 	Graphics string `toml:"graphics"`
+	// Icons is "auto" (Nerd Font icons unless PowerlineASCII, which says the
+	// terminal's font has no patched glyphs), "nerd" or "plain" (Unicode
+	// symbols that need no special font).
+	Icons string `toml:"icons"`
 	// NoticePosition is where the box for notices sits; see NoticePositions.
 	NoticePosition string      `toml:"notice-position"`
 	AgentColors    AgentColors `toml:"agent-colors"`
@@ -145,7 +149,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto", NoticePosition: "top-right"},
+		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto", Icons: "auto", NoticePosition: "top-right"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -284,6 +288,11 @@ func (c *Config) repair() []string {
 		bad("ui.graphics %q must be \"auto\", \"on\" or \"off\"", c.UI.Graphics)
 		c.UI.Graphics = d.UI.Graphics
 	}
+	c.UI.Icons = strings.ToLower(c.UI.Icons)
+	if c.UI.Icons != "auto" && c.UI.Icons != "nerd" && c.UI.Icons != "plain" {
+		bad("ui.icons %q must be \"auto\", \"nerd\" or \"plain\"", c.UI.Icons)
+		c.UI.Icons = d.UI.Icons
+	}
 	c.UI.NoticePosition = strings.ToLower(c.UI.NoticePosition)
 	if !slices.Contains(NoticePositions, c.UI.NoticePosition) {
 		bad("ui.notice-position %q must be %s", c.UI.NoticePosition, strings.Join(NoticePositions, ", "))
@@ -421,6 +430,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
                             # and blank space, with the theme's text colors
 # graphics = "auto"         # show images programs draw: "auto" detects Kitty
                             # graphics support, "on" assumes it, "off" never
+# icons = "auto"            # "nerd" draws Nerd Font icons, "plain" uses Unicode symbols;
+                            # "auto" uses Nerd Font icons unless powerline-ascii is on
 # notice-position = "top-right"  # where notices appear: top-left, top-center, top-right,
                             # bottom-left, bottom-center or bottom-right
 

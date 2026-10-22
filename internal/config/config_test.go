@@ -323,3 +323,14 @@ func TestNoticePositionIsValidated(t *testing.T) {
 		t.Fatalf("%q %v", cfg.UI.NoticePosition, err)
 	}
 }
+
+func TestIconsSettingIsCaseInsensitiveAndRejectsUnknownValues(t *testing.T) {
+	cfg, err := Load(write(t, "[ui]\nicons = \"Nerd\"\n"), noEnv)
+	if err != nil || cfg.UI.Icons != "nerd" {
+		t.Fatalf("icons = %q, %v", cfg.UI.Icons, err)
+	}
+	cfg, err = Load(write(t, "[ui]\nicons = \"emoji\"\n"), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "ui.icons") || cfg.UI.Icons != "auto" {
+		t.Fatalf("icons = %q, %v", cfg.UI.Icons, err)
+	}
+}

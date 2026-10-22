@@ -48,17 +48,21 @@ func TestSettingsPageShowsTabsAndSavesChoices(t *testing.T) {
 	u, path := settingsPageUI(t, "# my notes\n")
 	u.draw()
 	text := screenText(u)
-	for _, want := range []string{"Settings", "General", "Appearance", "Sidebar", "Sessions", "Prefix key", "Check for updates", "on"} {
+	for _, want := range []string{"Settings", "General", "Appearance", "Sidebar", "Sessions", "Keys", "Updates", "Prefix key", "Check for updates", "on",
+		"⏎/␣ change · ←/→ tabs · esc close"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("page doesn't show %q:\n%s", want, text)
 		}
 	}
-	// Theme leads the Appearance tab. Enter cycles dark -> light, saves, and applies at once.
+	// Theme leads the Appearance tab, under its own header. Enter opens the
+	// choices; picking one saves it and applies it at once.
 	u.key(runeKey('l'))
 	u.draw()
 	if text := screenText(u); !strings.Contains(text, "Theme") || !strings.Contains(text, "dark") {
 		t.Fatalf("Appearance doesn't lead with Theme:\n%s", text)
 	}
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	u.key(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if got := fileText(t, path); !strings.Contains(got, "# my notes\n") || !strings.Contains(got, `theme = "light"`) {
 		t.Fatalf("file after Enter:\n%s", got)
@@ -66,8 +70,11 @@ func TestSettingsPageShowsTabsAndSavesChoices(t *testing.T) {
 	if u.settings.Theme != "light" {
 		t.Fatalf("client still on theme %q", u.settings.Theme)
 	}
+	if u.settingsPage.choosing {
+		t.Fatal("Enter left the choices open instead of going back to the list")
+	}
 	u.draw()
-	if text := screenText(u); !strings.Contains(text, "light") || !strings.Contains(text, "Saved theme") {
+	if text := screenText(u); u.settingsPage.values.Theme != "light" || !strings.Contains(text, "Saved theme") {
 		t.Fatalf("page after saving:\n%s", text)
 	}
 	// Space toggles a bool: Check for updates is on General, below the prefix.
@@ -155,4 +162,474 @@ func TestSettingsPageTakesKeysAndPasteInsteadOfPanes(t *testing.T) {
 		t.Fatalf("pasted into the editor as %q", u.settingsPage.input)
 	}
 	noRequest(t, requests)
+}
+
+func key(k tcell.Key) *tcell.EventKey { return tcell.NewEventKey(k, 0, tcell.ModNone) }
+
+// dimmed says whether the cell at x, y is drawn dim.
+func dimmed(u *ui, x, y int) bool {
+	_, style, _ := u.screen.Get(x, y)
+	_, _, attrs := style.Decompose()
+	return attrs&tcell.AttrDim != 0
+}
+
+func TestSettingsPageGroupsOptionsUnderHeaders(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	u.key(runeKey('l')) // Appearance
+	u.screen.SetSize(110, 40)
+	u.draw()
+	text := screenText(u)
+	last := -1
+	for _, header := range []string{"Display", "Agent colors"} {
+		at := strings.Index(text, header)
+		if at < 0 || at < last {
+			t.Fatalf("header %q missing or out of order:\n%s", header, text)
+		}
+		last = at
+	}
+	// Moving down through every option reaches the last group and keeps it on screen.
+	for range len(config.SettingTabs[1].Settings) {
+		u.key(key(tcell.KeyDown))
+	}
+	u.screen.SetSize(110, 14)
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "Idle color") {
+		t.Fatalf("the last option scrolled out of a short box:\n%s", text)
+	}
+}
+
+func TestSettingsPageThemePreviewsWhileScrollingAndEscapeReverts(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	u.key(runeKey('l')) // Appearance, Theme
+	u.draw()
+	saved := chrome
+	if !dimmed(u, 105, 5) {
+		t.Fatal("the settings list should dim the screen behind it")
+	}
+	boxTop := func() (int, int) {
+		for y := range 24 {
+			for x := range 110 {
+				if text, _, _ := u.screen.Get(x, y); text == "┌" && x > 20 {
+					return x, y
+				}
+			}
+		}
+		return -1, -1
+	}
+	listX, listY := boxTop()
+	u.key(key(tcell.KeyEnter))
+	if !u.settingsPage.choosing {
+		t.Fatal("Enter on a choice didn't open its list")
+	}
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown)) // catppuccin-mocha
+	if chrome == saved {
+		t.Fatal("scrolling didn't preview the theme")
+	}
+	want := themeFor("catppuccin-mocha", u.settings.UI)
+	if chrome != want {
+		t.Fatalf("preview chrome %+v, want %+v", chrome, want)
+	}
+	u.draw()
+	if dimmed(u, 105, 5) {
+		t.Fatal("the choice list dimmed the screen, which muddies the previewed colors")
+	}
+	if text := screenText(u); !strings.Contains(text, "catppuccin-frappe") || !strings.Contains(text, "esc cancel") ||
+		!strings.Contains(text, "Settings") || !strings.Contains(text, "Appearance") || !strings.Contains(text, "Sessions") {
+		t.Fatalf("the choice list isn't a page inside Settings:\n%s", text)
+	}
+	if x, y := boxTop(); x != listX || y != listY {
+		t.Fatalf("the choice page's box moved from %d,%d to %d,%d", listX, listY, x, y)
+	}
+	u.key(key(tcell.KeyRight))
+	if u.settingsPage.tab != 1 {
+		t.Fatalf("→ on the choice page switched to tab %d", u.settingsPage.tab)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatalf("previewing wrote the file:\n%s", fileText(t, path))
+	}
+	if u.settings.Theme != config.Default().Theme {
+		t.Fatalf("previewing changed the client's theme to %q", u.settings.Theme)
+	}
+	u.key(key(tcell.KeyEscape))
+	if u.settingsPage.choosing || !u.settingsPage.open {
+		t.Fatalf("Esc: choosing=%v open=%v", u.settingsPage.choosing, u.settingsPage.open)
+	}
+	if chrome != saved {
+		t.Fatal("Esc didn't put the saved theme back")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("a reverted preview was written")
+	}
+}
+
+func TestSettingsPageChoiceHighlightsSavedValueAndKeepsPreviewOffAnyOtherSetting(t *testing.T) {
+	u, _ := settingsPageUI(t, "theme = \"nord\"\n[ui]\ngraphics = \"off\"\n")
+	u.key(runeKey('l'))
+	u.key(key(tcell.KeyEnter))
+	if got := config.SettingTabs[1].Settings[0].Options[u.settingsPage.choice]; got != "nord" {
+		t.Fatalf("choices open on %q, want the saved theme", got)
+	}
+	u.key(key(tcell.KeyEscape))
+	// Images is a choice too, but it has no look to preview.
+	for i, s := range config.SettingTabs[1].Settings {
+		if s.Key == "ui.graphics" {
+			for range i {
+				u.key(key(tcell.KeyDown))
+			}
+		}
+	}
+	before := chrome
+	u.key(key(tcell.KeyEnter))
+	if got := u.pageSetting().Options[u.settingsPage.choice]; got != "off" {
+		t.Fatalf("image choices open on %q", got)
+	}
+	u.key(key(tcell.KeyDown))
+	if chrome != before {
+		t.Fatal("scrolling image choices changed the colors")
+	}
+}
+
+func TestSettingsPageAccentCustomRowOpensTheEditor(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	u.key(runeKey('l'))
+	for i, s := range config.SettingTabs[1].Settings {
+		if s.Key == "ui.accent" {
+			for range i {
+				u.key(key(tcell.KeyDown))
+			}
+		}
+	}
+	saved := chrome
+	u.key(key(tcell.KeyEnter))
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown)) // amber previews
+	if chrome.accent == saved.accent {
+		t.Fatal("scrolling accents didn't preview them")
+	}
+	for range 5 {
+		u.key(key(tcell.KeyDown)) // clamps on the Custom row
+	}
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "Custom…") {
+		t.Fatalf("no Custom… row:\n%s", text)
+	}
+	if chrome != saved {
+		t.Fatal("the Custom row should show the saved look")
+	}
+	u.key(key(tcell.KeyEnter))
+	if !u.settingsPage.editing || u.settingsPage.choosing {
+		t.Fatalf("Custom…: editing=%v choosing=%v", u.settingsPage.editing, u.settingsPage.choosing)
+	}
+	u.key(key(tcell.KeyCtrlU))
+	typeText(u, "#112233")
+	u.key(key(tcell.KeyEnter))
+	if got := fileText(t, path); !strings.Contains(got, `accent = "#112233"`) {
+		t.Fatalf("custom accent not saved:\n%s", got)
+	}
+	// The saved custom value reopens on the Custom row.
+	u.key(key(tcell.KeyEnter))
+	if u.settingsPage.choice != len(u.pageSetting().Options) {
+		t.Fatalf("custom value highlights choice %d", u.settingsPage.choice)
+	}
+}
+
+func TestSettingsPageClickRevertsAPreview(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	u.key(runeKey('l'))
+	saved := chrome
+	u.key(key(tcell.KeyEnter))
+	u.key(key(tcell.KeyDown))
+	u.mouse(tcell.NewEventMouse(5, 5, tcell.Button1, tcell.ModNone))
+	if u.settingsPage.open || chrome != saved {
+		t.Fatalf("click: open=%v, saved look back=%v", u.settingsPage.open, chrome == saved)
+	}
+}
+
+func TestSettingsPageScrollbarShowsOnlyWhenThereIsMoreToScrollTo(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	// A 24-row screen fits Sidebar's options but not the 25 themes.
+	u.key(runeKey('l'))
+	u.key(runeKey('l'))
+	u.draw()
+	text := screenText(u)
+	if strings.ContainsAny(text, "█░") {
+		t.Fatalf("a list that fits drew a scrollbar:\n%s", text)
+	}
+	u.key(runeKey('h'))
+	u.key(key(tcell.KeyEnter)) // Theme choices
+	column := func() (cells []string) {
+		for y := range 24 {
+			for x := range 110 {
+				if text, _, _ := u.screen.Get(x, y); text == "█" || text == "░" {
+					cells = append(cells, text)
+					break
+				}
+			}
+		}
+		return cells
+	}
+	u.draw()
+	top := column()
+	if len(top) < 3 || top[0] != "█" || top[len(top)-1] != "░" {
+		t.Fatalf("at the top the thumb should lead the track: %v", top)
+	}
+	u.key(runeKey('G'))
+	u.draw()
+	if bottom := column(); len(bottom) != len(top) || bottom[0] != "░" || bottom[len(bottom)-1] != "█" {
+		t.Fatalf("at the end the thumb should close the track: %v", bottom)
+	}
+}
+
+func TestSettingsTabsShowIconsWithSpaceBetween(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	u.settings.UI.Icons = "plain"
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ≡ Sidebar   ♪ Alerts ") {
+		t.Fatalf("tabs lack icons or spacing:\n%s", text)
+	}
+	// On a terminal too narrow for every tab, the current one still shows.
+	u.screen.SetSize(60, 24)
+	for range len(config.SettingTabs) - 1 {
+		u.key(key(tcell.KeyRight))
+	}
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "↻ Sessions") {
+		t.Fatalf("the current tab scrolled out of a narrow bar:\n%s", text)
+	}
+}
+
+func TestSettingsTabIconsFollowTheIconsSetting(t *testing.T) {
+	const nerd, plain = "\uf013 General", "⌘ General"
+	for _, tt := range []struct {
+		name, icons string
+		ascii       bool
+		want, not   string
+	}{
+		{"auto uses nerd icons with powerline separators", "auto", false, nerd, plain},
+		{"auto falls back when separators are ASCII", "auto", true, plain, nerd},
+		{"nerd wins over ASCII separators", "nerd", true, nerd, plain},
+		{"plain", "plain", false, plain, nerd},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			u, _ := settingsPageUI(t, "")
+			u.settings.UI.Icons, u.settings.UI.PowerlineASCII = tt.icons, tt.ascii
+			u.draw()
+			text := screenText(u)
+			if !strings.Contains(text, tt.want) || strings.Contains(text, tt.not) {
+				t.Fatalf("want %q and not %q:\n%s", tt.want, tt.not, text)
+			}
+		})
+	}
+}
+
+// selectSetting moves to the tab holding the setting with this key and puts the cursor on it.
+func selectSetting(t *testing.T, u *ui, key_ string) {
+	t.Helper()
+	for tab, tabSettings := range config.SettingTabs {
+		for i, s := range tabSettings.Settings {
+			if s.Key == key_ {
+				for range tab {
+					u.key(key(tcell.KeyRight))
+				}
+				for range i {
+					u.key(key(tcell.KeyDown))
+				}
+				return
+			}
+		}
+	}
+	t.Fatalf("no setting %s", key_)
+}
+
+func TestSettingsPageOnlyClearsTheOverlayForChoicesItPreviews(t *testing.T) {
+	for _, tt := range []struct {
+		key     string
+		clears  bool
+		reasons string
+	}{
+		{"theme", true, "colors preview"},
+		{"ui.icons", true, "icons preview"},
+		{"ui.notice-position", true, "a sample notice previews"},
+		{"ui.graphics", false, "nothing to preview"},
+	} {
+		t.Run(tt.key, func(t *testing.T) {
+			u, _ := settingsPageUI(t, "")
+			selectSetting(t, u, tt.key)
+			u.key(key(tcell.KeyEnter))
+			u.draw()
+			if got := !dimmed(u, 105, 5); got != tt.clears {
+				t.Fatalf("overlay cleared = %v, want %v (%s)", got, tt.clears, tt.reasons)
+			}
+		})
+	}
+}
+
+func TestSettingsPageIconsPreviewWhileScrollingAndEscapeReverts(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	selectSetting(t, u, "ui.icons")
+	u.key(key(tcell.KeyEnter)) // auto, so Nerd Font icons
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "\uf013 General") {
+		t.Fatalf("auto should start on Nerd Font icons:\n%s", text)
+	}
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown)) // plain
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "⌘ General") || strings.Contains(text, "\uf013") {
+		t.Fatalf("scrolling to plain didn't preview the tab icons:\n%s", text)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("previewing icons wrote the file")
+	}
+	u.key(key(tcell.KeyEscape))
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "\uf013 General") {
+		t.Fatalf("Esc didn't put the icons back:\n%s", text)
+	}
+	u.key(key(tcell.KeyEnter))
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyEnter))
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "⌘ General") || !strings.Contains(fileText(t, path), `icons = "plain"`) {
+		t.Fatalf("Enter didn't keep plain icons:\n%s", text)
+	}
+}
+
+// openRoots opens the editor on Agents > Extra programs, a list holding "alpha, beta".
+func openRoots(t *testing.T) (*ui, string) {
+	t.Helper()
+	u, path := settingsPageUI(t, "[agents]\nextra = [\"alpha\", \"beta\"]\n")
+	for range 4 {
+		u.key(key(tcell.KeyRight))
+	}
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyEnter))
+	if !u.settingsPage.editing || u.settingsPage.input != "alpha, beta" {
+		t.Fatalf("editor: editing=%v input=%q", u.settingsPage.editing, u.settingsPage.input)
+	}
+	return u, path
+}
+
+func TestSettingsEditorMovesTheCursorToEditAnyPartOfTheLine(t *testing.T) {
+	u, path := openRoots(t)
+	if u.settingsPage.cursor != len("alpha, beta") {
+		t.Fatalf("cursor starts at %d, want the end", u.settingsPage.cursor)
+	}
+	u.key(key(tcell.KeyHome))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyRight))
+	typeText(u, "my-") // inserted after "al", not appended
+	if got := u.settingsPage.input; got != "almy-pha, beta" {
+		t.Fatalf("after inserting: %q", got)
+	}
+	u.key(key(tcell.KeyLeft))
+	u.key(key(tcell.KeyBackspace2)) // removes "y", the character before the cursor
+	u.key(key(tcell.KeyDelete))     // removes "-", the one under it
+	if got := u.settingsPage.input; got != "almpha, beta" {
+		t.Fatalf("after backspace and delete: %q", got)
+	}
+	u.key(key(tcell.KeyEnd))
+	u.key(key(tcell.KeyDelete)) // nothing after the end
+	u.key(key(tcell.KeyRight))
+	typeText(u, "!")
+	if got := u.settingsPage.input; got != "almpha, beta!" {
+		t.Fatalf("at the end: %q", got)
+	}
+	u.key(key(tcell.KeyEnter))
+	if got := fileText(t, path); !strings.Contains(got, `extra = ["almpha", "beta!"]`) {
+		t.Fatalf("saved:\n%s", got)
+	}
+}
+
+func TestSettingsEditorKillsToEitherEndOfTheLine(t *testing.T) {
+	u, _ := openRoots(t)
+	for range 4 { // before "beta"
+		u.key(key(tcell.KeyLeft))
+	}
+	u.key(key(tcell.KeyCtrlK))
+	if got := u.settingsPage.input; got != "alpha, " {
+		t.Fatalf("Ctrl-K: %q", got)
+	}
+	u.key(key(tcell.KeyCtrlA))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyCtrlU))
+	if got := u.settingsPage.input; got != "pha, " || u.settingsPage.cursor != 0 {
+		t.Fatalf("Ctrl-U: %q cursor %d", got, u.settingsPage.cursor)
+	}
+}
+
+func TestSettingsEditorPastesAtTheCursorAndShowsIt(t *testing.T) {
+	u, _ := openRoots(t)
+	u.key(key(tcell.KeyHome))
+	u.handleRawPaste(&rawPasteEvent{Text: "A\nB"})
+	if got := u.settingsPage.input; got != "ABalpha, beta" || u.settingsPage.cursor != 2 {
+		t.Fatalf("paste: %q cursor %d", got, u.settingsPage.cursor)
+	}
+	u.draw()
+	// The cursor is the reversed cell over the character it sits on.
+	found := false
+	for y := range 24 {
+		for x := range 110 {
+			text, style, _ := u.screen.Get(x, y)
+			if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse != 0 && text == "a" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no cursor shown over the character at the cursor:\n%s", screenText(u))
+	}
+}
+
+func TestSettingsEditorScrollsLongValuesToKeepTheCursorInView(t *testing.T) {
+	u, _ := openRoots(t)
+	u.key(key(tcell.KeyCtrlU))
+	typeText(u, strings.Repeat("a", 100)+"END")
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "aEND") {
+		t.Fatalf("the end of a long value isn't in view:\n%s", text)
+	}
+	u.key(key(tcell.KeyHome))
+	u.draw() // the screen redraws after every key
+	typeText(u, "START")
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "STARTaaa") || strings.Contains(text, "END") {
+		t.Fatalf("the start of a long value isn't in view:\n%s", text)
+	}
+}
+
+func TestSettingsPageShowsASampleNoticeWhereTheChoiceWouldPutIt(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	selectSetting(t, u, "ui.notice-position")
+	u.key(key(tcell.KeyEnter)) // top-right is saved
+	sample := func() (x, y int, ok bool) {
+		for y := range 24 {
+			line := pickerScreenLine(u, y)
+			if at := strings.Index(line, "Notices appear here"); at >= 0 {
+				return len([]rune(line[:at])), y, true
+			}
+		}
+		return 0, 0, false
+	}
+	u.draw()
+	rightX, rightY, ok := sample()
+	if !ok {
+		t.Fatalf("no sample notice while the choices are open:\n%s", screenText(u))
+	}
+	u.key(key(tcell.KeyDown)) // bottom-left
+	u.draw()
+	if x, y, ok := sample(); !ok || x >= rightX || y <= rightY {
+		t.Fatalf("sample at %d,%d (was %d,%d), want it lower and further left", x, y, rightX, rightY)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("previewing a notice position wrote the file")
+	}
+	u.key(key(tcell.KeyEscape))
+	u.draw()
+	if _, _, ok := sample(); ok {
+		t.Fatal("the sample notice stayed after Esc")
+	}
 }
