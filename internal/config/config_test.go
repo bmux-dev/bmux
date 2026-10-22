@@ -307,3 +307,19 @@ func TestPaneBackgroundIsValidated(t *testing.T) {
 		t.Fatalf("%q %v", cfg.UI.PaneBackground, err)
 	}
 }
+
+func TestNoticePositionIsValidated(t *testing.T) {
+	if cfg := Default(); cfg.UI.NoticePosition != "top-right" {
+		t.Fatalf("default %q", cfg.UI.NoticePosition)
+	}
+	for _, position := range NoticePositions {
+		cfg, err := Load(write(t, "[ui]\nnotice-position = \""+strings.ToUpper(position)+"\"\n"), noEnv)
+		if err != nil || cfg.UI.NoticePosition != position {
+			t.Fatalf("%s: got %q, %v", position, cfg.UI.NoticePosition, err)
+		}
+	}
+	cfg, err := Load(write(t, "[ui]\nnotice-position = \"middle\"\n"), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "ui.notice-position") || cfg.UI.NoticePosition != "top-right" {
+		t.Fatalf("%q %v", cfg.UI.NoticePosition, err)
+	}
+}

@@ -101,13 +101,15 @@ func TestRawPasteRejectionIsVisibleWithoutSendingOrEditing(t *testing.T) {
 			t.Fatal("rejected paste changed input or live state")
 		}
 		u.draw()
-		var footer strings.Builder
-		for x := 0; x < 100; x++ {
-			r, _, _, _ := screen.GetContent(x, 23)
-			footer.WriteRune(r)
+		var box strings.Builder
+		for y := paneOriginY; y < paneOriginY+3; y++ {
+			box.WriteString(pickerScreenLine(u, y) + "\n")
 		}
-		if !strings.Contains(footer.String(), message) {
-			t.Fatalf("paste rejection is not visible: %q", footer.String())
+		if !strings.Contains(box.String(), message) {
+			t.Fatalf("paste rejection is not shown in the notice box: %q", box.String())
+		}
+		if footer := pickerScreenLine(u, 23); strings.Contains(footer, message) {
+			t.Fatalf("notice still in the footer: %q", footer)
 		}
 		select {
 		case r := <-requests:

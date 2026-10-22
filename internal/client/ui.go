@@ -628,6 +628,8 @@ func dropRune(s string) string {
 }
 func displayWidth(s string) int { return uniseg.StringWidth(s) }
 
+// copy copies the selection and, once the copy is accepted, clears it. A
+// copy that fails keeps the selection so it can be tried again.
 func (u *ui) copy() {
 	if u.selection.observed && u.selection.missingRows() {
 		// Auto-scroll outran the frames: copy from the server's history.
@@ -639,7 +641,9 @@ func (u *ui) copy() {
 			u.notice("Could not copy: " + err.Error())
 			return
 		}
-		u.copyText(r.Text)
+		if u.copyText(r.Text) {
+			u.selection = selection{}
+		}
 		return
 	}
 	text := u.selection.text()
@@ -647,21 +651,25 @@ func (u *ui) copy() {
 		u.notice("Select text by dragging first")
 		return
 	}
-	u.copyText(text)
+	if u.copyText(text) {
+		u.selection = selection{}
+	}
 }
 
-// copyText puts text on the clipboard of the machine running this client.
-func (u *ui) copyText(text string) {
+// copyText puts text on the clipboard of the machine running this client. It
+// reports whether the copy was accepted; if not, the notice says why.
+func (u *ui) copyText(text string) bool {
 	u.clipboardSeq++
 	if u.clipboard == nil {
 		u.finishClipboard(clipboardResult{Seq: u.clipboardSeq, Text: text})
-		return
+		return true
 	}
 	if err := u.clipboard.Submit(u.clipboardSeq, text); err != nil {
 		u.notice(err.Error())
-	} else {
-		u.notice("Copying…")
+		return false
 	}
+	u.notice("Copying…")
+	return true
 }
 
 func (u *ui) finishClipboard(result clipboardResult) {
@@ -1019,9 +1027,6 @@ func (u *ui) draw() {
 		_, prefix := u.keyTables()
 		footer = "Resizing: " + directionKeys(prefix, "resize") + " to continue · stops after 1s pause or another key"
 	}
-	if time.Now().Before(u.messageUntil) {
-		footer = u.message
-	}
 	if !u.picker && !u.projects.open {
 		identity := u.name + " | " + u.focusedPaneLabel()
 		if len(identity) > 0 {
@@ -1047,6 +1052,7 @@ func (u *ui) draw() {
 		u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
 		u.drawUpdateHint(w, h, 1+displayWidth(footer))
 	}
+	u.drawNotice(w, h)
 	u.updateTitle()
 	u.drawImages()
 	u.screen.Show()
