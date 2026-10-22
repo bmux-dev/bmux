@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.5.1 | Install and updates: [prebuilt binaries, install script, `bmux update`](#install-and-updates) |
+| **Shipped** | v0.5.2 | A settings page, one popup to find or create a session, clickable links, modified keys ([already built](#already-built)) |
 | **Now** | [v0.6](#v06-scripting) | Scripting and automation |
 | **Later** | [v1.0](#v10-stable) | Stable: compatibility, quality, distribution |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -208,3 +208,9 @@ and the `scrollback.lines` setting.
 v0.5.1 added prebuilt Linux and macOS binaries with checksums, a one-line
 install script, a once-a-day check for new releases with a hint in the status
 bar, and `bmux update`.
+
+v0.5.2 added the settings page (Ctrl-a ,), one new-session popup for finding
+a project or creating a session (Ctrl-a n) with `projects.start-dir`,
+clickable links, modified keys for programs that ask for them (kitty keyboard
+protocol, `modifyOtherKeys`), `bmux zoomed`, and `agent:blocked` for omp and
+pi extensions. Protocol version 8: run `bmux restart` after upgrading.
