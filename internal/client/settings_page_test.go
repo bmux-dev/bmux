@@ -380,3 +380,20 @@ func TestSettingsPageScrollbarShowsOnlyWhenThereIsMoreToScrollTo(t *testing.T) {
 		t.Fatalf("at the end the thumb should close the track: %v", bottom)
 	}
 }
+
+func TestSettingsTabsShowIconsWithSpaceBetween(t *testing.T) {
+	u, _ := settingsPageUI(t, "")
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, " ⌘ General   ◐ Appearance   ▌ Sidebar   ♪ Sound ") {
+		t.Fatalf("tabs lack icons or spacing:\n%s", text)
+	}
+	// On a terminal too narrow for every tab, the current one still shows.
+	u.screen.SetSize(60, 24)
+	for range len(config.SettingTabs) - 1 {
+		u.key(key(tcell.KeyRight))
+	}
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "↻ Sessions") {
+		t.Fatalf("the current tab scrolled out of a narrow bar:\n%s", text)
+	}
+}
