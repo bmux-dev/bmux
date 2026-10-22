@@ -113,7 +113,7 @@ Targets depend on windows from v0.4.
 | --- | --- | --- |
 | Targets for every command | M | Done: `session:window.pane` (`api:2.1`, `api:2.`, `:2.1`); `api:7` stays pane 7 ([#82](https://github.com/bmux-dev/bmux/issues/82)) |
 | `send-keys`, `capture-pane` | M | Done: `bmux send` and `bmux capture` take every target form |
-| Layout commands | M | `bmux split`, `new-window`, `select`, `kill-pane`, `kill-window`, `resize`, so scripts can open a pane in a project folder |
+| Layout commands | M | Done: `bmux split`, `new-window`, `select`, `kill-pane`, `kill-window`, `resize`, `zoom`, `rename-window`, with targets ([#84](https://github.com/bmux-dev/bmux/issues/84)) |
 | `list-panes`, `list-windows`, `display-message` | S | |
 | Format variables | M | `#{session_name}`, `#{pane_current_path}`, `#{pane_id}`, … |
 | Hooks | M | `session-created`, `pane-exited`, `client-attached`, … |

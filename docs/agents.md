@@ -82,6 +82,26 @@ batch, without resizing the session, moving focus or marking it seen.
 pane's seq still matches; otherwise it fails with `stale`. Capture again and
 look at what changed instead of retrying the same keys.
 
+## Change the layout
+
+```
+bmux split -h -c ~/code/api -- "npm run dev"   # prints the new pane: api:4
+bmux split api:4 -v -d -- tail -f log         # -d keeps focus where it was
+bmux new-window -n tests -- go test ./...
+bmux select api:2.            # a window; bmux select api:4 focuses a pane
+bmux resize api:4 left 10     # move its divider 10 cells; 5 by default
+bmux zoom api:4
+bmux rename-window api:2. tests
+bmux kill-pane api:4          # and kill-window: no confirmation
+```
+
+Without a TARGET they act on the pane you run them in. `split` and
+`new-window` start in the target pane's directory unless `-c DIR` says
+otherwise, type the command after `--` into the new shell (one argument is a
+command line, several are quoted as arguments), and print the new pane's
+target. `kill-pane` and `kill-window` always need a TARGET. Ask the user
+before closing a pane you didn't open.
+
 ## Wait for a pane
 
 ```
