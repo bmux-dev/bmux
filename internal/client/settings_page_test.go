@@ -206,6 +206,17 @@ func TestSettingsPageThemePreviewsWhileScrollingAndEscapeReverts(t *testing.T) {
 	if !dimmed(u, 105, 5) {
 		t.Fatal("the settings list should dim the screen behind it")
 	}
+	boxTop := func() (int, int) {
+		for y := range 24 {
+			for x := range 110 {
+				if text, _, _ := u.screen.Get(x, y); text == "┌" && x > 20 {
+					return x, y
+				}
+			}
+		}
+		return -1, -1
+	}
+	listX, listY := boxTop()
 	u.key(key(tcell.KeyEnter))
 	if !u.settingsPage.choosing {
 		t.Fatal("Enter on a choice didn't open its list")
@@ -223,8 +234,16 @@ func TestSettingsPageThemePreviewsWhileScrollingAndEscapeReverts(t *testing.T) {
 	if dimmed(u, 105, 5) {
 		t.Fatal("the choice list dimmed the screen, which muddies the previewed colors")
 	}
-	if text := screenText(u); !strings.Contains(text, "catppuccin-frappe") || !strings.Contains(text, "esc cancel") {
-		t.Fatalf("choice list:\n%s", text)
+	if text := screenText(u); !strings.Contains(text, "catppuccin-frappe") || !strings.Contains(text, "esc cancel") ||
+		!strings.Contains(text, "Settings") || !strings.Contains(text, "Appearance") || !strings.Contains(text, "Sessions") {
+		t.Fatalf("the choice list isn't a page inside Settings:\n%s", text)
+	}
+	if x, y := boxTop(); x != listX || y != listY {
+		t.Fatalf("the choice page's box moved from %d,%d to %d,%d", listX, listY, x, y)
+	}
+	u.key(key(tcell.KeyRight))
+	if u.settingsPage.tab != 1 {
+		t.Fatalf("→ on the choice page switched to tab %d", u.settingsPage.tab)
 	}
 	if _, err := os.Stat(path); err == nil {
 		t.Fatalf("previewing wrote the file:\n%s", fileText(t, path))

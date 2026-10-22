@@ -267,12 +267,12 @@ func (u *ui) drawSettingsFooter(x, y, inner, rows int, hint string) {
 	u.screen.PutStrStyled(x, y+rows-1, fit(hint, inner), uiMutedStyle)
 }
 
+// drawSettings draws the page. A list of choices takes the place of the
+// tab's options inside the same box, title and footer rows, with the tabs
+// shown but not selectable. It leaves the screen behind undimmed, so a theme
+// shows its true colors while you scroll.
 func (u *ui) drawSettings(w, h int) {
 	p := &u.settingsPage
-	if p.choosing {
-		u.drawChoices(w, h)
-		return
-	}
 	tabs := config.SettingTabs
 	tallest, labelWidth := 0, 0
 	for _, tab := range tabs {
@@ -281,20 +281,43 @@ func (u *ui) drawSettings(w, h int) {
 			labelWidth = max(labelWidth, displayWidth(s.Label))
 		}
 	}
-	const hint = "⏎/␣ change · ←/→ tabs · esc close"
 	// Tab bar, rule, lines, blank, help, message, rule, keys.
-	x, y, inner, rows, ok := u.modalFrame(w, h, "Settings", 70, tallest+7)
+	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", 70, tallest+7, !p.choosing)
 	if !ok {
 		return
 	}
 	listHeight := rows - 7
-	if listHeight < 1 {
+	if listHeight < 1 || p.choosing && listHeight < 2 {
 		return
 	}
 	u.drawSettingsTabs(x, y, inner)
 	u.screen.PutStrStyled(x, y+1, strings.Repeat("─", inner), uiMutedStyle)
 
 	options := tabs[p.tab].Settings
+	footer := "⏎/␣ change · ←/→ tabs · esc close"
+	switch {
+	case p.editing:
+		footer = "⏎ save · esc cancel"
+	case p.choosing:
+		footer = "⏎ select · ↑/↓ scroll · esc cancel"
+		u.drawChoices(x, y+2, inner, listHeight)
+	}
+	if !p.choosing {
+		u.drawSettingsList(x, y+2, inner, listHeight, labelWidth)
+	}
+	u.screen.PutStrStyled(x, y+rows-4, fit(options[p.row].Help, inner), uiMutedStyle)
+	messageStyle := uiMutedStyle
+	if p.failed {
+		messageStyle = uiBaseStyle.Foreground(tcell.ColorRed)
+	}
+	u.screen.PutStrStyled(x, y+rows-3, fit(p.message, inner), messageStyle)
+	u.drawSettingsFooter(x, y, inner, rows, footer)
+}
+
+// drawSettingsList draws the tab's options under their group headers.
+func (u *ui) drawSettingsList(x, y, inner, listHeight, labelWidth int) {
+	p := &u.settingsPage
+	options := config.SettingTabs[p.tab].Settings
 	lines := settingsLines(options)
 	selected := 0
 	for i, line := range lines {
@@ -312,7 +335,7 @@ func (u *ui) drawSettings(w, h int) {
 		p.offset = selected - listHeight + 1
 	}
 	for i := p.offset; i < min(len(lines), p.offset+listHeight); i++ {
-		row := y + 2 + i - p.offset
+		row := y + i - p.offset
 		line := lines[i]
 		if line.row < 0 {
 			u.screen.PutStrStyled(x, row, fit(line.header, inner), uiBaseStyle.Bold(true))
@@ -334,46 +357,23 @@ func (u *ui) drawSettings(w, h int) {
 		u.screen.PutStrStyled(x, row, fit("  "+marker+s.Label, labelWidth+5), label)
 		u.screen.PutStrStyled(x+labelWidth+5, row, fit(value, max(0, inner-labelWidth-5)), valueStyle)
 	}
-	u.screen.PutStrStyled(x, y+rows-4, fit(options[p.row].Help, inner), uiMutedStyle)
-	messageStyle := uiMutedStyle
-	if p.failed {
-		messageStyle = uiBaseStyle.Foreground(tcell.ColorRed)
-	}
-	u.screen.PutStrStyled(x, y+rows-3, fit(p.message, inner), messageStyle)
-	footer := hint
-	if p.editing {
-		footer = "⏎ save · esc cancel"
-	}
-	u.drawSettingsFooter(x, y, inner, rows, footer)
 }
 
-// drawChoices draws the list of choices for the selected setting. The screen
-// behind it isn't dimmed, so a theme shows its true colors while you scroll.
-func (u *ui) drawChoices(w, h int) {
+// drawChoices draws the selected setting's name and its choices, scrolled so
+// the highlighted one shows.
+func (u *ui) drawChoices(x, y, inner, listHeight int) {
 	p := &u.settingsPage
 	s := u.pageSetting()
 	labels := slices.Clone(s.Options)
 	if s.Custom {
 		labels = append(labels, customChoice)
 	}
-	const hint = "⏎ select · ↑/↓ scroll · esc cancel"
-	widest := displayWidth(hint)
-	for _, label := range labels {
-		widest = max(widest, displayWidth(label)+6)
-	}
-	// Choices, message, rule, keys.
-	x, y, inner, rows, ok := u.modalBox(w, h, s.Label, widest, len(labels)+3, false)
-	if !ok {
-		return
-	}
-	listHeight := rows - 3
-	if listHeight < 1 {
-		return
-	}
+	u.screen.PutStrStyled(x, y, fit(s.Label, inner), uiBaseStyle.Bold(true))
+	height := listHeight - 1
 	if p.choice < p.choiceOffset {
 		p.choiceOffset = p.choice
-	} else if p.choice >= p.choiceOffset+listHeight {
-		p.choiceOffset = p.choice - listHeight + 1
+	} else if p.choice >= p.choiceOffset+height {
+		p.choiceOffset = p.choice - height + 1
 	}
 	current := s.Get(p.values)
 	if s.Key == "theme" {
@@ -381,22 +381,16 @@ func (u *ui) drawChoices(w, h int) {
 			current = theme
 		}
 	}
-	for i := p.choiceOffset; i < min(len(labels), p.choiceOffset+listHeight); i++ {
-		text, style := "  "+labels[i], uiBaseStyle
+	for i := p.choiceOffset; i < min(len(labels), p.choiceOffset+height); i++ {
+		text, style := "    "+labels[i], uiBaseStyle
 		if i == p.choice {
-			text, style = "▸ "+labels[i], uiAccentStyle
+			text, style = "  ▸ "+labels[i], uiAccentStyle
 		}
 		if labels[i] == current || i >= len(s.Options) && !slices.Contains(s.Options, current) {
 			text += " ✓"
 		}
-		u.screen.PutStrStyled(x, y+i-p.choiceOffset, fit(text, inner), style)
+		u.screen.PutStrStyled(x, y+1+i-p.choiceOffset, fit(text, inner), style)
 	}
-	messageStyle := uiMutedStyle
-	if p.failed {
-		messageStyle = uiBaseStyle.Foreground(tcell.ColorRed)
-	}
-	u.screen.PutStrStyled(x, y+rows-3, fit(p.message, inner), messageStyle)
-	u.drawSettingsFooter(x, y, inner, rows, hint)
 }
 
 // drawSettingsTabs draws the tab names, scrolled so the current one shows.
