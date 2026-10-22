@@ -15,7 +15,7 @@ var Names = []string{
 	"window_index", "window_name", "window_active", "window_zoomed", "window_panes",
 	"pane_id", "pane_index", "pane_target", "pane_active",
 	"pane_current_path", "pane_current_command", "pane_title", "pane_width", "pane_height",
-	"pane_agent", "pane_agent_state",
+	"pane_agent", "pane_agent_state", "pane_pipe",
 }
 
 // Vars are info's format variables. Booleans are "1" or "0".
@@ -49,6 +49,7 @@ func Vars(info protocol.PaneInfo) map[string]string {
 		"pane_height":          itoa(info.Height),
 		"pane_agent":           info.Agent,
 		"pane_agent_state":     info.State,
+		"pane_pipe":            flag(info.Pipe),
 	}
 }
 

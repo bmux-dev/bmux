@@ -73,6 +73,13 @@ func (s *session) watchPane(id int, p *pane) {
 		// A background child might still hold the PTY open after its shell exits.
 		// Shell lifetime, not PTY EOF or client attachment, determines pane lifetime.
 		p.stop()
+		p.mu.Lock()
+		pipe := p.pipe
+		p.pipe = nil
+		p.mu.Unlock()
+		if pipe != nil {
+			pipe.stop() // its command reads end of file
+		}
 		s.shutdownMu.Lock()
 		delete(s.owned, p)
 		s.shutdownMu.Unlock()
