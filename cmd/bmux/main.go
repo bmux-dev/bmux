@@ -356,13 +356,19 @@ func restartServer(socket string) error {
 	if err != nil {
 		return err
 	}
+	restored := fmt.Sprintf("%d sessions restored", len(r.Sessions))
+	if len(r.Sessions) == 1 {
+		restored = "1 session restored"
+	}
 	switch {
 	case running && !saved:
-		fmt.Printf("Restarted the bmux server; %d sessions restored from the last save. The previous server predated saving, so changes since then were lost.\n", len(r.Sessions))
+		// Too old to be asked to stop by this version: SIGTERM, which has
+		// saved sessions since v0.2.
+		fmt.Printf("Restarted the bmux server, stopping the old one with SIGTERM; %s from its last save\n", restored)
 	case running:
-		fmt.Printf("Restarted the bmux server; %d sessions restored\n", len(r.Sessions))
+		fmt.Printf("Restarted the bmux server; %s\n", restored)
 	default:
-		fmt.Printf("Started the bmux server; %d sessions restored\n", len(r.Sessions))
+		fmt.Printf("Started the bmux server; %s\n", restored)
 	}
 	if len(r.Sessions) > 0 {
 		fmt.Println("Return to them with bmux attach [NAME]; bare bmux creates another session")
