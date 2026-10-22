@@ -35,12 +35,12 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 	} else if u.settingsPage.open {
 		// Pasted text fills the value being edited and is never a command.
 		if u.settingsPage.editing {
-			u.settingsPage.input += strings.Map(func(r rune) rune {
+			u.settingsPage.insert(strings.Map(func(r rune) rune {
 				if r < 0x20 || r == 0x7f {
 					return -1
 				}
 				return r
-			}, e.Text)
+			}, e.Text))
 		}
 	} else if u.view.active && u.view.searching {
 		u.view.input += strings.Map(func(r rune) rune {

@@ -298,7 +298,8 @@ func (u *ui) endSession(name string) {
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}
-	u.help, u.integrations.open, u.settingsPage.open, u.welcome = false, false, false, false
+	u.help, u.integrations.open, u.welcome = false, false, false
+	u.closeSettings()
 	u.selections = nil
 	u.paneSizes = nil
 	u.selection = selection{}
@@ -388,7 +389,8 @@ func (u *ui) switchTo(name string) error {
 	u.sidebarFocus = false
 	u.closeConfirm, u.closeWindow = 0, 0
 	u.view = scrollView{}
-	u.help, u.integrations.open, u.settingsPage.open, u.welcome = false, false, false, false
+	u.help, u.integrations.open, u.welcome = false, false, false
+	u.closeSettings()
 	u.generation++
 	generation := u.generation
 	u.picker, u.prefix, u.prompt = false, false, ""
@@ -737,7 +739,8 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		// Overlays are modal: a click closes the key list or panel and
 		// reaches nothing else. The welcome screen waits for its keys.
 		if e.Buttons()&(tcell.Button1|tcell.Button2|tcell.Button3) != 0 {
-			u.help, u.integrations.open, u.settingsPage.open = false, false, false
+			u.help, u.integrations.open = false, false
+			u.closeSettings()
 		}
 		return
 	}
@@ -1020,6 +1023,8 @@ func (u *ui) draw() {
 		footer = "Settings: ←/→ tab · j/k select · Enter or Space changes · Esc closes"
 		if u.settingsPage.editing {
 			footer = "Settings: type a value · Enter saves · Esc cancels"
+		} else if u.settingsPage.choosing {
+			footer = "Settings: j/k scroll · Enter chooses · Esc cancels"
 		}
 	} else if u.welcome {
 		footer = "Welcome: Enter continues · Esc skips"

@@ -1,7 +1,9 @@
 package client
 
 import (
+	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
@@ -10,21 +12,83 @@ import (
 // settingsPage is the overlay for changing the config file's settings: one
 // tab per area, a list of options per tab. Each change goes straight to the
 // file through config.Setting.Save and reloads, so the page never holds
-// edits that aren't on disk.
+// edits that aren't on disk. The one exception is the look of a choice being
+// scrolled through, which previews until Enter saves it or Esc puts it back.
 type settingsPage struct {
 	open     bool
 	tab, row int
-	offset   int           // first option shown, when a tab is taller than the box
+	offset   int           // first line shown, when a tab is taller than the box
 	values   config.Config // the file's settings, without environment overrides
 	editing  bool
 	input    string
+	cursor   int // rune index in input where typing goes
+	inputOff int // first rune of input shown, when it is wider than the box
 	message  string
 	failed   bool // message is an error
+
+	choosing     bool // the list of choices for the selected setting is open
+	choice       int  // highlighted choice; len(Options) is the Custom row
+	choiceOffset int  // first choice shown
+	// previewIcons is the ui.icons choice being scrolled over, shown on the
+	// tabs until Enter saves it or Esc drops it.
+	previewIcons string
 }
+
+// customChoice is the last row of a choice list that also takes a typed value.
+const customChoice = "Custom…"
 
 func (u *ui) openSettings() {
 	u.settingsPage = settingsPage{open: true}
 	u.loadSettingsPage()
+}
+
+// closeSettings closes the page, putting back any previewed look.
+func (u *ui) closeSettings() {
+	u.revertPreview()
+	u.settingsPage.open = false
+}
+
+// startEdit opens the editor on value, with the cursor after its last character.
+func (p *settingsPage) startEdit(value string) {
+	p.editing, p.input, p.message = true, value, ""
+	p.cursor, p.inputOff = utf8.RuneCountInString(value), 0
+}
+
+// insert types text at the cursor.
+func (p *settingsPage) insert(text string) {
+	r := []rune(p.input)
+	p.input = string(r[:p.cursor]) + text + string(r[p.cursor:])
+	p.cursor += utf8.RuneCountInString(text)
+}
+
+// editKey edits the value with the usual line-editing keys.
+func (p *settingsPage) editKey(e *tcell.EventKey) {
+	r := []rune(p.input)
+	switch {
+	case e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyCtrlB:
+		p.cursor = max(0, p.cursor-1)
+	case e.Key() == tcell.KeyRight || e.Key() == tcell.KeyCtrlF:
+		p.cursor = min(len(r), p.cursor+1)
+	case e.Key() == tcell.KeyHome || e.Key() == tcell.KeyCtrlA:
+		p.cursor = 0
+	case e.Key() == tcell.KeyEnd || e.Key() == tcell.KeyCtrlE:
+		p.cursor = len(r)
+	case e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2 || e.Key() == tcell.KeyCtrlH:
+		if p.cursor > 0 {
+			p.input = string(r[:p.cursor-1]) + string(r[p.cursor:])
+			p.cursor--
+		}
+	case e.Key() == tcell.KeyDelete:
+		if p.cursor < len(r) {
+			p.input = string(r[:p.cursor]) + string(r[p.cursor+1:])
+		}
+	case e.Key() == tcell.KeyCtrlU: // to the start of the line
+		p.input, p.cursor = string(r[p.cursor:]), 0
+	case e.Key() == tcell.KeyCtrlK: // to the end of the line
+		p.input = string(r[:p.cursor])
+	case e.Key() == tcell.KeyRune && e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0:
+		p.insert(string(e.Rune()))
+	}
 }
 
 // loadSettingsPage rereads the file, so the page shows what is saved.
@@ -45,13 +109,13 @@ func (u *ui) settingsKey(e *tcell.EventKey) {
 			u.saveSetting(p.input)
 		case e.Key() == tcell.KeyEscape:
 			p.editing, p.message = false, ""
-		case e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2 || e.Key() == tcell.KeyCtrlH:
-			p.input = dropRune(p.input)
-		case e.Key() == tcell.KeyCtrlU:
-			p.input = ""
-		case e.Key() == tcell.KeyRune && e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0:
-			p.input += string(e.Rune())
+		default:
+			p.editKey(e)
 		}
+		return
+	}
+	if p.choosing {
+		u.choiceKey(e)
 		return
 	}
 	tabs := config.SettingTabs
@@ -61,7 +125,7 @@ func (u *ui) settingsKey(e *tcell.EventKey) {
 	}
 	switch {
 	case e.Key() == tcell.KeyEscape || e.Key() == tcell.KeyRune && e.Rune() == 'q':
-		p.open = false
+		u.closeSettings()
 	case e.Key() == tcell.KeyRight || e.Key() == tcell.KeyTab || e.Key() == tcell.KeyRune && e.Rune() == 'l':
 		moveTab(1)
 	case e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyBacktab || e.Key() == tcell.KeyRune && e.Rune() == 'h':
@@ -72,32 +136,154 @@ func (u *ui) settingsKey(e *tcell.EventKey) {
 		p.row, p.message = max(p.row-1, 0), ""
 	case e.Key() == tcell.KeyEnter || e.Key() == tcell.KeyRune && e.Rune() == ' ':
 		u.changeSetting()
-	case e.Key() == tcell.KeyRune && e.Rune() == 'e' && u.pageSetting().Custom:
-		p.editing, p.input, p.message = true, u.pageSetting().Get(p.values), ""
 	}
 }
 
-// changeSetting cycles a choice or opens the editor for a typed value.
+// changeSetting flips a switch, opens the list of choices, or opens the
+// editor for a typed value.
 func (u *ui) changeSetting() {
 	p := &u.settingsPage
 	s := u.pageSetting()
-	current := s.Get(p.values)
-	if s.Kind != config.KindBool && s.Kind != config.KindEnum {
-		p.editing, p.input, p.message = true, current, ""
-		return
+	switch s.Kind {
+	case config.KindBool:
+		current := s.Get(p.values)
+		next := s.Options[0]
+		for i, option := range s.Options {
+			if option == current {
+				next = s.Options[(i+1)%len(s.Options)]
+			}
+		}
+		u.saveSetting(next)
+	case config.KindEnum:
+		u.openChoices()
+	default:
+		p.startEdit(s.Get(p.values))
 	}
-	next := s.Options[0] // also where a custom value goes next
-	for i, option := range s.Options {
-		if option == current {
-			next = s.Options[(i+1)%len(s.Options)]
+}
+
+// openChoices opens the list of choices with the saved one highlighted.
+func (u *ui) openChoices() {
+	p := &u.settingsPage
+	s := u.pageSetting()
+	current := s.Get(p.values)
+	if s.Key == "theme" {
+		if theme, ok := config.ResolveTheme(current); ok {
+			current = theme // "catppuccin" is catppuccin-mocha
 		}
 	}
-	u.saveSetting(next)
+	p.choosing, p.choice, p.choiceOffset, p.message, p.failed = true, 0, 0, "", false
+	if s.Custom {
+		p.choice = len(s.Options) // a value that isn't a preset is custom
+	}
+	for i, option := range s.Options {
+		if option == current {
+			p.choice = i
+		}
+	}
+}
+
+// choiceKey handles keys while a list of choices is open.
+func (u *ui) choiceKey(e *tcell.EventKey) {
+	p := &u.settingsPage
+	s := u.pageSetting()
+	last := len(s.Options) - 1
+	if s.Custom {
+		last++
+	}
+	move := func(to int) {
+		p.choice, p.message = max(0, min(to, last)), ""
+		u.previewChoice()
+	}
+	switch {
+	case e.Key() == tcell.KeyEscape:
+		u.revertPreview()
+		p.message = ""
+	case e.Key() == tcell.KeyDown || e.Key() == tcell.KeyRune && e.Rune() == 'j':
+		move(p.choice + 1)
+	case e.Key() == tcell.KeyUp || e.Key() == tcell.KeyRune && e.Rune() == 'k':
+		move(p.choice - 1)
+	case e.Key() == tcell.KeyPgDn:
+		move(p.choice + 8)
+	case e.Key() == tcell.KeyPgUp:
+		move(p.choice - 8)
+	case e.Key() == tcell.KeyHome || e.Key() == tcell.KeyRune && e.Rune() == 'g':
+		move(0)
+	case e.Key() == tcell.KeyEnd || e.Key() == tcell.KeyRune && e.Rune() == 'G':
+		move(last)
+	case e.Key() == tcell.KeyEnter && p.choice >= len(s.Options):
+		u.revertPreview()
+		p.startEdit(s.Get(p.values))
+	case e.Key() == tcell.KeyEnter:
+		u.saveSetting(s.Options[p.choice])
+	}
+}
+
+// previews says whether the look of a setting's choices can be shown before
+// one is saved: the colors, the icons and where notices go. Anything else
+// waits for Enter.
+func previews(key string) bool {
+	switch key {
+	case "theme", "ui.accent", "ui.pane-background", "ui.icons", "ui.notice-position":
+		return true
+	}
+	return false
+}
+
+// previewChoice shows the highlighted choice without saving it, for the
+// settings that previews lists.
+func (u *ui) previewChoice() {
+	p := &u.settingsPage
+	s := u.pageSetting()
+	p.previewIcons = ""
+	if p.choice >= len(s.Options) {
+		u.applySaved() // Custom: nothing to show until a value is typed
+		return
+	}
+	c := u.settings
+	switch s.Key {
+	case "ui.icons":
+		p.previewIcons = s.Options[p.choice]
+		return
+	case "theme":
+		c.Theme = s.Options[p.choice]
+	case "ui.accent":
+		c.UI.Accent = s.Options[p.choice]
+	case "ui.pane-background":
+		c.UI.PaneBackground = s.Options[p.choice]
+	default:
+		return
+	}
+	applyTheme(themeFor(c.Theme, c.UI))
+}
+
+// applySaved shows the colors of the settings the client is running.
+func (u *ui) applySaved() { applyTheme(themeFor(u.settings.Theme, u.settings.UI)) }
+
+// noticePreview is the position a sample notice shows at while the choices
+// for ui.notice-position are open.
+func (u *ui) noticePreview() (position string, ok bool) {
+	p := &u.settingsPage
+	if !p.open || !p.choosing {
+		return "", false
+	}
+	s := u.pageSetting()
+	if s.Key != "ui.notice-position" || p.choice >= len(s.Options) {
+		return "", false
+	}
+	return s.Options[p.choice], true
+}
+
+// revertPreview leaves the list of choices and puts back the applied theme.
+func (u *ui) revertPreview() {
+	if u.settingsPage.choosing {
+		u.settingsPage.choosing, u.settingsPage.previewIcons = false, ""
+		u.applySaved()
+	}
 }
 
 // saveSetting writes the selected setting, then reloads like Ctrl-a r so the
 // change applies without leaving the page. A refused value stays in the
-// editor with the reason.
+// editor or list of choices with the reason.
 func (u *ui) saveSetting(input string) {
 	p := &u.settingsPage
 	s := u.pageSetting()
@@ -105,7 +291,7 @@ func (u *ui) saveSetting(input string) {
 		p.message, p.failed = err.Error(), true
 		return
 	}
-	p.editing, p.failed = false, false
+	p.editing, p.choosing, p.previewIcons, p.failed = false, false, "", false
 	p.message = "Saved " + s.Key
 	u.requestReload()
 	u.loadSettingsPage()
@@ -125,71 +311,237 @@ func settingValue(s config.Setting, c config.Config) (string, bool) {
 	return value, true
 }
 
+// settingsLine is one line of a tab: a group header, the gap before one, or
+// the setting at index row.
+type settingsLine struct {
+	header string
+	row    int // index into the tab's settings, or -1 for a header or gap
+}
+
+// settingsLines lays out a tab's settings under their group headers.
+func settingsLines(settings []config.Setting) []settingsLine {
+	var lines []settingsLine
+	for i, s := range settings {
+		if i == 0 || s.Group != settings[i-1].Group {
+			if i > 0 {
+				lines = append(lines, settingsLine{row: -1})
+			}
+			if s.Group != "" {
+				lines = append(lines, settingsLine{header: s.Group, row: -1})
+			}
+		}
+		lines = append(lines, settingsLine{row: i})
+	}
+	return lines
+}
+
+// drawSettingsFooter draws the rule and the line of keys at the box's bottom.
+func (u *ui) drawSettingsFooter(x, y, inner, rows int, hint string) {
+	u.screen.PutStrStyled(x, y+rows-2, strings.Repeat("─", inner), uiMutedStyle)
+	u.screen.PutStrStyled(x, y+rows-1, fit(hint, inner), uiMutedStyle)
+}
+
+// drawSettings draws the page. A list of choices takes the place of the
+// tab's options inside the same box, title and footer rows, with the tabs
+// shown but not selectable. A list that previews its choices leaves the
+// screen behind undimmed, so a theme shows its true colors while you scroll.
 func (u *ui) drawSettings(w, h int) {
 	p := &u.settingsPage
 	tabs := config.SettingTabs
 	tallest, labelWidth := 0, 0
 	for _, tab := range tabs {
-		tallest = max(tallest, len(tab.Settings))
+		tallest = max(tallest, len(settingsLines(tab.Settings)))
 		for _, s := range tab.Settings {
 			labelWidth = max(labelWidth, displayWidth(s.Label))
 		}
 	}
-	// Tab bar, rule, options, blank, help, message.
-	x, y, inner, rows, ok := u.modalFrame(w, h, "Settings", 70, tallest+5)
+	// Tab bar, rule, lines, blank, help, message, rule, keys.
+	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", max(70, u.tabsWidth()), tallest+7, !(p.choosing && previews(u.pageSetting().Key)))
 	if !ok {
 		return
 	}
-	listHeight := rows - 5
-	if listHeight < 1 {
+	listHeight := rows - 7
+	if listHeight < 1 || p.choosing && listHeight < 2 {
 		return
 	}
 	u.drawSettingsTabs(x, y, inner)
 	u.screen.PutStrStyled(x, y+1, strings.Repeat("─", inner), uiMutedStyle)
 
 	options := tabs[p.tab].Settings
-	if p.row < p.offset {
-		p.offset = p.row
-	} else if p.row >= p.offset+listHeight {
-		p.offset = p.row - listHeight + 1
+	footer := "⏎/␣ change · ←/→ tabs · esc close"
+	switch {
+	case p.editing:
+		footer = "⏎ save · ←/→ move · esc cancel"
+	case p.choosing:
+		footer = "⏎ select · ↑/↓ scroll · esc cancel"
+		u.drawChoices(x, y+2, inner, listHeight)
 	}
-	for i := p.offset; i < min(len(options), p.offset+listHeight); i++ {
-		s := options[i]
-		value, set := settingValue(s, p.values)
-		selected := i == p.row
-		if selected && p.editing {
-			value, set = tailFit(p.input, max(1, inner-labelWidth-5))+"_", true
-		}
-		label, valueStyle := uiBaseStyle, uiMutedStyle
-		marker := "  "
-		if selected {
-			marker, label, valueStyle = "▸ ", uiAccentStyle, uiAccentStyle
-		} else if set {
-			valueStyle = uiBaseStyle
-		}
-		row := y + 2 + i - p.offset
-		u.screen.PutStrStyled(x, row, fit(marker+s.Label, labelWidth+3), label)
-		u.screen.PutStrStyled(x+labelWidth+3, row, fit(value, max(0, inner-labelWidth-3)), valueStyle)
+	if !p.choosing {
+		u.drawSettingsList(x, y+2, inner, listHeight, labelWidth)
 	}
-	help := options[p.row].Help
-	u.screen.PutStrStyled(x, y+rows-2, fit(help, inner), uiMutedStyle)
+	u.screen.PutStrStyled(x, y+rows-4, fit(options[p.row].Help, inner), uiMutedStyle)
 	messageStyle := uiMutedStyle
 	if p.failed {
 		messageStyle = uiBaseStyle.Foreground(tcell.ColorRed)
 	}
-	u.screen.PutStrStyled(x, y+rows-1, fit(p.message, inner), messageStyle)
+	u.screen.PutStrStyled(x, y+rows-3, fit(p.message, inner), messageStyle)
+	u.drawSettingsFooter(x, y, inner, rows, footer)
+}
+
+// drawSettingsList draws the tab's options under their group headers.
+func (u *ui) drawSettingsList(x, y, inner, listHeight, labelWidth int) {
+	p := &u.settingsPage
+	options := config.SettingTabs[p.tab].Settings
+	lines := settingsLines(options)
+	selected := 0
+	for i, line := range lines {
+		if line.row == p.row {
+			selected = i
+		}
+	}
+	top := selected // keep a group's header with its first setting
+	if top > 0 && lines[top-1].header != "" {
+		top--
+	}
+	if top < p.offset {
+		p.offset = top
+	} else if selected >= p.offset+listHeight {
+		p.offset = selected - listHeight + 1
+	}
+	for i := p.offset; i < min(len(lines), p.offset+listHeight); i++ {
+		row := y + i - p.offset
+		line := lines[i]
+		if line.row < 0 {
+			u.screen.PutStrStyled(x, row, fit(line.header, inner), uiBaseStyle.Bold(true))
+			continue
+		}
+		s := options[line.row]
+		value, set := settingValue(s, p.values)
+		isSelected := line.row == p.row
+		label, valueStyle := uiBaseStyle, uiMutedStyle
+		marker := "  "
+		if isSelected {
+			marker, label, valueStyle = "▸ ", uiAccentStyle, uiAccentStyle
+		} else if set {
+			valueStyle = uiBaseStyle
+		}
+		u.screen.PutStrStyled(x, row, fit("  "+marker+s.Label, labelWidth+5), label)
+		if isSelected && p.editing {
+			u.drawEditor(x+labelWidth+5, row, max(1, inner-labelWidth-5))
+			continue
+		}
+		u.screen.PutStrStyled(x+labelWidth+5, row, fit(value, max(0, inner-labelWidth-5)), valueStyle)
+	}
+	u.drawScrollbar(x+inner, y, listHeight, len(lines), p.offset, listHeight)
+}
+
+// drawEditor draws the value being typed in width cells, scrolled to keep the
+// cursor in view, with the cursor shown as a reversed cell.
+func (u *ui) drawEditor(x, y, width int) {
+	p := &u.settingsPage
+	r := []rune(p.input)
+	if p.cursor < p.inputOff {
+		p.inputOff = p.cursor
+	} else if p.cursor >= p.inputOff+width {
+		p.inputOff = p.cursor - width + 1
+	}
+	shown := r[p.inputOff:min(len(r), p.inputOff+width)]
+	u.screen.PutStrStyled(x, y, fit(string(shown), width), uiAccentStyle)
+	under := " "
+	if p.cursor < len(r) {
+		under = string(r[p.cursor])
+	}
+	u.screen.PutStrStyled(x+p.cursor-p.inputOff, y, under, uiAccentStyle.Reverse(true))
+}
+
+// drawChoices draws the selected setting's name and its choices, scrolled so
+// the highlighted one shows.
+func (u *ui) drawChoices(x, y, inner, listHeight int) {
+	p := &u.settingsPage
+	s := u.pageSetting()
+	labels := slices.Clone(s.Options)
+	if s.Custom {
+		labels = append(labels, customChoice)
+	}
+	u.screen.PutStrStyled(x, y, fit(s.Label, inner), uiBaseStyle.Bold(true))
+	height := listHeight - 1
+	if p.choice < p.choiceOffset {
+		p.choiceOffset = p.choice
+	} else if p.choice >= p.choiceOffset+height {
+		p.choiceOffset = p.choice - height + 1
+	}
+	current := s.Get(p.values)
+	if s.Key == "theme" {
+		if theme, ok := config.ResolveTheme(current); ok {
+			current = theme
+		}
+	}
+	for i := p.choiceOffset; i < min(len(labels), p.choiceOffset+height); i++ {
+		text, style := "    "+labels[i], uiBaseStyle
+		if i == p.choice {
+			text, style = "  ▸ "+labels[i], uiAccentStyle
+		}
+		if labels[i] == current || i >= len(s.Options) && !slices.Contains(s.Options, current) {
+			text += " ✓"
+		}
+		u.screen.PutStrStyled(x, y+1+i-p.choiceOffset, fit(text, inner), style)
+	}
+	u.drawScrollbar(x+inner, y+1, height, len(labels), p.choiceOffset, height)
+}
+
+// tabGap is the space between tab labels.
+const tabGap = 1
+
+// nerdIcons says whether to draw Nerd Font icons. A terminal can't report its
+// font, so auto trusts the same assumption as the powerline separators.
+func (u *ui) nerdIcons() bool {
+	icons := u.settings.UI.Icons
+	if u.settingsPage.choosing && u.settingsPage.previewIcons != "" {
+		icons = u.settingsPage.previewIcons
+	}
+	switch icons {
+	case "nerd":
+		return true
+	case "plain":
+		return false
+	}
+	return !u.settings.UI.PowerlineASCII
+}
+
+// tabLabel is a tab's icon and name with a cell of padding either side. A
+// terminal that can't draw an icon gets the plain symbol, then the name alone.
+func (u *ui) tabLabel(i int) string {
+	tab := config.SettingTabs[i]
+	icons := []string{tab.Icon}
+	if u.nerdIcons() {
+		icons = []string{tab.NerdIcon, tab.Icon}
+	}
+	for _, icon := range icons {
+		if icon != "" && u.screen.CanDisplay([]rune(icon)[0], false) {
+			return " " + icon + " " + tab.Name + " "
+		}
+	}
+	return " " + tab.Name + " "
+}
+
+// tabsWidth is the width of the whole tab bar.
+func (u *ui) tabsWidth() int {
+	width := -tabGap
+	for i := range config.SettingTabs {
+		width += displayWidth(u.tabLabel(i)) + tabGap
+	}
+	return width
 }
 
 // drawSettingsTabs draws the tab names, scrolled so the current one shows.
 func (u *ui) drawSettingsTabs(x, y, width int) {
 	tabs := config.SettingTabs
-	label := func(i int) string { return " " + tabs[i].Name + " " }
-	first, used := 0, 0
+	first, used := 0, -tabGap
 	for i := 0; i <= u.settingsPage.tab; i++ {
-		used += displayWidth(label(i))
+		used += displayWidth(u.tabLabel(i)) + tabGap
 	}
 	for first < u.settingsPage.tab && used > width {
-		used -= displayWidth(label(first))
+		used -= displayWidth(u.tabLabel(first)) + tabGap
 		first++
 	}
 	u.screen.PutStrStyled(x, y, fit("", width), uiBaseStyle)
@@ -198,13 +550,13 @@ func (u *ui) drawSettingsTabs(x, y, width int) {
 		if i == u.settingsPage.tab {
 			style = uiAccentStyle.Reverse(true)
 		}
-		text := label(i)
+		text := u.tabLabel(i)
 		cells := displayWidth(text)
 		if cells > width {
 			text, cells = fit(text, width), width
 		}
 		u.screen.PutStrStyled(x, y, text, style)
-		x, width = x+cells, width-cells
+		x, width = x+cells+tabGap, width-cells-tabGap
 		if width <= 0 {
 			break
 		}
