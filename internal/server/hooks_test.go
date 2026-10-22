@@ -113,7 +113,7 @@ session-closed = ["echo ran >> `+ran+`"]
 	hookTimeout = 200 * time.Millisecond
 	t.Cleanup(func() { hookTimeout = saved })
 	start := time.Now()
-	runHook("pane-exited", "sleep 30", protocol.PaneInfo{})
+	runHook("pane-exited", "sleep 30", protocol.PaneInfo{}, hookTimeout)
 	if elapsed := time.Since(start); elapsed > 3*time.Second {
 		t.Fatalf("a hook ran %v past its time limit", elapsed)
 	}
