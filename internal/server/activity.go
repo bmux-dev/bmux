@@ -301,10 +301,23 @@ func (s *pane) agentViewLocked() (agent, state string) {
 }
 
 // trackAgentLocked gives the pane a new seq when its agent or state differs
-// from the view captured before a change. Caller holds pane.mu.
+// from the view captured before a change, and runs the agent-blocked hook
+// when it becomes blocked, or agent-idle when a turn finishes. Caller holds
+// pane.mu.
 func (s *pane) trackAgentLocked(agent, state string) {
-	if now, nowState := s.agentViewLocked(); now != agent || nowState != state {
-		s.agentSeq = agentSeqs.Add(1)
+	now, nowState := s.agentViewLocked()
+	if now == agent && nowState == state {
+		return
+	}
+	s.agentSeq = agentSeqs.Add(1)
+	if s.agentHook == nil || now == "" {
+		return
+	}
+	switch {
+	case nowState == protocol.AgentBlocked && state != protocol.AgentBlocked:
+		s.agentHook("blocked")
+	case nowState == protocol.AgentIdle && state == protocol.AgentWorking:
+		s.agentHook("idle")
 	}
 }
 

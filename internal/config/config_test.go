@@ -40,6 +40,7 @@ func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
 	want.Agents.Extra = []string{}
 	want.Keys = Keys{PassThrough: []string{}, Root: map[string]string{}, Prefix: map[string]string{}}
 	want.Restore.Resume = map[string][]string{"claude": {"claude", "--continue"}, "codex": {"codex", "resume", "--last"}}
+	want.Hooks = map[string][]string{"agent-blocked": {"notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"}}
 	if err != nil || !reflect.DeepEqual(cfg, want) {
 		t.Fatalf("documented defaults:\n got %+v\nwant %+v\n%v", cfg, want, err)
 	}
@@ -162,5 +163,21 @@ func TestPrefixKeyForms(t *testing.T) {
 		if _, err := PrefixKey(in); err == nil {
 			t.Errorf("%q accepted", in)
 		}
+	}
+}
+
+func TestHooksNameKnownEventsAndRealCommands(t *testing.T) {
+	cfg, err := Load(write(t, `[hooks]
+pane-exited = ["echo #{pane_target} >> /tmp/exits"]
+agent-blocked = ["notify-send blocked", "echo second"]
+on-boot = ["echo nope"]
+client-attached = ["  "]
+`), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "hooks.on-boot isn't an event") || !strings.Contains(err.Error(), "hooks.client-attached has an empty command") {
+		t.Fatalf("problems: %v", err)
+	}
+	want := map[string][]string{"pane-exited": {"echo #{pane_target} >> /tmp/exits"}, "agent-blocked": {"notify-send blocked", "echo second"}}
+	if !reflect.DeepEqual(cfg.Hooks, want) {
+		t.Fatalf("hooks: %+v", cfg.Hooks)
 	}
 }

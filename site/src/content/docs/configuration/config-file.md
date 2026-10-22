@@ -60,6 +60,8 @@ width = 24
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
 | `projects.start-dir` | `""` | Folder the new-session popup's Create tab starts in, and what its relative paths are relative to, e.g. `"~"`; absolute or `~/` path. Empty means the directory bmux was started in. |
 | `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
+| `update.check` | `true` | Look for a new release once a day and show `↑` in the status bar; see [Updates](/bmux/start/installation/#updates) |
+| `hooks.EVENT` | none | Shell commands to run when an event happens; see [Hooks](#hooks) |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](/bmux/configuration/rebinding-keys/) |
 | `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |
 
@@ -69,3 +71,33 @@ the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
 is invalid, the status line (or `bmux reload`) says which, and that setting
 keeps its default, so a typo never leaves you without keys. Unknown settings
 are reported too.
+
+## Hooks
+
+`[hooks]` runs shell commands when something happens, like tmux's `set-hook`:
+
+```toml
+[hooks]
+agent-blocked = ["notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"]
+session-created = ["bmux split -h -d"]
+pane-exited = ["echo '#{pane_target} exited' >> ~/.local/state/bmux/exits.log"]
+```
+
+| Event | When | Its pane |
+| --- | --- | --- |
+| `session-created` | A session is created (not when one is restored) | Its first pane |
+| `session-closed` | Its last pane's shell exits | That pane: session and pane number only |
+| `window-created` | A window opens (Ctrl-a c, `bmux new-window`) | The window's pane |
+| `pane-exited` | A pane's shell exits, or `bmux kill-pane` closes it | That pane: session, window and pane number only |
+| `client-attached`, `client-detached` | A client attaches to or leaves the session | Its focused pane |
+| `agent-blocked` | A pane's agent starts waiting on a decision | That pane |
+| `agent-idle` | A pane's agent finishes a turn | That pane |
+
+Each command runs with `/bin/sh -c` after its [`#{...}` variables](/bmux/reference/commands/#format-variables)
+are filled in for the event's pane. It runs in that pane's directory, with
+`BMUX_SESSION`, `BMUX_SESSION_ID` and `BMUX_PANE` set for it and `BMUX_HOOK` set
+to the event, so `bmux` commands in a hook act on that pane. Hooks run in the
+background and never hold anything up: each gets one minute, at most eight run
+at once (more are skipped), and their output and failures go to `server.log`.
+Stopping the server (`bmux restart`) doesn't count as panes exiting. A hook
+that creates sessions on `session-created` would create them forever.

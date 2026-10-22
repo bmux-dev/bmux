@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -33,7 +34,10 @@ type Config struct {
 	Projects   Projects   `toml:"projects"`
 	Scrollback Scrollback `toml:"scrollback"`
 	Update     Update     `toml:"update"`
-	Keys       Keys       `toml:"keys"`
+	// Hooks maps an event (HookEvents) to shell commands the server runs
+	// when it happens, with #{...} format variables for its pane.
+	Hooks map[string][]string `toml:"hooks"`
+	Keys  Keys                `toml:"keys"`
 }
 
 type UI struct {
@@ -97,6 +101,12 @@ type Scrollback struct {
 // installs one.
 type Update struct {
 	Check bool `toml:"check"`
+}
+
+// HookEvents are the events [hooks] can name.
+var HookEvents = []string{
+	"session-created", "session-closed", "window-created", "pane-exited",
+	"client-attached", "client-detached", "agent-blocked", "agent-idle",
 }
 
 // Bounds for scrollback.lines; each line holds a row of cells.
@@ -332,6 +342,17 @@ func (c *Config) repair() []string {
 		bad("scrollback.lines %d must be between %d and %d", c.Scrollback.Lines, MinScrollbackLines, MaxScrollbackLines)
 		c.Scrollback.Lines = d.Scrollback.Lines
 	}
+	for event, commands := range c.Hooks {
+		if !slices.Contains(HookEvents, event) {
+			bad("hooks.%s isn't an event; use one of %s", event, strings.Join(HookEvents, ", "))
+			delete(c.Hooks, event)
+			continue
+		}
+		if slices.ContainsFunc(commands, func(s string) bool { return strings.TrimSpace(s) == "" }) {
+			bad("hooks.%s has an empty command", event)
+			delete(c.Hooks, event)
+		}
+	}
 	c.repairKeys(bad)
 	return problems
 }
@@ -402,6 +423,11 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 [update]
 # check = true              # look for a new release once a day; bmux update installs it
+
+[hooks]                     # shell commands run on events, with #{...} variables for the event's pane
+# Events: session-created, session-closed, window-created, pane-exited,
+# client-attached, client-detached, agent-blocked, agent-idle. See bmux guide.
+# agent-blocked = ["notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"]
 
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:

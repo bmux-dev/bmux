@@ -116,6 +116,12 @@ bmux display-message -p '#{pane_current_path} #{pane_current_command}'
 field. `bmux display-message TARGET 'text'` without `-p` shows text in the
 status line of everyone attached to that session; use it sparingly.
 
+## Hooks the user configured
+
+The user's config file can run commands on events (`[hooks]`, such as
+`agent-blocked = ["notify-send …"]`). A hook runs with `BMUX_HOOK` set to its
+event. If you are one, act on the pane `BMUX_PANE` names and finish quickly.
+
 ## Wait for a pane
 
 ```

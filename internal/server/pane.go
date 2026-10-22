@@ -62,6 +62,9 @@ type pane struct {
 	clipboardSeq                uint64   // its clipboardWrites number, 0 if none
 	graphics                    *graphics.Pane
 	graphicsOK                  atomic.Bool // some attached client can display images
+	// agentHook runs the agent-blocked and agent-idle hooks; set by the
+	// session that owns the pane. Called under pane.mu.
+	agentHook func(state string)
 }
 
 func newPane(sessionID uint64, name, dir, shell string, width, height, paneID int) (*pane, error) {

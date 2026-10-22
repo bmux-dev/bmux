@@ -409,7 +409,13 @@ func (s *Server) handle(conn net.Conn) {
 		_ = enc.Encode(protocol.Response{Version: protocol.Version, Error: "session not found"})
 		return
 	}
-	defer func() { item.mu.Lock(); item.info.Clients--; item.mu.Unlock() }()
+	item.hook("client-attached", 0)
+	defer func() {
+		item.mu.Lock()
+		item.info.Clients--
+		item.mu.Unlock()
+		item.hook("client-detached", 0)
+	}()
 	if err := enc.Encode(protocol.Response{Version: protocol.Version}); err != nil {
 		return
 	}
