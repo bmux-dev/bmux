@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bufio"
-	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -24,7 +21,6 @@ import (
 const (
 	maxProjects       = 2000
 	maxProjectVisits  = 20000
-	zoxideTimeout     = 2 * time.Second
 	projectWalkBudget = 3 * time.Second
 )
 
@@ -68,7 +64,7 @@ func (u *ui) openProjects() {
 		result := projectResult{err: err}
 		if err == nil {
 			home, _ := os.UserHomeDir()
-			result.projects = findProjects(settings, home, r.Sessions, zoxideDirs(settings))
+			result.projects = findProjects(settings, home, r.Sessions)
 			result.sessions = r.Sessions
 		}
 		select {
@@ -91,9 +87,9 @@ func (u *ui) finishProjects(result projectResult) {
 }
 
 // findProjects lists folders with a session first (most recent first), then
-// zoxide's directories in its ranking, then the git repositories under the
-// roots in path order. Each folder appears once.
-func findProjects(settings config.Projects, home string, sessions []protocol.Session, zoxide []string) []project {
+// the git repositories under the roots in path order. Each folder appears
+// once.
+func findProjects(settings config.Projects, home string, sessions []protocol.Session) []project {
 	var result []project
 	seen := make(map[string]bool)
 	add := func(dir, session string) {
@@ -112,9 +108,6 @@ func findProjects(settings config.Projects, home string, sessions []protocol.Ses
 		if s.Dir != "" {
 			add(s.Dir, s.Name)
 		}
-	}
-	for _, dir := range zoxide {
-		add(dir, sessionIn(sessions, dir))
 	}
 	deadline := time.Now().Add(projectWalkBudget)
 	visits := 0
@@ -159,32 +152,6 @@ func walkProjects(dir string, depth int, visits *int, deadline time.Time, found 
 		}
 		walkProjects(filepath.Join(dir, name), depth-1, visits, deadline, found)
 	}
-}
-
-// zoxideDirs is zoxide's directory list, best first, or nil when zoxide is
-// off, missing or slow.
-func zoxideDirs(settings config.Projects) []string {
-	if !settings.Zoxide {
-		return nil
-	}
-	path, err := exec.LookPath("zoxide")
-	if err != nil {
-		return nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), zoxideTimeout)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, path, "query", "--list").Output()
-	if err != nil {
-		return nil
-	}
-	var dirs []string
-	scanner := bufio.NewScanner(strings.NewReader(string(out)))
-	for scanner.Scan() {
-		if dir := strings.TrimSpace(scanner.Text()); filepath.IsAbs(dir) {
-			dirs = append(dirs, dir)
-		}
-	}
-	return dirs
 }
 
 // projectLabel writes dir with ~ for the home directory.
@@ -472,7 +439,7 @@ func (u *ui) drawProjectList(ix, iy, iw, ih int) {
 	case u.projects.loading:
 		message = "Finding projects…"
 	case len(u.projects.list) == 0:
-		message = "No projects. Set projects.roots in the config file, or install zoxide."
+		message = "No projects. Set projects.roots in the config file to folders holding git repositories."
 	case len(matches) == 0:
 		message = "No matches. Enter creates a session named after the filter."
 	}

@@ -58,7 +58,6 @@ width = 24
 | `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
 | `projects.roots` | `["~/code", "~/src", "~/projects", "~/dev"]` | Folders the [new-session popup](/bmux/guides/project-picker/) lists for git repositories; absolute or `~/` paths. Missing ones are skipped. |
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
-| `projects.zoxide` | `true` | Also list zoxide's directories when zoxide is installed |
 | `projects.start-dir` | `""` | Folder the new-session popup's Create tab starts in, and what its relative paths are relative to, e.g. `"~"`; absolute or `~/` path. Empty means the directory bmux was started in. |
 | `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](/bmux/configuration/rebinding-keys/) |

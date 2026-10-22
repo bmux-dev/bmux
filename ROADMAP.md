@@ -82,7 +82,7 @@ Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21
 | Break and join panes | M | Done: Ctrl-a ! / @ |
 | Preset layouts | M | Done: Ctrl-a Space cycles, Alt-1…5 pick, Ctrl-a E equalizes |
 | Last pane toggle | S | Done: Ctrl-a ; |
-| Project picker | M | Done: the Ctrl-a n popup (Projects and Create tabs) and `bmux project`, from zoxide and `projects.roots` |
+| Project picker | M | Done: the Ctrl-a n popup (Projects and Create tabs) and `bmux project`, from sessions and `projects.roots` |
 | Layout files | M | Done: `.bmux.toml`, commands run once trusted; `bmux layout save` / `trust` |
 
 ## v0.5: keyboard scrollback

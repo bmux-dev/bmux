@@ -62,7 +62,6 @@ onboarding = false
 
 [projects]
 roots = ["~/projects"]
-zoxide = false
 EOF
 
 make_repo() { # make_repo NAME MESSAGE...: a git repository with these empty commits, oldest first
