@@ -7,9 +7,8 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.5.2 | A settings page, one popup to find or create a session, clickable links, modified keys ([already built](#already-built)) |
-| **Now** | [v0.6](#v06-scripting) | Scripting and automation, images in panes |
-| **Next** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
+| **Shipped** | v0.6.0 | Scripting and automation, images in panes ([already built](#already-built)) |
+| **Now** | [v0.7](#v07-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
 | **Later** | [v1.0](#v10-stable) | v0.7, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -108,6 +107,8 @@ open a pane in a project folder) have direct bmux equivalents.
 
 Targets depend on windows from v0.4.
 
+Shipped in v0.6.0:
+
 | Item | Size | Status |
 | --- | --- | --- |
 | Targets for every command | M | Done: `session:window.pane` (`api:2.1`, `api:2.`, `:2.1`); `api:7` stays pane 7 ([#82](https://github.com/bmux-dev/bmux/issues/82)) |
@@ -188,6 +189,7 @@ Worth doing, not yet scheduled. Open an issue if one matters to you.
 | tmux-prefix-highlight | Status line shows prefix keys while Ctrl-a is pending |
 | `.tmux.conf`, `source-file` | `~/.config/bmux/config.toml` (Helix layout), reload with Ctrl-a r, `bmux reload` or SIGUSR1; `bmux default-config` |
 | `bind-key`, `unbind-key`, `list-keys` (`C-b ?`) | `[keys.root]` and `[keys.prefix]` in the config file; Ctrl-a ? lists the bindings in effect |
+| `send-keys`, `capture-pane`, `split-window`, `new-window`, `list-panes`, `display-message -p`, formats, `set-hook`, `run-shell`, `if-shell`, `pipe-pane` | `bmux send`, `capture`, `split`, `new-window`, `list-panes`, `display-message`, `#{...}` variables, `[hooks]`, `run-shell`, `if-shell`, `pipe-pane`, with `session:window.pane` targets |
 | Status themes | Powerline status bars, accent colors, light theme |
 | (no tmux equivalent) | Images programs draw in panes (Kitty graphics), kept per pane through scrolling, splits and detaching |
 
@@ -225,3 +227,12 @@ a project or creating a session (Ctrl-a n) with `projects.start-dir`,
 clickable links, modified keys for programs that ask for them (kitty keyboard
 protocol, `modifyOtherKeys`), `bmux zoomed`, and `agent:blocked` for omp and
 pi extensions. Protocol version 8: run `bmux restart` after upgrading.
+
+v0.6.0 added `session:window.pane` targets for every scripting command, layout
+commands (`bmux split`, `new-window`, `select`, `kill-pane`, `kill-window`,
+`resize`, `zoom`, `rename-window`), `#{...}` format variables with
+`list-panes`, `list-windows` and `display-message`, `[hooks]` for session,
+window, pane, client and agent events, `run-shell`, `if-shell` and keys bound to
+shell commands, `pipe-pane`, `restored` marks on sessions in the picker and
+sidebar, and images in panes with the Kitty graphics protocol (`ui.graphics`).
+Protocol version 10: run `bmux restart` after upgrading.
