@@ -504,7 +504,14 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	if selected {
 		style, iconStyle = sidebarSelectedStyle, sidebarSelectedStyle
 	}
-	u.putSidebarLine(y, width, "   "+row.session.Name, style, "", style)
+	right, rightStyle := "", style
+	if row.session.Restored {
+		right = "restored"
+		if !selected {
+			rightStyle = sidebarMutedStyle
+		}
+	}
+	u.putSidebarLine(y, width, "   "+row.session.Name, style, right, rightStyle)
 	if icon != "" {
 		u.screen.PutStrStyled(1, y, u.sidebarGlyph(icon), iconStyle)
 	}
