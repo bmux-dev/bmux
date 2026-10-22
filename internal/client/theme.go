@@ -1,28 +1,29 @@
 package client
 
 import (
-	"image/color"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
 )
 
 // Chrome has its own palette; application cells keep their supplied colors.
-// Agent state colors follow herdr's Catppuccin defaults (Mocha, or Latte for
-// the light theme): working yellow, blocked red, done teal, idle green.
+// Agent state colors follow herdr's Catppuccin defaults: working yellow,
+// blocked red, done teal, idle green. Named themes use their scheme's own
+// equivalents; see palettes.
 type chromeTheme struct {
 	foreground, background, muted, bar, accent, selection, selectionText tcell.Color
 	working, blocked, done, idle, unknown                                tcell.Color
+	light                                                                bool
 }
 
+// themeFor builds the chrome palette for a theme name, then applies the ui
+// accent and agent color overrides. An unrecognised name gets the default.
 func themeFor(name string, settings config.UI) chromeTheme {
-	light := name == "light"
-	t := chromeTheme{tcell.NewHexColor(0xe7e7e7), tcell.NewHexColor(0x0b0b0b), tcell.NewHexColor(0x929292), tcell.NewHexColor(0x202020), tcell.NewHexColor(0x83c8dc), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xeeeeee),
-		tcell.NewHexColor(0xf9e2af), tcell.NewHexColor(0xf38ba8), tcell.NewHexColor(0x94e2d5), tcell.NewHexColor(0xa6e3a1), tcell.NewHexColor(0x6c7086)}
-	if light {
-		t = chromeTheme{tcell.NewHexColor(0x202020), tcell.NewHexColor(0xf5f5f5), tcell.NewHexColor(0x555555), tcell.NewHexColor(0xe4e4e4), tcell.NewHexColor(0x00657c), tcell.NewHexColor(0xc7c7c7), tcell.NewHexColor(0x202020),
-			tcell.NewHexColor(0xdf8e1d), tcell.NewHexColor(0xd20f39), tcell.NewHexColor(0x179299), tcell.NewHexColor(0x40a02b), tcell.NewHexColor(0x9ca0b0)}
+	name, _ = config.ResolveTheme(name)
+	t, ok := palettes[name]
+	if !ok {
+		t = palettes[config.Default().Theme]
 	}
+	light := t.light
 	switch settings.Accent {
 	case "amber":
 		t.accent = map[bool]tcell.Color{false: tcell.NewHexColor(0xd4b483), true: tcell.NewHexColor(0x855500)}[light]
@@ -85,13 +86,3 @@ func applyTheme(t chromeTheme) {
 const paneOriginY = 1
 
 func paneViewportHeight(height int) int { return max(1, height-2) }
-
-func previewDefaultColors() (color.RGBA, color.RGBA) {
-	r, g, b := chrome.foreground.RGB()
-	fg := color.RGBA{uint8(r), uint8(g), uint8(b), 255}
-	background := color.RGBA{8, 8, 8, 255}
-	if chrome.background == tcell.NewHexColor(0xf5f5f5) {
-		background = color.RGBA{245, 245, 245, 255}
-	}
-	return background, fg
-}

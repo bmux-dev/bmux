@@ -38,10 +38,10 @@ width = 24
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `theme` | `"dark"` | `"dark"` or `"light"` |
+| `theme` | `"dark"` | Colors for bmux's chrome: status bars, sidebar, window tabs, pickers, dividers and selection. `dark`, `light`, or a Neovim colorscheme: [see the list below](#themes) |
 | `prefix` | `"C-a"` | The command key, written like Helix keys: `C-a` to `C-z`, except `C-h/j/k/l` (navigation) and `C-i`/`C-m` (Tab and Enter). `ctrl-a` also works. Status-line help follows it. |
 | `onboarding` | `true` | Show the welcome screen on the next attach; bmux sets `false` once it has been seen |
-| `ui.accent` | `"cyan"` | `cyan`, `amber`, `green` or `"#RRGGBB"` |
+| `ui.accent` | `"cyan"` | `cyan` (the theme's own accent), `amber`, `green` or `"#RRGGBB"`; overrides the theme's accent |
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
 | `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
@@ -72,6 +72,37 @@ the same from a shell, and, like Helix, so does sending the server `SIGUSR1`
 is invalid, the status line (or `bmux reload`) says which, and that setting
 keeps its default, so a typo never leaves you without keys. Unknown settings
 are reported too.
+
+## Themes
+
+`theme` colors bmux's own chrome with a colorscheme's published palette:
+foreground, background, muted text, status bars, accent, selection, and the
+working, waiting, blocked and idle agent colors. Programs inside panes keep the
+outer terminal's palette, so set the terminal to the same scheme to match.
+
+| Scheme | `theme` values |
+| --- | --- |
+| bmux | `dark` (default), `light` |
+| Catppuccin | `catppuccin-mocha`, `catppuccin-macchiato`, `catppuccin-frappe`, `catppuccin-latte` |
+| Tokyo Night | `tokyonight-night`, `tokyonight-storm`, `tokyonight-moon`, `tokyonight-day` |
+| Gruvbox | `gruvbox-dark`, `gruvbox-light` |
+| Nord | `nord` |
+| Rosé Pine | `rose-pine`, `rose-pine-moon`, `rose-pine-dawn` |
+| Kanagawa | `kanagawa-wave`, `kanagawa-dragon`, `kanagawa-lotus` |
+| One Dark | `onedark` |
+| Dracula | `dracula` |
+| Everforest | `everforest-dark`, `everforest-light` |
+| Solarized | `solarized-dark`, `solarized-light` |
+
+A scheme name without a variant picks its default: `catppuccin` is
+`catppuccin-mocha`, `tokyonight` is `tokyonight-night`, `gruvbox` is
+`gruvbox-dark`, `kanagawa` is `kanagawa-wave`, `everforest` is
+`everforest-dark` and `solarized` is `solarized-dark`.
+
+`ui.accent` and `ui.agent-colors` override the theme's colors when set. The
+default accent, `cyan`, keeps the theme's own. An unknown theme name is
+reported in the status line and falls back to `dark`. The `BMUX_THEME`
+environment variable takes the same names.
 
 ## Hooks
 

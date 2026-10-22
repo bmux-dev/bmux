@@ -22,7 +22,7 @@ works out of the box, with no plugin manager.
 | tmux-copycat, copy mode | An optional [scrollback view](/bmux/guides/selection-scrollback/#keyboard-scrollback) (Ctrl-a v) with vi keys, search (Ctrl-a /), and jumps between shell prompts; the mouse never needs it |
 | tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
 | tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
-| tmux-powerline, tmux themes | Powerline status bars, accent colors and a light theme |
+| tmux-powerline, tmux themes | Powerline status bars, accent colors, a light theme and [presets for Neovim colorschemes](/bmux/configuration/config-file/#themes): Catppuccin, Tokyo Night, Gruvbox, Nord and more |
 | herdr (separate app) | [Agent sidebar](/bmux/agents/sidebar/): every coding agent across sessions with working, waiting and blocked state |
 
 The picker starts as a list: browse first, press **/** to search. See what's

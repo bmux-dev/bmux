@@ -193,10 +193,7 @@ func applyEnv(cfg *Config, env func(string) string) {
 		return
 	}
 	if v := env("BMUX_THEME"); v != "" {
-		cfg.Theme = strings.ToLower(v)
-		if cfg.Theme != "light" {
-			cfg.Theme = "dark"
-		}
+		cfg.Theme = v
 	}
 	if v := env("BMUX_ACCENT"); v != "" {
 		cfg.UI.Accent = v
@@ -260,9 +257,10 @@ func (c *Config) repair() []string {
 		bad("%v", err)
 		c.Prefix = d.Prefix
 	}
-	c.Theme = strings.ToLower(c.Theme)
-	if c.Theme != "dark" && c.Theme != "light" {
-		bad("theme %q must be \"dark\" or \"light\"", c.Theme)
+	if theme, ok := ResolveTheme(c.Theme); ok {
+		c.Theme = theme
+	} else {
+		bad("theme %q must be %s", c.Theme, themeChoices)
 		c.Theme = d.Theme
 	}
 	c.UI.Graphics = strings.ToLower(c.UI.Graphics)
@@ -382,7 +380,12 @@ func expandHome(path string) (string, error) {
 const DefaultFile = `# ~/.config/bmux/config.toml
 # Uncomment only what you change. Reload with Ctrl-a r or bmux reload.
 
-# theme = "dark"            # "dark" or "light"
+# theme = "dark"            # dark, light, catppuccin-{mocha,macchiato,frappe,latte},
+                            # tokyonight-{night,storm,moon,day}, gruvbox-{dark,light}, nord,
+                            # rose-pine[-moon|-dawn], kanagawa-{wave,dragon,lotus}, onedark,
+                            # dracula, everforest-{dark,light}, solarized-{dark,light};
+                            # a family name alone (catppuccin, tokyonight, gruvbox, kanagawa,
+                            # everforest, solarized) picks its default variant
 # prefix = "C-a"            # any C-letter except C-h/j/k/l, C-i, C-m
 # onboarding = true         # welcome screen on the next attach; bmux sets false
 
