@@ -33,6 +33,8 @@ sidebar:
 | `bmux list-panes [TARGET] [-a] [-F FORMAT \| --json]` | List the panes of the target's window (`SESSION:WINDOW.` or a pane), its whole session (`SESSION`), or every session (`-a`); without a target, the calling pane's window. `-F` prints each pane as a [format](#format-variables) |
 | `bmux list-windows [TARGET] [-a] [-F FORMAT \| --json]` | List the windows of the target's session, or every session's (`-a`); a window's variables come from its focused pane |
 | `bmux display-message [TARGET] [-p] FORMAT` | Expand `FORMAT` for a pane (the calling pane by default): `-p` prints it; otherwise it shows in the status line of every client attached to that session |
+| `bmux run-shell [-t TARGET] [-b] COMMAND` | Run a shell command for a pane (the calling pane by default): its `#{...}` variables, directory and `BMUX_*` environment; exits with the command's status. `-b` doesn't wait |
+| `bmux if-shell [-t TARGET] CONDITION COMMAND [ELSE]` | Run `CONDITION` the same way, then `COMMAND` if it succeeded or `ELSE` if it failed |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
 | `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |

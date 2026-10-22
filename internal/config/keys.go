@@ -90,6 +90,19 @@ var Actions = []struct{ Name, Help string }{
 	{"send-prefix", "send the prefix key to the application"},
 }
 
+// ShellCommand is the command a "run-shell COMMAND" binding runs, and
+// whether action is one.
+func ShellCommand(action string) (string, bool) {
+	command, ok := strings.CutPrefix(action, "run-shell ")
+	command = strings.TrimSpace(command)
+	return command, ok && command != ""
+}
+
+func isShellBinding(action string) bool {
+	_, ok := ShellCommand(action)
+	return ok
+}
+
 func knownAction(name string) bool {
 	for _, a := range Actions {
 		if a.Name == name {
@@ -254,7 +267,9 @@ func (c *Config) repairKeys(bad func(string, ...any)) {
 			switch {
 			case err != nil:
 				bad("%s: %v", table.name, err)
-			case action != Unbound && !knownAction(action):
+			case strings.HasPrefix(action, "run-shell") && !isShellBinding(action):
+				bad("%s.%q: run-shell needs a command, as in \"run-shell make test\"", table.name, key)
+			case action != Unbound && !knownAction(action) && !isShellBinding(action):
 				bad("%s.%q: unknown action %q (see bmux default-config)", table.name, key, action)
 			case table.name == "keys.root" && name == prefixKey:
 				bad("keys.root.%q: the prefix can't also be a root key", key)

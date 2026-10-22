@@ -117,7 +117,7 @@ Targets depend on windows from v0.4.
 | `list-panes`, `list-windows`, `display-message` | S | Done: `-F` formats, `-a` for every session, `--json`; `display-message` without `-p` shows in the session's status lines ([#86](https://github.com/bmux-dev/bmux/issues/86)) |
 | Format variables | M | Done: `#{session_name}`, `#{window_index}`, `#{pane_current_path}`, `#{pane_current_command}` and 17 more |
 | Hooks | M | Done: `[hooks]` in the config file for `session-created`, `session-closed`, `window-created`, `pane-exited`, `client-attached`, `client-detached`, `agent-blocked`, `agent-idle` ([#88](https://github.com/bmux-dev/bmux/issues/88)) |
-| `run-shell`, `if-shell` | S | |
+| `run-shell`, `if-shell` | S | Done: `bmux run-shell` and `bmux if-shell` for a pane, and keys bound to `run-shell COMMAND` ([#90](https://github.com/bmux-dev/bmux/issues/90)) |
 | Log a pane to a file | S | Like tmux's `pipe-pane` and the tmux-logging plugin. |
 
 ## v1.0: stable
