@@ -20,9 +20,9 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 - **Modeless by default.** Keyboard selection and search can exist, but copy mode
   is never required.
 - **Server owns terminals, client owns the clipboard.**
-- **Honest persistence.** Restores bring back layouts, directories and
-  allowlisted commands. bmux never claims to revive arbitrary running processes
-  after a reboot.
+- **Honest persistence.** Restores bring back layouts, directories and agents'
+  conversations. bmux never claims to revive arbitrary running processes after
+  a reboot.
 - **Opinionated defaults, then configuration.** Defaults should match a good
   tmux setup so most people never need a config file.
 
@@ -45,12 +45,10 @@ v0.2.0 replaced tmux-resurrect and tmux-continuum: a versioned snapshot
 clean shutdown, restore on server start, agent resume (reported commands or
 each agent's "continue latest"), and `bmux restart`, which survives protocol
 changes and reconnects clients. With an [agent integration](#already-built)
-(v0.3.0), two agents in one directory each resume their own session. Still to do:
+(v0.3.0), two agents in one directory each resume their own session. Since then:
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Relaunch allowlist | M | e.g. `nvim -S`, `less`, `man`, `ssh host`. Everything else restores as a shell. |
-| Optional scrollback in snapshots | M | Like resurrect's `capture-pane-contents`. Off by default; has a size cap. |
 | Mark restored sessions | S | Done: `restored` in the picker and sidebar until you attach ([#94](https://github.com/bmux-dev/bmux/issues/94)) |
 
 ## Install and updates
