@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"image/color"
 	"os"
 	"sync/atomic"
 	"time"
@@ -22,6 +23,10 @@ type serverSettings struct {
 	scrollback                int                 // history lines kept per pane
 	updateCheck               bool                // look for new releases
 	hooks                     map[string][]string // event -> shell commands
+	// paneFG and paneBG are the theme's default colors in panes, nil where the
+	// terminal's own show; themeBG is a themed pane's background even when
+	// ui.pane-background leaves it to the terminal.
+	paneFG, paneBG, themeBG color.Color
 }
 
 var (
@@ -50,7 +55,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 	for _, program := range cfg.Keys.PassThrough {
 		passThrough[program] = true
 	}
-	return &serverSettings{
+	settings := &serverSettings{
 		detect:       cfg.Agents.Detect,
 		agents:       agents,
 		busySamples:  samplesFor(cfg.Agents.WorkingAfter.Duration),
@@ -62,6 +67,13 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		updateCheck:  cfg.Update.Check,
 		hooks:        cfg.Hooks,
 	}
+	if p, foreground, background := cfg.PaneColors(); foreground {
+		settings.paneFG, settings.themeBG = rgbColor(p.Foreground), rgbColor(p.Background)
+		if background {
+			settings.paneBG = settings.themeBG
+		}
+	}
+	return settings
 }
 
 // resumeFor is an agent's resume command: the config file's override when
@@ -79,6 +91,7 @@ func (s *serverSettings) resumeFor(agent string) ([]string, bool) {
 func (s *Server) LoadSettings(path string) error {
 	cfg, err := config.Load(path, os.Getenv)
 	activeSettings.Store(settingsFrom(cfg))
+	s.applyPaneColors()
 	s.persistMu.Lock()
 	s.configPath = path
 	s.persistMu.Unlock()

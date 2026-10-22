@@ -46,6 +46,7 @@ width = 24
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
 | `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
 | `ui.theme-panes` | `true` | Draw panes in a named theme's background and foreground wherever the program sets none, such as a plain shell prompt; `false` keeps your terminal's colors. `dark` and `light` never recolor panes. See [Themes](#themes). |
+| `ui.pane-background` | `"theme"` | `"terminal"` keeps your terminal's own background in panes and blank space, with the theme's text colors, for a terminal background you like better than the theme's. Chrome (bars, sidebar, pickers) keeps the theme's. |
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
@@ -81,13 +82,20 @@ foreground, background, muted text, status bars, accent, selection, and the
 working, waiting, blocked and idle agent colors.
 
 :::note
-With a named theme, panes take its background and foreground wherever the
-program running in them sets no color, so a shell matches the status bars and
-sidebar. Colors a program sets itself (Neovim's colorscheme, `ls --color`, ANSI
-palette colors) are left alone, and the ANSI palette still comes from your
-terminal, so set the terminal to the same colorscheme for those to match too.
-Set `ui.theme-panes = false` to keep your terminal's own background and
-foreground in panes. `dark` and `light` always do.
+A theme works like a terminal theme: it supplies the default text and background
+colors, and nothing a program chose. With a named theme, panes use its
+foreground and background wherever a program sets none, so a plain shell matches
+the status bars and sidebar. Colors a program sets itself are left alone: Neovim's
+colorscheme, a CLI's own theme, `ls --color`, and ANSI palette colors, which
+still come from your terminal (set it to the same colorscheme for those to
+match).
+
+Programs that ask the terminal for its colors (OSC 10 and 11, which Neovim and
+omp use to pick a dark or light theme) are told the colors panes really show: the
+theme's, or your terminal's own where bmux leaves them alone.
+
+`ui.theme-panes = false` keeps your terminal's colors in panes, and `dark` and
+`light` always do.
 :::
 
 | Scheme | `theme` values |

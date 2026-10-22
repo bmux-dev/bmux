@@ -1,68 +1,18 @@
 package client
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/josephferrero/bmux/internal/config"
+)
 
-// palettes holds the chrome colors of every config.ThemeNames entry. Named
-// themes take their colors from the scheme's own palette, using the roles its
-// Neovim port gives them:
-//
-//	foreground, background  Normal
-//	muted                   Comment, or a brighter palette neutral where Comment is hard to
-//	                        read (Tokyo Night, One Dark, Everforest light, Kanagawa Lotus)
-//	bar                     StatusLine background (or the nearest darker/panel tone)
-//	accent                  the scheme's blue
-//	selection               Visual background (or a palette tone that stands out from bar)
-//	working, blocked        yellow, red
-//	done (waiting), idle    teal/cyan/aqua, green
-//	unknown                 the scheme's dimmest neutral
-//
-// Sources: catppuccin/palette and catppuccin/nvim, folke/tokyonight.nvim
-// extras, ellisonleao/gruvbox.nvim, nordtheme/vim, rose-pine/neovim,
-// rebelot/kanagawa.nvim, navarasu/onedark.nvim, dracula/vim,
-// sainnhe/everforest, and Ethan Schoonover's Solarized.
-var palettes = map[string]chromeTheme{
-	// The original palettes, kept as they were.
-	"dark":  theme(false, 0xe7e7e7, 0x0b0b0b, 0x929292, 0x202020, 0x83c8dc, 0x555555, 0xeeeeee, 0xf9e2af, 0xf38ba8, 0x94e2d5, 0xa6e3a1, 0x6c7086),
-	"light": theme(true, 0x202020, 0xf5f5f5, 0x555555, 0xe4e4e4, 0x00657c, 0xc7c7c7, 0x202020, 0xdf8e1d, 0xd20f39, 0x179299, 0x40a02b, 0x9ca0b0),
-
-	"catppuccin-mocha":     theme(false, 0xcdd6f4, 0x1e1e2e, 0x9399b2, 0x181825, 0x89b4fa, 0x45475a, 0xcdd6f4, 0xf9e2af, 0xf38ba8, 0x94e2d5, 0xa6e3a1, 0x6c7086),
-	"catppuccin-macchiato": theme(false, 0xcad3f5, 0x24273a, 0x939ab7, 0x1e2030, 0x8aadf4, 0x494d64, 0xcad3f5, 0xeed49f, 0xed8796, 0x8bd5ca, 0xa6da95, 0x6e738d),
-	"catppuccin-frappe":    theme(false, 0xc6d0f5, 0x303446, 0x949cbb, 0x292c3c, 0x8caaee, 0x51576d, 0xc6d0f5, 0xe5c890, 0xe78284, 0x81c8be, 0xa6d189, 0x737994),
-	"catppuccin-latte":     theme(true, 0x4c4f69, 0xeff1f5, 0x7c7f93, 0xe6e9ef, 0x1e66f5, 0xbcc0cc, 0x4c4f69, 0xdf8e1d, 0xd20f39, 0x179299, 0x40a02b, 0x9ca0b0),
-
-	"tokyonight-night": theme(false, 0xc0caf5, 0x1a1b26, 0x737aa2, 0x16161e, 0x7aa2f7, 0x283457, 0xc0caf5, 0xe0af68, 0xf7768e, 0x1abc9c, 0x9ece6a, 0x545c7e),
-	"tokyonight-storm": theme(false, 0xc0caf5, 0x24283b, 0x737aa2, 0x1f2335, 0x7aa2f7, 0x2e3c64, 0xc0caf5, 0xe0af68, 0xf7768e, 0x1abc9c, 0x9ece6a, 0x545c7e),
-	"tokyonight-moon":  theme(false, 0xc8d3f5, 0x222436, 0x636da6, 0x1e2030, 0x82aaff, 0x2d3f76, 0xc8d3f5, 0xffc777, 0xff757f, 0x4fd6be, 0xc3e88d, 0x545c7e),
-	"tokyonight-day":   theme(true, 0x3760bf, 0xe1e2e7, 0x68709a, 0xd0d5e3, 0x2e7de9, 0xb7c1e3, 0x3760bf, 0x8c6c3e, 0xf52a65, 0x118c74, 0x587539, 0x8990b3),
-
-	"gruvbox-dark":  theme(false, 0xebdbb2, 0x282828, 0x928374, 0x3c3836, 0x83a598, 0x665c54, 0xebdbb2, 0xfabd2f, 0xfb4934, 0x8ec07c, 0xb8bb26, 0x7c6f64),
-	"gruvbox-light": theme(true, 0x3c3836, 0xfbf1c7, 0x928374, 0xebdbb2, 0x076678, 0xbdae93, 0x3c3836, 0xb57614, 0x9d0006, 0x427b58, 0x79740e, 0xa89984),
-
-	"nord": theme(false, 0xd8dee9, 0x2e3440, 0x616e88, 0x3b4252, 0x88c0d0, 0x4c566a, 0xeceff4, 0xebcb8b, 0xbf616a, 0x8fbcbb, 0xa3be8c, 0x4c566a),
-
-	"rose-pine":      theme(false, 0xe0def4, 0x191724, 0x908caa, 0x1f1d2e, 0xc4a7e7, 0x403d52, 0xe0def4, 0xf6c177, 0xeb6f92, 0x9ccfd8, 0x95b1ac, 0x6e6a86),
-	"rose-pine-moon": theme(false, 0xe0def4, 0x232136, 0x908caa, 0x2a273f, 0xc4a7e7, 0x44415a, 0xe0def4, 0xf6c177, 0xeb6f92, 0x9ccfd8, 0x95b1ac, 0x6e6a86),
-	"rose-pine-dawn": theme(true, 0x464261, 0xfaf4ed, 0x797593, 0xfffaf3, 0x907aa9, 0xdfdad9, 0x464261, 0xea9d34, 0xb4637a, 0x56949f, 0x6d8f89, 0x9893a5),
-
-	"kanagawa-wave":   theme(false, 0xdcd7ba, 0x1f1f28, 0x727169, 0x16161d, 0x7e9cd8, 0x223249, 0xdcd7ba, 0xe6c384, 0xe46876, 0x7aa89f, 0x98bb6c, 0x717c7c),
-	"kanagawa-dragon": theme(false, 0xc5c9c5, 0x181616, 0x737c73, 0x0d0c0c, 0x8ba4b0, 0x223249, 0xc5c9c5, 0xc4b28a, 0xc4746e, 0x8ea4a2, 0x87a987, 0x7a8382),
-	"kanagawa-lotus":  theme(true, 0x545464, 0xf2ecbc, 0x716e61, 0xd5cea3, 0x4d699b, 0x9fb5c9, 0x545464, 0x836f4a, 0xc84053, 0x597b75, 0x6f894e, 0x8a8980),
-
-	"onedark": theme(false, 0xabb2bf, 0x282c34, 0x848b98, 0x21252b, 0x61afef, 0x3b3f4c, 0xabb2bf, 0xe5c07b, 0xe86671, 0x56b6c2, 0x98c379, 0x5c6370),
-
-	"dracula": theme(false, 0xf8f8f2, 0x282a36, 0x6272a4, 0x21222c, 0xbd93f9, 0x44475a, 0xf8f8f2, 0xf1fa8c, 0xff5555, 0x8be9fd, 0x50fa7b, 0x6272a4),
-
-	"everforest-dark":  theme(false, 0xd3c6aa, 0x2d353b, 0x859289, 0x232a2e, 0x7fbbb3, 0x543a48, 0xd3c6aa, 0xdbbc7f, 0xe67e80, 0x83c092, 0xa7c080, 0x7a8478),
-	"everforest-light": theme(true, 0x5c6a72, 0xfdf6e3, 0x829181, 0xefebd4, 0x3a94c5, 0xbdc3af, 0x5c6a72, 0xdfa000, 0xf85552, 0x35a77c, 0x8da101, 0xa6b0a0),
-
-	"solarized-dark":  theme(false, 0x839496, 0x002b36, 0x657b83, 0x073642, 0x268bd2, 0x586e75, 0xfdf6e3, 0xb58900, 0xdc322f, 0x2aa198, 0x859900, 0x586e75),
-	"solarized-light": theme(true, 0x657b83, 0xfdf6e3, 0x839496, 0xeee8d5, 0x268bd2, 0x93a1a1, 0x002b36, 0xb58900, 0xdc322f, 0x2aa198, 0x859900, 0x93a1a1),
-}
-
-// theme builds a palette from 0xRRGGBB values, in the order of chromeTheme's
-// fields. light picks the light variants of the accent shortcuts amber and green.
-func theme(light bool, foreground, background, muted, bar, accent, selection, selectionText, working, blocked, done, idle, unknown int32) chromeTheme {
-	c := tcell.NewHexColor
-	return chromeTheme{c(foreground), c(background), c(muted), c(bar), c(accent), c(selection), c(selectionText),
-		c(working), c(blocked), c(done), c(idle), c(unknown), light, false}
-}
+// palettes holds the chrome colors of every config.ThemeNames entry, from
+// config.Palettes.
+var palettes = func() map[string]chromeTheme {
+	themes := make(map[string]chromeTheme, len(config.Palettes))
+	for name, p := range config.Palettes {
+		c := tcell.NewHexColor
+		themes[name] = chromeTheme{c(p.Foreground), c(p.Background), c(p.Muted), c(p.Bar), c(p.Accent), c(p.Selection), c(p.SelectionText),
+			c(p.Working), c(p.Blocked), c(p.Waiting), c(p.Idle), c(p.Unknown), p.Light, tcell.ColorDefault, tcell.ColorDefault}
+	}
+	return themes
+}()

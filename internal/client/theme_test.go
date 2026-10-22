@@ -35,7 +35,7 @@ func TestEveryListedThemeHasItsOwnPalette(t *testing.T) {
 func TestNamedThemeUsesItsSchemePalette(t *testing.T) {
 	got := themeFor("catppuccin-latte", config.UI{Accent: "theme"})
 	want := chromeTheme{hex(0x4c4f69), hex(0xeff1f5), hex(0x7c7f93), hex(0xe6e9ef), hex(0x1e66f5), hex(0xbcc0cc), hex(0x4c4f69),
-		hex(0xdf8e1d), hex(0xd20f39), hex(0x179299), hex(0x40a02b), hex(0x9ca0b0), true, false}
+		hex(0xdf8e1d), hex(0xd20f39), hex(0x179299), hex(0x40a02b), hex(0x9ca0b0), true, tcell.ColorDefault, tcell.ColorDefault}
 	if got != want {
 		t.Fatalf("catppuccin-latte:\n got %+v\nwant %+v", got, want)
 	}
@@ -164,5 +164,19 @@ func TestThemedPanesPaintDividersAndKeepReverseVideo(t *testing.T) {
 	style := cellStyle(protocol.Cell{Text: "x", Attrs: uv.AttrReverse})
 	if fg, bg, attrs := style.Decompose(); fg != hex(0xcdd6f4) || bg != hex(0x1e1e2e) || attrs&tcell.AttrReverse == 0 {
 		t.Errorf("reverse cell: fg %v bg %v attrs %v", fg, bg, attrs)
+	}
+}
+
+func TestTerminalPaneBackgroundKeepsTheThemesText(t *testing.T) {
+	ui := config.Default().UI
+	ui.PaneBackground = "terminal"
+	useTheme(t, "catppuccin-mocha", ui)
+	fg, bg, _ := cellStyle(protocol.Cell{Text: "$"}).Decompose()
+	if fg != hex(0xcdd6f4) || bg != tcell.ColorDefault {
+		t.Fatalf("a plain cell is fg %v bg %v, want the theme's text on the terminal's background", fg, bg)
+	}
+	// The chrome keeps the theme's background regardless.
+	if chrome.background != hex(0x1e1e2e) {
+		t.Fatalf("chrome background %v", chrome.background)
 	}
 }

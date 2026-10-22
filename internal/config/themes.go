@@ -71,3 +71,16 @@ func SaveTheme(path, name string) (string, error) {
 	}
 	return "", errors.New("the theme setting is missing")
 }
+
+// PaneColors says what themed panes show where a program set no color of its
+// own, which is all a theme ever changes there, as a terminal's does. It
+// returns the theme's palette and whether its foreground and background apply.
+// dark and light, ui.theme-panes = false, and ui.pane-background = "terminal"
+// (for the background) leave the terminal's own colors in place.
+func (c Config) PaneColors() (p Palette, foreground, background bool) {
+	if !c.UI.ThemePanes || c.Theme == "dark" || c.Theme == "light" {
+		return Palette{}, false, false
+	}
+	p, ok := Palettes[c.Theme]
+	return p, ok, ok && c.UI.PaneBackground == "theme"
+}

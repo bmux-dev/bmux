@@ -432,6 +432,10 @@ func (s *Server) handle(conn net.Conn) {
 	if err := enc.Encode(protocol.Response{Version: protocol.Version}); err != nil {
 		return
 	}
+	if r.Colors != nil {
+		terminalColors.Store(r.Colors)
+		s.applyPaneColors()
+	}
 	display := &clientGraphics{}
 	item.reportGraphics(display, r.Graphics)
 	defer item.dropGraphics(display)

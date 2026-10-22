@@ -142,8 +142,12 @@ func TestSettingsPageTakesKeysAndPasteInsteadOfPanes(t *testing.T) {
 	u.handleRawPaste(&rawPasteEvent{Text: "pasted"})
 	noRequest(t, requests)
 	u.key(runeKey('l'))
-	for range 7 {
-		u.key(runeKey('j')) // from Theme, past Images, to Working color
+	for i, setting := range config.SettingTabs[1].Settings {
+		if setting.Key == "ui.agent-colors.working" {
+			for range i {
+				u.key(runeKey('j'))
+			}
+		}
 	}
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)) // Appearance: working color
 	u.handleRawPaste(&rawPasteEvent{Text: "#12ab\n34"})

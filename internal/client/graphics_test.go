@@ -21,14 +21,17 @@ func TestProbeParserReadsRepliesAmongKeystrokes(t *testing.T) {
 		name, input string
 		want        terminalProbe
 	}{
-		{"kitty terminal", "\x1b_Gi=31;OK\x1b\\\x1b[6;18;9t\x1b[?62;4c", terminalProbe{true, 9, 18, true}},
+		{"kitty terminal", "\x1b_Gi=31;OK\x1b\\\x1b[6;18;9t\x1b[?62;4c", terminalProbe{kitty: true, cellWidth: 9, cellHeight: 18, done: true}},
 		{"no kitty support", "\x1b[?62c", terminalProbe{done: true}},
 		{"kitty error", "\x1b_Gi=31;ENOTSUPPORTED:no\x1b\\\x1b[?62c", terminalProbe{done: true}},
 		{"another image id", "\x1b_Gi=311;OK\x1b\\\x1b[?62c", terminalProbe{done: true}},
 		{"BEL terminated", "\x1b_Gi=31;OK\x07\x1b[?1;2c", terminalProbe{kitty: true, done: true}},
-		{"typed keys around replies", "ab\x1b[A\x1b_Gi=31;OK\x1b\\jk\x1b[6;20;10tq\x1b[?62c", terminalProbe{true, 10, 20, true}},
+		{"typed keys around replies", "ab\x1b[A\x1b_Gi=31;OK\x1b\\jk\x1b[6;20;10tq\x1b[?62c", terminalProbe{kitty: true, cellWidth: 10, cellHeight: 20, done: true}},
 		{"absurd cell size", "\x1b[6;20000;10t\x1b[?62c", terminalProbe{done: true}},
 		{"other window reports", "\x1b[8;24;80t\x1b[4;480;720t\x1b[?62c", terminalProbe{done: true}},
+		{"colors, BEL and ST terminated", "\x1b]10;rgb:cdcd/d6d6/f4f4\x07\x1b]11;rgb:1e1e/1e1e/2e2e\x1b\\\x1b[?62c", terminalProbe{done: true, foreground: "#cdd6f4", background: "#1e1e2e"}},
+		{"two-digit colors", "\x1b]11;rgb:11/22/33\x07\x1b[?62c", terminalProbe{done: true, background: "#112233"}},
+		{"unparsable and other OSCs", "\x1b]11;nonsense\x07\x1b]12;rgb:ffff/0000/0000\x07\x1b]0;title\x07\x1b[?62c", terminalProbe{done: true}},
 		{"no attributes reply yet", "\x1b_Gi=31;OK\x1b\\", terminalProbe{kitty: true}},
 	}
 	for _, tt := range tests {

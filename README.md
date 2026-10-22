@@ -280,12 +280,14 @@ The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
 and `BMUX_SOUND` environment variables still work and override the file.
 
 `theme` colors bmux's own chrome (status bars, sidebar, tabs, pickers, dividers,
-selection) with a scheme's published palette. Panes use the theme's background
-and foreground wherever the program sets none (a plain shell); colors a program
-sets itself, and the ANSI palette, still come from the program and your
-terminal, so set the terminal to the same scheme for those. Setting
-`ui.theme-panes = false` keeps the terminal's colors in panes, and `dark` and
-`light` always do.
+selection) with a scheme's published palette. Like a terminal theme it only sets
+defaults: panes use the theme's background and foreground wherever a program sets
+none (a plain shell), and colors a program sets itself, such as Neovim's or
+another CLI's own theme, and the ANSI palette, are left alone, so set the
+terminal to the same scheme for those. Programs that ask for the terminal's colors
+are told what panes show. `ui.pane-background = "terminal"` keeps your terminal's
+background in panes, `ui.theme-panes = false` keeps its colors there entirely,
+and `dark` and `light` always do.
 The names are `dark` (the default), `light`,
 `catppuccin-{mocha,macchiato,frappe,latte}`, `tokyonight-{night,storm,moon,day}`,
 `gruvbox-{dark,light}`, `nord`, `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`,

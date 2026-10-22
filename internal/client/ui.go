@@ -369,7 +369,7 @@ func (u *ui) send(r protocol.Request) {
 func (u *ui) switchTo(name string) error {
 	u.stopPreview()
 	w, h := u.screen.Size()
-	conn, err := attach(u.socket, name, u.paneViewportWidth(w), paneViewportHeight(h), u.graphicsReport())
+	conn, err := attach(u.socket, name, u.paneViewportWidth(w), paneViewportHeight(h), u.graphicsReport(), u.terminalColors())
 	if err != nil {
 		return err
 	}
