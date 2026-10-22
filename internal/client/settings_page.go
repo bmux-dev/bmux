@@ -282,7 +282,7 @@ func (u *ui) drawSettings(w, h int) {
 		}
 	}
 	// Tab bar, rule, lines, blank, help, message, rule, keys.
-	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", 70, tallest+7, !p.choosing)
+	x, y, inner, rows, ok := u.modalBox(w, h, "Settings", max(70, u.tabsWidth()), tallest+7, !p.choosing)
 	if !ok {
 		return
 	}
@@ -395,16 +395,37 @@ func (u *ui) drawChoices(x, y, inner, listHeight int) {
 	u.drawScrollbar(x+inner, y+1, height, len(labels), p.choiceOffset, height)
 }
 
+// tabGap is the space between tab labels.
+const tabGap = 1
+
+// tabLabel is a tab's icon and name with a cell of padding either side. A
+// terminal that can't draw the icon gets the name alone.
+func (u *ui) tabLabel(i int) string {
+	tab := config.SettingTabs[i]
+	if tab.Icon != "" && u.screen.CanDisplay([]rune(tab.Icon)[0], false) {
+		return " " + tab.Icon + " " + tab.Name + " "
+	}
+	return " " + tab.Name + " "
+}
+
+// tabsWidth is the width of the whole tab bar.
+func (u *ui) tabsWidth() int {
+	width := -tabGap
+	for i := range config.SettingTabs {
+		width += displayWidth(u.tabLabel(i)) + tabGap
+	}
+	return width
+}
+
 // drawSettingsTabs draws the tab names, scrolled so the current one shows.
 func (u *ui) drawSettingsTabs(x, y, width int) {
 	tabs := config.SettingTabs
-	label := func(i int) string { return " " + tabs[i].Name + " " }
-	first, used := 0, 0
+	first, used := 0, -tabGap
 	for i := 0; i <= u.settingsPage.tab; i++ {
-		used += displayWidth(label(i))
+		used += displayWidth(u.tabLabel(i)) + tabGap
 	}
 	for first < u.settingsPage.tab && used > width {
-		used -= displayWidth(label(first))
+		used -= displayWidth(u.tabLabel(first)) + tabGap
 		first++
 	}
 	u.screen.PutStrStyled(x, y, fit("", width), uiBaseStyle)
@@ -413,13 +434,13 @@ func (u *ui) drawSettingsTabs(x, y, width int) {
 		if i == u.settingsPage.tab {
 			style = uiAccentStyle.Reverse(true)
 		}
-		text := label(i)
+		text := u.tabLabel(i)
 		cells := displayWidth(text)
 		if cells > width {
 			text, cells = fit(text, width), width
 		}
 		u.screen.PutStrStyled(x, y, text, style)
-		x, width = x+cells, width-cells
+		x, width = x+cells+tabGap, width-cells-tabGap
 		if width <= 0 {
 			break
 		}

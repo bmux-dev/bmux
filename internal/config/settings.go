@@ -45,7 +45,10 @@ type Setting struct {
 
 // SettingTab groups related settings under one tab of the settings page.
 type SettingTab struct {
-	Name     string
+	Name string
+	// Icon is one cell wide and shown before the name where the terminal
+	// can draw it.
+	Icon     string
 	Settings []Setting
 }
 
@@ -92,7 +95,7 @@ func group(name string, settings ...Setting) []Setting {
 // SettingTabs lists the settings the page edits. Keys, the per-agent resume
 // commands and onboarding stay in the config file; see Config.
 var SettingTabs = []SettingTab{
-	{"General", slices.Concat(
+	{"General", "⌘", slices.Concat(
 		group("Keys",
 			textSetting("prefix", "Prefix key", "A Ctrl-letter such as C-a; not C-h/j/k/l, C-i or C-m", func(c *Config) *string { return &c.Prefix }),
 		),
@@ -100,7 +103,7 @@ var SettingTabs = []SettingTab{
 			boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
 		),
 	)},
-	{"Appearance", slices.Concat(
+	{"Appearance", "◐", slices.Concat(
 		group("Theme",
 			enumSetting("theme", "Theme", "Colors for the bars and overlays", ThemeNames, false, func(c *Config) *string { return &c.Theme }),
 			boolSetting("ui.theme-panes", "Theme the panes", "Plain pane text uses a named theme's colors; off keeps the terminal's", func(c *Config) *bool { return &c.UI.ThemePanes }),
@@ -121,7 +124,7 @@ var SettingTabs = []SettingTab{
 			textSetting("ui.agent-colors.idle", "Idle color", "#RRGGBB; empty keeps the default", func(c *Config) *string { return &c.UI.AgentColors.Idle }),
 		),
 	)},
-	{"Sidebar", slices.Concat(
+	{"Sidebar", "▌", slices.Concat(
 		group("Visibility",
 			boolSetting("sidebar.show", "Show sidebar", "The prefix key then b toggles it", func(c *Config) *bool { return &c.Sidebar.Show }),
 		),
@@ -130,12 +133,12 @@ var SettingTabs = []SettingTab{
 			intSetting("sidebar.min-screen-width", "Minimum screen width", "Hide the sidebar on narrower terminals; at least width + 20", func(c *Config) *int { return &c.Sidebar.MinScreenWidth }),
 		),
 	)},
-	{"Sound", group("Alerts",
+	{"Sound", "♪", group("Alerts",
 		boolSetting("sound.enabled", "Alert sounds", "When a background agent is ready or blocked", func(c *Config) *bool { return &c.Sound.Enabled }),
 		textSetting("sound.ready", "Ready sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Ready }),
 		textSetting("sound.blocked", "Blocked sound", "Absolute path or ~/ file; empty uses the system sound", func(c *Config) *string { return &c.Sound.Blocked }),
 	)},
-	{"Agents", slices.Concat(
+	{"Agents", "◉", slices.Concat(
 		group("Detection",
 			boolSetting("agents.detect", "Detect agents", "Recognize agents running in panes", func(c *Config) *bool { return &c.Agents.Detect }),
 			listSetting("agents.extra", "Extra programs", "More program names to treat as agents, comma separated", func(c *Config) *[]string { return &c.Agents.Extra }),
@@ -145,7 +148,7 @@ var SettingTabs = []SettingTab{
 			durationSetting("agents.waiting-after", "Waiting after", "Quiet this long means waiting, 1s-1m", func(c *Config) *Duration { return &c.Agents.WaitingAfter }),
 		),
 	)},
-	{"Projects", slices.Concat(
+	{"Projects", "▤", slices.Concat(
 		group("Search",
 			listSetting("projects.roots", "Roots", "Folders searched for git repositories, comma separated", func(c *Config) *[]string { return &c.Projects.Roots }),
 			intSetting("projects.depth", "Depth", "Levels to search below each root, 1-6", func(c *Config) *int { return &c.Projects.Depth }),
@@ -154,7 +157,7 @@ var SettingTabs = []SettingTab{
 			textSetting("projects.start-dir", "Start directory", "Where the new-session Create tab starts, such as ~; empty uses the current directory", func(c *Config) *string { return &c.Projects.StartDir }),
 		),
 	)},
-	{"Sessions", slices.Concat(
+	{"Sessions", "↻", slices.Concat(
 		group("Restore",
 			boolSetting("restore.enabled", "Restore sessions", "Save sessions and restore them after restarts", func(c *Config) *bool { return &c.Restore.Enabled }),
 		),
