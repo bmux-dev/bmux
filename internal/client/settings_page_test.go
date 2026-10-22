@@ -446,7 +446,7 @@ func TestSettingsPageOnlyClearsTheOverlayForChoicesItPreviews(t *testing.T) {
 	}{
 		{"theme", true, "colors preview"},
 		{"ui.icons", true, "icons preview"},
-		{"ui.notice-position", false, "nothing to preview"},
+		{"ui.notice-position", true, "a sample notice previews"},
 		{"ui.graphics", false, "nothing to preview"},
 	} {
 		t.Run(tt.key, func(t *testing.T) {
@@ -490,5 +490,142 @@ func TestSettingsPageIconsPreviewWhileScrollingAndEscapeReverts(t *testing.T) {
 	u.draw()
 	if text := screenText(u); !strings.Contains(text, "⌘ General") || !strings.Contains(fileText(t, path), `icons = "plain"`) {
 		t.Fatalf("Enter didn't keep plain icons:\n%s", text)
+	}
+}
+
+// openRoots opens the editor on Agents > Extra programs, a list holding "alpha, beta".
+func openRoots(t *testing.T) (*ui, string) {
+	t.Helper()
+	u, path := settingsPageUI(t, "[agents]\nextra = [\"alpha\", \"beta\"]\n")
+	for range 4 {
+		u.key(key(tcell.KeyRight))
+	}
+	u.key(key(tcell.KeyDown))
+	u.key(key(tcell.KeyEnter))
+	if !u.settingsPage.editing || u.settingsPage.input != "alpha, beta" {
+		t.Fatalf("editor: editing=%v input=%q", u.settingsPage.editing, u.settingsPage.input)
+	}
+	return u, path
+}
+
+func TestSettingsEditorMovesTheCursorToEditAnyPartOfTheLine(t *testing.T) {
+	u, path := openRoots(t)
+	if u.settingsPage.cursor != len("alpha, beta") {
+		t.Fatalf("cursor starts at %d, want the end", u.settingsPage.cursor)
+	}
+	u.key(key(tcell.KeyHome))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyRight))
+	typeText(u, "my-") // inserted after "al", not appended
+	if got := u.settingsPage.input; got != "almy-pha, beta" {
+		t.Fatalf("after inserting: %q", got)
+	}
+	u.key(key(tcell.KeyLeft))
+	u.key(key(tcell.KeyBackspace2)) // removes "y", the character before the cursor
+	u.key(key(tcell.KeyDelete))     // removes "-", the one under it
+	if got := u.settingsPage.input; got != "almpha, beta" {
+		t.Fatalf("after backspace and delete: %q", got)
+	}
+	u.key(key(tcell.KeyEnd))
+	u.key(key(tcell.KeyDelete)) // nothing after the end
+	u.key(key(tcell.KeyRight))
+	typeText(u, "!")
+	if got := u.settingsPage.input; got != "almpha, beta!" {
+		t.Fatalf("at the end: %q", got)
+	}
+	u.key(key(tcell.KeyEnter))
+	if got := fileText(t, path); !strings.Contains(got, `extra = ["almpha", "beta!"]`) {
+		t.Fatalf("saved:\n%s", got)
+	}
+}
+
+func TestSettingsEditorKillsToEitherEndOfTheLine(t *testing.T) {
+	u, _ := openRoots(t)
+	for range 4 { // before "beta"
+		u.key(key(tcell.KeyLeft))
+	}
+	u.key(key(tcell.KeyCtrlK))
+	if got := u.settingsPage.input; got != "alpha, " {
+		t.Fatalf("Ctrl-K: %q", got)
+	}
+	u.key(key(tcell.KeyCtrlA))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyRight))
+	u.key(key(tcell.KeyCtrlU))
+	if got := u.settingsPage.input; got != "pha, " || u.settingsPage.cursor != 0 {
+		t.Fatalf("Ctrl-U: %q cursor %d", got, u.settingsPage.cursor)
+	}
+}
+
+func TestSettingsEditorPastesAtTheCursorAndShowsIt(t *testing.T) {
+	u, _ := openRoots(t)
+	u.key(key(tcell.KeyHome))
+	u.handleRawPaste(&rawPasteEvent{Text: "A\nB"})
+	if got := u.settingsPage.input; got != "ABalpha, beta" || u.settingsPage.cursor != 2 {
+		t.Fatalf("paste: %q cursor %d", got, u.settingsPage.cursor)
+	}
+	u.draw()
+	// The cursor is the reversed cell over the character it sits on.
+	found := false
+	for y := range 24 {
+		for x := range 110 {
+			text, style, _ := u.screen.Get(x, y)
+			if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse != 0 && text == "a" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no cursor shown over the character at the cursor:\n%s", screenText(u))
+	}
+}
+
+func TestSettingsEditorScrollsLongValuesToKeepTheCursorInView(t *testing.T) {
+	u, _ := openRoots(t)
+	u.key(key(tcell.KeyCtrlU))
+	typeText(u, strings.Repeat("a", 100)+"END")
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "aEND") {
+		t.Fatalf("the end of a long value isn't in view:\n%s", text)
+	}
+	u.key(key(tcell.KeyHome))
+	u.draw() // the screen redraws after every key
+	typeText(u, "START")
+	u.draw()
+	if text := screenText(u); !strings.Contains(text, "STARTaaa") || strings.Contains(text, "END") {
+		t.Fatalf("the start of a long value isn't in view:\n%s", text)
+	}
+}
+
+func TestSettingsPageShowsASampleNoticeWhereTheChoiceWouldPutIt(t *testing.T) {
+	u, path := settingsPageUI(t, "")
+	selectSetting(t, u, "ui.notice-position")
+	u.key(key(tcell.KeyEnter)) // top-right is saved
+	sample := func() (x, y int, ok bool) {
+		for y := range 24 {
+			line := pickerScreenLine(u, y)
+			if at := strings.Index(line, "Notices appear here"); at >= 0 {
+				return len([]rune(line[:at])), y, true
+			}
+		}
+		return 0, 0, false
+	}
+	u.draw()
+	rightX, rightY, ok := sample()
+	if !ok {
+		t.Fatalf("no sample notice while the choices are open:\n%s", screenText(u))
+	}
+	u.key(key(tcell.KeyDown)) // bottom-left
+	u.draw()
+	if x, y, ok := sample(); !ok || x >= rightX || y <= rightY {
+		t.Fatalf("sample at %d,%d (was %d,%d), want it lower and further left", x, y, rightX, rightY)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("previewing a notice position wrote the file")
+	}
+	u.key(key(tcell.KeyEscape))
+	u.draw()
+	if _, _, ok := sample(); ok {
+		t.Fatal("the sample notice stayed after Esc")
 	}
 }

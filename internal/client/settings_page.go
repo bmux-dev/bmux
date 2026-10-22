@@ -3,6 +3,7 @@ package client
 import (
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
@@ -20,6 +21,8 @@ type settingsPage struct {
 	values   config.Config // the file's settings, without environment overrides
 	editing  bool
 	input    string
+	cursor   int // rune index in input where typing goes
+	inputOff int // first rune of input shown, when it is wider than the box
 	message  string
 	failed   bool // message is an error
 
@@ -45,6 +48,49 @@ func (u *ui) closeSettings() {
 	u.settingsPage.open = false
 }
 
+// startEdit opens the editor on value, with the cursor after its last character.
+func (p *settingsPage) startEdit(value string) {
+	p.editing, p.input, p.message = true, value, ""
+	p.cursor, p.inputOff = utf8.RuneCountInString(value), 0
+}
+
+// insert types text at the cursor.
+func (p *settingsPage) insert(text string) {
+	r := []rune(p.input)
+	p.input = string(r[:p.cursor]) + text + string(r[p.cursor:])
+	p.cursor += utf8.RuneCountInString(text)
+}
+
+// editKey edits the value with the usual line-editing keys.
+func (p *settingsPage) editKey(e *tcell.EventKey) {
+	r := []rune(p.input)
+	switch {
+	case e.Key() == tcell.KeyLeft || e.Key() == tcell.KeyCtrlB:
+		p.cursor = max(0, p.cursor-1)
+	case e.Key() == tcell.KeyRight || e.Key() == tcell.KeyCtrlF:
+		p.cursor = min(len(r), p.cursor+1)
+	case e.Key() == tcell.KeyHome || e.Key() == tcell.KeyCtrlA:
+		p.cursor = 0
+	case e.Key() == tcell.KeyEnd || e.Key() == tcell.KeyCtrlE:
+		p.cursor = len(r)
+	case e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2 || e.Key() == tcell.KeyCtrlH:
+		if p.cursor > 0 {
+			p.input = string(r[:p.cursor-1]) + string(r[p.cursor:])
+			p.cursor--
+		}
+	case e.Key() == tcell.KeyDelete:
+		if p.cursor < len(r) {
+			p.input = string(r[:p.cursor]) + string(r[p.cursor+1:])
+		}
+	case e.Key() == tcell.KeyCtrlU: // to the start of the line
+		p.input, p.cursor = string(r[p.cursor:]), 0
+	case e.Key() == tcell.KeyCtrlK: // to the end of the line
+		p.input = string(r[:p.cursor])
+	case e.Key() == tcell.KeyRune && e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0:
+		p.insert(string(e.Rune()))
+	}
+}
+
 // loadSettingsPage rereads the file, so the page shows what is saved.
 func (u *ui) loadSettingsPage() {
 	u.settingsPage.values, _ = config.Load(u.configPath, nil)
@@ -63,12 +109,8 @@ func (u *ui) settingsKey(e *tcell.EventKey) {
 			u.saveSetting(p.input)
 		case e.Key() == tcell.KeyEscape:
 			p.editing, p.message = false, ""
-		case e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2 || e.Key() == tcell.KeyCtrlH:
-			p.input = dropRune(p.input)
-		case e.Key() == tcell.KeyCtrlU:
-			p.input = ""
-		case e.Key() == tcell.KeyRune && e.Modifiers()&(tcell.ModCtrl|tcell.ModAlt) == 0:
-			p.input += string(e.Rune())
+		default:
+			p.editKey(e)
 		}
 		return
 	}
@@ -115,7 +157,7 @@ func (u *ui) changeSetting() {
 	case config.KindEnum:
 		u.openChoices()
 	default:
-		p.editing, p.input, p.message = true, s.Get(p.values), ""
+		p.startEdit(s.Get(p.values))
 	}
 }
 
@@ -170,17 +212,18 @@ func (u *ui) choiceKey(e *tcell.EventKey) {
 		move(last)
 	case e.Key() == tcell.KeyEnter && p.choice >= len(s.Options):
 		u.revertPreview()
-		p.editing, p.input, p.message = true, s.Get(p.values), ""
+		p.startEdit(s.Get(p.values))
 	case e.Key() == tcell.KeyEnter:
 		u.saveSetting(s.Options[p.choice])
 	}
 }
 
 // previews says whether the look of a setting's choices can be shown before
-// one is saved: the colors and the icons. Anything else waits for Enter.
+// one is saved: the colors, the icons and where notices go. Anything else
+// waits for Enter.
 func previews(key string) bool {
 	switch key {
-	case "theme", "ui.accent", "ui.pane-background", "ui.icons":
+	case "theme", "ui.accent", "ui.pane-background", "ui.icons", "ui.notice-position":
 		return true
 	}
 	return false
@@ -215,6 +258,20 @@ func (u *ui) previewChoice() {
 
 // applySaved shows the colors of the settings the client is running.
 func (u *ui) applySaved() { applyTheme(themeFor(u.settings.Theme, u.settings.UI)) }
+
+// noticePreview is the position a sample notice shows at while the choices
+// for ui.notice-position are open.
+func (u *ui) noticePreview() (position string, ok bool) {
+	p := &u.settingsPage
+	if !p.open || !p.choosing {
+		return "", false
+	}
+	s := u.pageSetting()
+	if s.Key != "ui.notice-position" || p.choice >= len(s.Options) {
+		return "", false
+	}
+	return s.Options[p.choice], true
+}
 
 // revertPreview leaves the list of choices and puts back the applied theme.
 func (u *ui) revertPreview() {
@@ -314,7 +371,7 @@ func (u *ui) drawSettings(w, h int) {
 	footer := "⏎/␣ change · ←/→ tabs · esc close"
 	switch {
 	case p.editing:
-		footer = "⏎ save · esc cancel"
+		footer = "⏎ save · ←/→ move · esc cancel"
 	case p.choosing:
 		footer = "⏎ select · ↑/↓ scroll · esc cancel"
 		u.drawChoices(x, y+2, inner, listHeight)
@@ -361,9 +418,6 @@ func (u *ui) drawSettingsList(x, y, inner, listHeight, labelWidth int) {
 		s := options[line.row]
 		value, set := settingValue(s, p.values)
 		isSelected := line.row == p.row
-		if isSelected && p.editing {
-			value, set = tailFit(p.input, max(1, inner-labelWidth-6))+"_", true
-		}
 		label, valueStyle := uiBaseStyle, uiMutedStyle
 		marker := "  "
 		if isSelected {
@@ -372,9 +426,32 @@ func (u *ui) drawSettingsList(x, y, inner, listHeight, labelWidth int) {
 			valueStyle = uiBaseStyle
 		}
 		u.screen.PutStrStyled(x, row, fit("  "+marker+s.Label, labelWidth+5), label)
+		if isSelected && p.editing {
+			u.drawEditor(x+labelWidth+5, row, max(1, inner-labelWidth-5))
+			continue
+		}
 		u.screen.PutStrStyled(x+labelWidth+5, row, fit(value, max(0, inner-labelWidth-5)), valueStyle)
 	}
 	u.drawScrollbar(x+inner, y, listHeight, len(lines), p.offset, listHeight)
+}
+
+// drawEditor draws the value being typed in width cells, scrolled to keep the
+// cursor in view, with the cursor shown as a reversed cell.
+func (u *ui) drawEditor(x, y, width int) {
+	p := &u.settingsPage
+	r := []rune(p.input)
+	if p.cursor < p.inputOff {
+		p.inputOff = p.cursor
+	} else if p.cursor >= p.inputOff+width {
+		p.inputOff = p.cursor - width + 1
+	}
+	shown := r[p.inputOff:min(len(r), p.inputOff+width)]
+	u.screen.PutStrStyled(x, y, fit(string(shown), width), uiAccentStyle)
+	under := " "
+	if p.cursor < len(r) {
+		under = string(r[p.cursor])
+	}
+	u.screen.PutStrStyled(x+p.cursor-p.inputOff, y, under, uiAccentStyle.Reverse(true))
 }
 
 // drawChoices draws the selected setting's name and its choices, scrolled so
