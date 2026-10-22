@@ -13,6 +13,9 @@ type chromeTheme struct {
 	foreground, background, muted, bar, accent, selection, selectionText tcell.Color
 	working, blocked, done, idle, unknown                                tcell.Color
 	light                                                                bool
+	// themePanes draws cells and dividers that use the terminal's default
+	// colors in foreground and background. Only named themes ask for it.
+	themePanes bool
 }
 
 // themeFor builds the chrome palette for a theme name, then applies the ui
@@ -21,8 +24,10 @@ func themeFor(name string, settings config.UI) chromeTheme {
 	name, _ = config.ResolveTheme(name)
 	t, ok := palettes[name]
 	if !ok {
-		t = palettes[config.Default().Theme]
+		name = config.Default().Theme
+		t = palettes[name]
 	}
+	t.themePanes = settings.ThemePanes && name != "dark" && name != "light"
 	light := t.light
 	switch settings.Accent {
 	case "amber":
@@ -51,6 +56,7 @@ func themeFor(name string, settings config.UI) chromeTheme {
 var (
 	chrome                                   chromeTheme
 	accentColor                              tcell.Color
+	paneStyle                                tcell.Style
 	barStyle, uiBaseStyle, uiMutedStyle      tcell.Style
 	uiAccentStyle, dividerStyle              tcell.Style
 	selectionBackground, selectionForeground tcell.Color
@@ -69,7 +75,13 @@ func applyTheme(t chromeTheme) {
 	uiBaseStyle = tcell.StyleDefault.Foreground(t.foreground).Background(t.background)
 	uiMutedStyle = uiBaseStyle.Foreground(t.muted)
 	uiAccentStyle = uiBaseStyle.Foreground(t.accent).Bold(true)
-	dividerStyle = tcell.StyleDefault.Foreground(t.muted)
+	// Pane cells without a color of their own start from paneStyle: the
+	// terminal's defaults, or the theme's when it paints the panes.
+	paneStyle = tcell.StyleDefault
+	if t.themePanes {
+		paneStyle = paneStyle.Foreground(t.foreground).Background(t.background)
+	}
+	dividerStyle = paneStyle.Foreground(t.muted)
 	selectionBackground, selectionForeground = t.selection, t.selectionText
 	// The sidebar uses the bar background so it reads as chrome, apart from panes.
 	sidebarBaseStyle = barStyle

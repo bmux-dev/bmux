@@ -45,6 +45,7 @@ width = 24
 | `ui.powerline-ascii` | `false` | Plain `<` `>` separators instead of powerline glyphs |
 | `ui.terminal-padding` | `false` | Keep physical-terminal padding; read when a client starts |
 | `ui.set-title` | `true` | Name the outer terminal's window after the session and, when its app set one, the focused pane's title (`api · nvim README.md`); `bmux` in the picker. Like tmux's `set-titles`; your terminal's own title comes back when bmux exits. Turning it off stops updates; the current title stays until then. |
+| `ui.theme-panes` | `true` | Draw panes in a named theme's background and foreground wherever the program sets none, such as a plain shell prompt; `false` keeps your terminal's colors. `dark` and `light` never recolor panes. See [Themes](#themes). |
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
 | `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
@@ -80,10 +81,13 @@ foreground, background, muted text, status bars, accent, selection, and the
 working, waiting, blocked and idle agent colors.
 
 :::note
-The theme does not recolor the panes. Text that uses the terminal's default
-colors, such as a plain shell prompt, keeps your terminal's own background and
-foreground, and programs that draw their own colors, like Neovim, show those.
-To match the panes to a theme, set your terminal to the same colorscheme.
+With a named theme, panes take its background and foreground wherever the
+program running in them sets no color, so a shell matches the status bars and
+sidebar. Colors a program sets itself (Neovim's colorscheme, `ls --color`, ANSI
+palette colors) are left alone, and the ANSI palette still comes from your
+terminal, so set the terminal to the same colorscheme for those to match too.
+Set `ui.theme-panes = false` to keep your terminal's own background and
+foreground in panes. `dark` and `light` always do.
 :::
 
 | Scheme | `theme` values |

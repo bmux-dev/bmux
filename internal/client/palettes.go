@@ -64,5 +64,5 @@ var palettes = map[string]chromeTheme{
 func theme(light bool, foreground, background, muted, bar, accent, selection, selectionText, working, blocked, done, idle, unknown int32) chromeTheme {
 	c := tcell.NewHexColor
 	return chromeTheme{c(foreground), c(background), c(muted), c(bar), c(accent), c(selection), c(selectionText),
-		c(working), c(blocked), c(done), c(idle), c(unknown), light}
+		c(working), c(blocked), c(done), c(idle), c(unknown), light, false}
 }

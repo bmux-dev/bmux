@@ -3,8 +3,10 @@ package client
 import (
 	"testing"
 
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
+	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 func hex(v int32) tcell.Color { return tcell.NewHexColor(v) }
@@ -33,7 +35,7 @@ func TestEveryListedThemeHasItsOwnPalette(t *testing.T) {
 func TestNamedThemeUsesItsSchemePalette(t *testing.T) {
 	got := themeFor("catppuccin-latte", config.UI{Accent: "cyan"})
 	want := chromeTheme{hex(0x4c4f69), hex(0xeff1f5), hex(0x7c7f93), hex(0xe6e9ef), hex(0x1e66f5), hex(0xbcc0cc), hex(0x4c4f69),
-		hex(0xdf8e1d), hex(0xd20f39), hex(0x179299), hex(0x40a02b), hex(0x9ca0b0), true}
+		hex(0xdf8e1d), hex(0xd20f39), hex(0x179299), hex(0x40a02b), hex(0x9ca0b0), true, false}
 	if got != want {
 		t.Fatalf("catppuccin-latte:\n got %+v\nwant %+v", got, want)
 	}
@@ -89,5 +91,74 @@ func TestDefaultThemesAreUnchanged(t *testing.T) {
 	l := themeFor("light", config.UI{Accent: "cyan"})
 	if l.background != hex(0xf5f5f5) || l.accent != hex(0x00657c) || l.bar != hex(0xe4e4e4) || !l.light {
 		t.Fatalf("light: %+v", l)
+	}
+}
+
+func useTheme(t *testing.T, name string, ui config.UI) {
+	t.Helper()
+	applyTheme(themeFor(name, ui))
+	t.Cleanup(func() { d := config.Default(); applyTheme(themeFor(d.Theme, d.UI)) })
+}
+
+func TestPanesFollowANamedThemeByDefault(t *testing.T) {
+	if !config.Default().UI.ThemePanes {
+		t.Fatal("ui.theme-panes isn't on by default")
+	}
+	useTheme(t, "catppuccin-mocha", config.Default().UI)
+	fg, bg, _ := cellStyle(protocol.Cell{Text: "$"}).Decompose()
+	if fg != hex(0xcdd6f4) || bg != hex(0x1e1e2e) {
+		t.Fatalf("a plain cell is fg %v bg %v, want the theme's", fg, bg)
+	}
+	// Colors a program sets stay as set, whether palette, exact, or one of the two.
+	fg, bg, _ = cellStyle(protocol.Cell{FG: "1", BG: "#102030"}).Decompose()
+	if fg != tcell.PaletteColor(1) || bg != hex(0x102030) {
+		t.Fatalf("explicit colors changed: fg %v bg %v", fg, bg)
+	}
+	fg, bg, _ = cellStyle(protocol.Cell{FG: "2"}).Decompose()
+	if fg != tcell.PaletteColor(2) || bg != hex(0x1e1e2e) {
+		t.Fatalf("a set foreground lost the theme background: fg %v bg %v", fg, bg)
+	}
+}
+
+func TestPanesKeepTerminalColorsWhenThemePanesIsOffOrTheThemeIsPlain(t *testing.T) {
+	off := config.Default().UI
+	off.ThemePanes = false
+	for name, c := range map[string]struct {
+		theme string
+		ui    config.UI
+	}{
+		"theme-panes off": {"catppuccin-mocha", off},
+		"dark":            {"dark", config.Default().UI},
+		"light":           {"light", config.Default().UI},
+		"unknown name":    {"neon", config.Default().UI},
+	} {
+		useTheme(t, c.theme, c.ui)
+		fg, bg, _ := cellStyle(protocol.Cell{Text: "$"}).Decompose()
+		if fg != tcell.ColorDefault || bg != tcell.ColorDefault {
+			t.Errorf("%s: a plain cell is fg %v bg %v, want the terminal's", name, fg, bg)
+		}
+	}
+}
+
+func TestThemedPanesPaintDividersAndKeepReverseVideo(t *testing.T) {
+	useTheme(t, "catppuccin-mocha", config.Default().UI)
+	s := focusTestScreen(t, 21, 9)
+	u := &ui{screen: s}
+	f := junctionTestFrame()
+	u.applyFrame(f)
+	for _, p := range f.Panes {
+		u.drawPane(p, 21, 9)
+	}
+	u.drawPaneDividers(21, 9)
+	for _, at := range [][2]int{{0, paneOriginY}, {10, paneOriginY + 1}} { // pane text, divider
+		_, style, _ := s.Get(at[0], at[1])
+		if _, bg, _ := style.Decompose(); bg != hex(0x1e1e2e) {
+			t.Errorf("cell %v has background %v, want the theme's", at, bg)
+		}
+	}
+	// Reverse video swaps the theme's colors rather than the terminal's.
+	style := cellStyle(protocol.Cell{Text: "x", Attrs: uv.AttrReverse})
+	if fg, bg, attrs := style.Decompose(); fg != hex(0xcdd6f4) || bg != hex(0x1e1e2e) || attrs&tcell.AttrReverse == 0 {
+		t.Errorf("reverse cell: fg %v bg %v attrs %v", fg, bg, attrs)
 	}
 }

@@ -45,6 +45,9 @@ type UI struct {
 	PowerlineASCII  bool   `toml:"powerline-ascii"`
 	TerminalPadding bool   `toml:"terminal-padding"`
 	SetTitle        bool   `toml:"set-title"`
+	// ThemePanes draws cells that use the terminal's default colors in a named
+	// theme's foreground and background. dark and light never do.
+	ThemePanes bool `toml:"theme-panes"`
 	// Graphics is "auto" (show images in terminals that support the Kitty
 	// graphics protocol), "on" (assume the terminal does) or "off".
 	Graphics    string      `toml:"graphics"`
@@ -134,7 +137,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "cyan", SetTitle: true, Graphics: "auto"},
+		UI:         UI{Accent: "cyan", SetTitle: true, ThemePanes: true, Graphics: "auto"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -394,6 +397,8 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
 # set-title = true          # name the terminal window after the session and pane
+# theme-panes = true        # panes use a named theme's background and foreground
+                            # where programs set none; false keeps the terminal's
 # graphics = "auto"         # show images programs draw: "auto" detects Kitty
                             # graphics support, "on" assumes it, "off" never
 
