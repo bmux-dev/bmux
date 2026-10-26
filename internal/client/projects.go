@@ -28,6 +28,7 @@ type project struct {
 	dir     string
 	session string // the most recently used session started here, or ""
 	nested  bool   // a linked worktree listed under its main repository
+	last    bool   // the last worktree of its group, which closes the tree
 	branch  string // checked-out branch; set only within a group of worktrees
 }
 
@@ -184,6 +185,7 @@ func nestWorktrees(list []project) []project {
 				}
 			}
 		}
+		result[len(result)-1].last = true // a group always has a worktree
 	}
 	return result
 }
@@ -518,7 +520,11 @@ func (u *ui) drawProjectList(ix, iy, iw, ih int) {
 		label, note := " "+projectLabel(p.dir), ""
 		if u.projects.query == "" { // a search ranks by match, so it drops the grouping
 			if p.nested {
-				label = "    " + projectLabel(p.dir)
+				branch := "├─"
+				if p.last {
+					branch = "└─"
+				}
+				label = "  " + branch + " " + projectLabel(p.dir)
 			}
 			if p.branch != "" {
 				label += "  [" + p.branch + "]"

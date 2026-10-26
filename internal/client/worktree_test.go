@@ -208,7 +208,7 @@ func TestSidebarGroupsWorktreeSessionsAndNavigationSkipsHeaders(t *testing.T) {
 	}
 	u.draw()
 	screen := pickerScreenText(u)
-	for _, want := range []string{" stl", "     one", "feat/one"} {
+	for _, want := range []string{" - stl", "├─ one", "└─ two", "feat/one"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("sidebar missing %q:\n%s", want, screen)
 		}
@@ -234,7 +234,7 @@ func TestPickerGroupsWorktreeSessionsUnlessSearching(t *testing.T) {
 	u.chosen = 2
 	u.drawPicker(100, 24)
 	screen := pickerScreenText(u)
-	if !strings.Contains(screen, "     stl") || !strings.Contains(screen, "(2) + ") || !strings.Contains(screen, "one [feat/one]") {
+	if !strings.Contains(screen, "- stl") || !strings.Contains(screen, "├─ (1) + two [feat/two]") || !strings.Contains(screen, "└─ (2) + one [feat/one]") {
 		t.Fatalf("picker missing header, numbering or branch:\n%s", screen)
 	}
 	// A click on the header chooses nothing; a click on a session chooses it.
@@ -263,7 +263,7 @@ func TestFindProjectsNestsWorktreesOutsideTheRoots(t *testing.T) {
 	want := []project{
 		{dir: f.main, branch: "main"},
 		{dir: f.two, session: "ticket", nested: true, branch: "feat/two"}, // sessions are listed first
-		{dir: f.one, nested: true, branch: "feat/one"},
+		{dir: f.one, nested: true, last: true, branch: "feat/one"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("projects %+v", got)

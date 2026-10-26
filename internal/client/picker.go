@@ -209,7 +209,7 @@ func (u *ui) drawPicker(w, h int) {
 	for row := start; row < end; row++ {
 		l := lines[row]
 		if l.index < 0 {
-			u.screen.PutStrStyled(list.x, list.y+row-start, fit("     "+l.header, list.w), uiMutedStyle.Bold(true))
+			u.screen.PutStrStyled(list.x, list.y+row-start, fit("    - "+l.header, list.w), uiMutedStyle.Bold(true)) // the - stands where a session's + does
 			continue
 		}
 		s, i := l.session, l.index
@@ -236,7 +236,11 @@ func (u *ui) drawPicker(w, h int) {
 		prefix := fmt.Sprintf("(%d) + ", i)
 		label := s.Name
 		if l.nested {
-			prefix = "  " + prefix
+			branch := "├─"
+			if l.last {
+				branch = "└─"
+			}
+			prefix = "  " + branch + " " + prefix
 		}
 		if l.branch != "" {
 			label += " [" + l.branch + "]"
