@@ -32,6 +32,22 @@ File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
 commit to `main`: work on a `feat/`, `fix/` or `docs/` branch and open a pull
 request that closes its issues with `Fixes #N`.
 
+## Comparing with tmux
+
+`scripts/compare-tmux.py` measures bmux from your checkout against the installed
+tmux and prints Markdown tables for three things:
+
+- keystroke echo latency, through an attached client;
+- how long `seq 1 1000000` takes to display;
+- server memory, idle, with scrollback at 80 and 200 columns, and with 20
+  sessions.
+
+Each program gets a throwaway socket and config and a client in a pty, and
+tmux's `history-limit` matches bmux's `scrollback.lines`. A full run takes a
+few minutes; `--quick` takes about one. It needs Go, tmux and Python 3. Run it
+before and after a change to the server, the client or the emulator to see
+its effect.
+
 ## Releasing
 
 A release is a tag on `main`. Pushing it runs CI and then GoReleaser
