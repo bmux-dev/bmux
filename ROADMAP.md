@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.0 | Theme presets, a reworked settings page, notices in a box ([already built](#already-built)) |
+| **Shipped** | v0.7.1 | Theme presets, a reworked settings page, notices in a box; clearer upgrades in v0.7.1 ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -243,3 +243,10 @@ terminal's colors (OSC 10/11), notices in a bordered box (`ui.notice-position`),
 and a reworked settings page with tabs, icons (`ui.icons`), group headers and
 live previews. Protocol version 10 is unchanged: run `bmux restart` after
 upgrading to get the new server behavior.
+
+v0.7.1 fixed upgrades: after `bmux update`, commands say the server is an
+older version and to run `bmux restart` instead of a bare "protocol version
+mismatch", and `bmux restart` no longer reports lost changes when the old
+server saved them. A sidebar click now selects a row, and a double-click opens
+it. Compatibility tests check every release's save file, config and commands.
+Protocol version 10 is unchanged.
