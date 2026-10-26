@@ -237,9 +237,9 @@ func (u *ui) drawPicker(w, h int) {
 		label := s.Name
 		if l.nested {
 			prefix = "  " + prefix
-			if l.branch != "" {
-				label += " [" + l.branch + "]"
-			}
+		}
+		if l.branch != "" {
+			label += " [" + l.branch + "]"
 		}
 		suffix := fmt.Sprintf(": %d panes%s", s.Panes, attachment)
 		if s.Windows > 1 {
