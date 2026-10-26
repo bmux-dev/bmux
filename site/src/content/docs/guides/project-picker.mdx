@@ -33,6 +33,12 @@ with the filter as the session name. **Esc** closes the popup; when
 folder without the popup. Folders reached through a symlink are the same
 folder.
 
+A repository with [git worktrees](/bmux/guides/sessions/#git-worktrees) is
+followed by its worktrees, indented and marked with their branch. They are
+listed wherever they live, even outside `projects.roots`: bmux reads them from
+the repository's own worktree list. Typing a filter ranks every folder by
+match and drops the indentation.
+
 ## Create tab
 
 **Tab** (or Enter with no match) opens a form with a start directory, a

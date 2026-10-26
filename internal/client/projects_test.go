@@ -43,10 +43,10 @@ func TestFindProjectsListsSessionsThenRepositories(t *testing.T) {
 	settings := config.Projects{Roots: []string{"~/code", "~/missing"}, Depth: 2}
 	got := findProjects(settings, home, sessions)
 	want := []project{
-		{filepath.Join(code, "group", "web"), "web"},
-		{"/tmp", "scratch"},
-		{filepath.Join(code, "api"), ""},
-		{filepath.Join(code, "worktree"), ""},
+		{dir: filepath.Join(code, "group", "web"), session: "web"},
+		{dir: "/tmp", session: "scratch"},
+		{dir: filepath.Join(code, "api")},
+		{dir: filepath.Join(code, "worktree")},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("projects:\n got %+v\nwant %+v", got, want)
@@ -79,7 +79,7 @@ func TestProjectSessionReusesTheFoldersSessionOrCreatesOne(t *testing.T) {
 
 func TestProjectPickerFiltersAsYouTypeAndLeaves(t *testing.T) {
 	u, requests := sidebarUI(t)
-	u.projects = projectPicker{open: true, list: []project{{"/p/api", "api"}, {"/p/web", ""}, {"/p/worker", ""}}}
+	u.projects = projectPicker{open: true, list: []project{{dir: "/p/api", session: "api"}, {dir: "/p/web"}, {dir: "/p/worker"}}}
 	for _, r := range "wk" {
 		u.key(runeKey(r))
 	}
@@ -120,7 +120,7 @@ func TestNewSessionPopupFindsOrCreates(t *testing.T) {
 		u, _ := sidebarUI(t)
 		socket, requests := fakeStartupRPC(t, func(protocol.Request) protocol.Response { return protocol.Response{} })
 		u.socket, u.cwd = socket, "/work"
-		u.projects = projectPicker{open: true, list: []project{{"/p/api", "api"}, {"/p/web", ""}}, sessions: []protocol.Session{{Name: "api"}, {Name: "web"}}}
+		u.projects = projectPicker{open: true, list: []project{{dir: "/p/api", session: "api"}, {dir: "/p/web"}}, sessions: []protocol.Session{{Name: "api"}, {Name: "web"}}}
 		return u, requests
 	}
 	t.Run("Tab prefills from the highlighted project", func(t *testing.T) {

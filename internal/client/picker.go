@@ -35,6 +35,26 @@ func (u *ui) movePicker(delta int) {
 	u.chosen = max(0, min(u.chosen+delta, len(u.filtered())-1))
 }
 
+// pickerLines lays matches out as list lines and returns the first line
+// visible in a window of height lines that keeps the chosen session in view.
+// Without a search, sessions of one project sit under a header.
+func (u *ui) pickerLines(matches []protocol.Session, height int) (lines []sessionLine, start int) {
+	if u.query == "" {
+		lines = groupLines(matches, resolveRepo)
+	} else {
+		for i, s := range matches {
+			lines = append(lines, sessionLine{session: s, index: i})
+		}
+	}
+	chosen := 0
+	for i, l := range lines {
+		if l.index == u.chosen {
+			chosen = i
+		}
+	}
+	return lines, max(0, chosen-height+1)
+}
+
 func (u *ui) listKey(e *tcell.EventKey) {
 	if u.searching {
 		switch e.Key() {
@@ -140,10 +160,9 @@ func (u *ui) pickerMouse(e *tcell.EventMouse, x, y int) {
 	case e.Buttons()&tcell.WheelUp != 0:
 		u.movePicker(-1)
 	case e.Buttons()&tcell.Button1 != 0:
-		start := max(0, u.chosen-list.h+1)
-		index := start + y - list.y
-		if index < len(u.filtered()) {
-			u.chosen = index
+		lines, start := u.pickerLines(u.filtered(), list.h)
+		if line := start + y - list.y; line < len(lines) && lines[line].index >= 0 {
+			u.chosen = lines[line].index
 		}
 	}
 	u.requestPreview()
@@ -161,15 +180,24 @@ func (u *ui) drawPicker(w, h int) {
 	list, preview := pickerAreas(w, h)
 	matches := u.filtered()
 	u.chosen = max(0, min(u.chosen, len(matches)-1))
-	start := max(0, u.chosen-list.h+1)
-	end := min(len(matches), start+list.h)
+	lines, start := u.pickerLines(matches, list.h)
+	end := min(len(lines), start+list.h)
 	position := 0
 	if len(matches) > 0 {
 		position = u.chosen + 1
 	}
 	heading := fmt.Sprintf("%d/%d", position, len(matches))
-	if len(matches) > list.h {
-		heading += fmt.Sprintf(" · %d-%d", start+1, end)
+	if len(lines) > list.h {
+		first, last := -1, -1 // the sessions the window shows
+		for _, l := range lines[start:end] {
+			if l.index >= 0 {
+				if first < 0 {
+					first = l.index
+				}
+				last = l.index
+			}
+		}
+		heading += fmt.Sprintf(" · %d-%d", first+1, last+1)
 	}
 	if len(matches) == 0 && list.h > 0 {
 		message := "No sessions. Press n to create one."
@@ -178,8 +206,13 @@ func (u *ui) drawPicker(w, h int) {
 		}
 		u.screen.PutStr(list.x, list.y, fit(message, list.w))
 	}
-	for i := start; i < len(matches) && i < start+list.h; i++ {
-		s := matches[i]
+	for row := start; row < end; row++ {
+		l := lines[row]
+		if l.index < 0 {
+			u.screen.PutStrStyled(list.x, list.y+row-start, fit("     "+l.header, list.w), uiMutedStyle.Bold(true))
+			continue
+		}
+		s, i := l.session, l.index
 		attachment := ""
 		if s.Clients > 0 {
 			attachment = " (attached)"
@@ -201,13 +234,20 @@ func (u *ui) drawPicker(w, h int) {
 			attachment = " (restored)" // its programs ended; nobody has looked yet
 		}
 		prefix := fmt.Sprintf("(%d) + ", i)
+		label := s.Name
+		if l.nested {
+			prefix = "  " + prefix
+			if l.branch != "" {
+				label += " [" + l.branch + "]"
+			}
+		}
 		suffix := fmt.Sprintf(": %d panes%s", s.Panes, attachment)
 		if s.Windows > 1 {
 			suffix = fmt.Sprintf(": %d windows, %d panes%s", s.Windows, s.Panes, attachment)
 		}
-		name := strings.TrimSpace(fit(s.Name, max(0, list.w-displayWidth(prefix)-displayWidth(suffix))))
+		name := strings.TrimSpace(fit(label, max(0, list.w-displayWidth(prefix)-displayWidth(suffix))))
 		line := prefix + name + suffix
-		u.screen.PutStrStyled(list.x, list.y+i-start, fit(line, list.w), style)
+		u.screen.PutStrStyled(list.x, list.y+row-start, fit(line, list.w), style)
 	}
 	if preview.w > 0 && preview.h > 0 {
 		u.drawPickerTerminalBorder(preview, w, heading)

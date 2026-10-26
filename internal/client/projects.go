@@ -27,6 +27,8 @@ const (
 type project struct {
 	dir     string
 	session string // the most recently used session started here, or ""
+	nested  bool   // a linked worktree listed under its main repository
+	branch  string // checked-out branch; set only within a group of worktrees
 }
 
 type projectResult struct {
@@ -102,7 +104,7 @@ func findProjects(settings config.Projects, home string, sessions []protocol.Ses
 			return
 		}
 		seen[key] = true
-		result = append(result, project{dir, session})
+		result = append(result, project{dir: dir, session: session})
 	}
 	for _, s := range sessions {
 		if s.Dir != "" {
@@ -120,6 +122,67 @@ func findProjects(settings config.Projects, home string, sessions []protocol.Ses
 		sort.Strings(found)
 		for _, dir := range found {
 			add(dir, sessionIn(sessions, dir))
+		}
+	}
+	addWorktrees(&result, add, sessions)
+	return nestWorktrees(result)
+}
+
+// addWorktrees lists the linked worktrees of every repository in result, and
+// the main repository of any worktree that is listed without it. Worktrees
+// can sit anywhere, so the search roots don't have to cover them; they are
+// read from the main repository's own worktree registry.
+func addWorktrees(result *[]project, add func(dir, session string), sessions []protocol.Session) {
+	var roots []string
+	seen := make(map[string]bool)
+	for _, p := range *result {
+		if info := resolveRepo(p.dir); info.Root != "" && info.Top == realPath(p.dir) && !seen[info.Root] {
+			seen[info.Root] = true
+			roots = append(roots, info.Root)
+		}
+	}
+	for _, root := range roots {
+		if fi, err := os.Stat(filepath.Join(root, ".git")); err == nil && fi.IsDir() {
+			add(root, sessionIn(sessions, root))
+		}
+		for _, dir := range worktreeDirs(root) {
+			add(dir, sessionIn(sessions, dir))
+		}
+	}
+}
+
+// nestWorktrees puts each repository's linked worktrees right after it, where
+// the first of the group appeared. Repositories without worktrees and
+// folders outside git keep their places.
+func nestWorktrees(list []project) []project {
+	infos := make([]repoInfo, len(list))
+	members := make(map[string][]int) // main repository to its list indexes
+	for i, p := range list {
+		if info := resolveRepo(p.dir); info.Root != "" && info.Top == realPath(p.dir) {
+			infos[i] = info
+			members[info.Root] = append(members[info.Root], i)
+		}
+	}
+	result := make([]project, 0, len(list))
+	done := make(map[string]bool)
+	for i, p := range list {
+		root := infos[i].Root
+		if len(members[root]) < 2 {
+			result = append(result, p)
+			continue
+		}
+		if done[root] {
+			continue
+		}
+		done[root] = true
+		for _, worktrees := range []bool{false, true} {
+			for _, j := range members[root] {
+				if infos[j].Worktree == worktrees {
+					q := list[j]
+					q.nested, q.branch = worktrees, infos[j].Branch
+					result = append(result, q)
+				}
+			}
 		}
 	}
 	return result
@@ -453,6 +516,14 @@ func (u *ui) drawProjectList(ix, iy, iw, ih int) {
 	for i := start; i < len(matches) && i-start < rows; i++ {
 		p := matches[i]
 		label, note := " "+projectLabel(p.dir), ""
+		if u.projects.query == "" { // a search ranks by match, so it drops the grouping
+			if p.nested {
+				label = "    " + projectLabel(p.dir)
+			}
+			if p.branch != "" {
+				label += "  [" + p.branch + "]"
+			}
+		}
 		if p.session != "" {
 			note = " session " + p.session + " "
 		}
