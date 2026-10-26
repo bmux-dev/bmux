@@ -122,6 +122,10 @@ func (e *Emulator) handleGrapheme(content string, width int) {
 		e.lastChar, _ = utf8.DecodeRuneInString(content)
 	}
 
+	if e.insert {
+		// Insert mode: push the rest of the line right, up to the right margin.
+		e.scr.buf.InsertCellArea(x, y, cell.Width, e.scr.blankCell(), e.scr.scroll)
+	}
 	e.scr.SetCell(x, y, &cell)
 
 	// Handle phantom state at the end of the line
