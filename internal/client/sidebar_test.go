@@ -222,22 +222,15 @@ func TestLeftEdgeFocusesSidebarAndKeysPickRows(t *testing.T) {
 	noRequest(t, requests)
 }
 
-func TestSidebarClickSelectsThenOpensOnDoubleClick(t *testing.T) {
+func TestSidebarClickOpensTheRow(t *testing.T) {
 	u, requests := sidebarUI(t)
 	click := func(y int) { u.mouse(tcell.NewEventMouse(3, y, tcell.Button1, tcell.ModNone)) }
 
-	// A first click on claude's agent line selects it and focuses the
-	// sidebar, so d and other sidebar keys work right away, but does not
-	// switch sessions.
-	click(paneOriginY + 7)
-	noRequest(t, requests)
-	if !u.sidebarFocus || u.sidebarSelected != (sidebarTarget{"api", 2}) {
-		t.Fatalf("click did not select and focus: focus %v selected %+v", u.sidebarFocus, u.sidebarSelected)
-	}
-	// A second click on the same row within the double-click window opens it.
+	// One click on claude's agent line opens it and hands focus to the panes.
+	u.sidebarFocus = true
 	click(paneOriginY + 7)
 	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
-		t.Fatalf("double-click: %+v", r)
+		t.Fatalf("agent row click: %+v", r)
 	}
 	if u.sidebarFocus {
 		t.Fatal("opening a row kept sidebar focus")
@@ -249,16 +242,10 @@ func TestSidebarClickSelectsThenOpensOnDoubleClick(t *testing.T) {
 	u.mouse(tcell.NewEventMouse(3, paneOriginY+3, tcell.WheelDown, tcell.ModNone))
 	noRequest(t, requests)
 
-	// A single click on a different session row only selects it.
-	click(paneOriginY + 1)
-	noRequest(t, requests)
-	if got := u.sidebarSelected; got != (sidebarTarget{"api", 0}) {
-		t.Fatalf("session row click selection: %+v", got)
-	}
-	// Double-clicking it opens that session's first pane waiting on you.
+	// One click on a session row opens its first pane waiting on you.
 	click(paneOriginY + 1)
 	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
-		t.Fatalf("session row double-click: %+v", r)
+		t.Fatalf("session row click: %+v", r)
 	}
 	noRequest(t, requests)
 }

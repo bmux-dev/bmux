@@ -76,8 +76,6 @@ type ui struct {
 	clipboardSeq                    uint64
 	sidebarHidden, sidebarFocus     bool
 	sidebarSelected                 sidebarTarget
-	sidebarLastClick                time.Time
-	sidebarClickIndex               int // row of the last sidebar press, to detect a double-click
 	sidebarBusy                     bool
 	sidebarResults                  chan sidebarResult
 	edge                            uint64 // last seen Frame.Edge for this attachment
