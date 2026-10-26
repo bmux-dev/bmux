@@ -138,7 +138,7 @@ func watchPreview(ctx context.Context, socket string, request protocol.Request, 
 			return err
 		}
 		if r.Version != protocol.Version {
-			return fmt.Errorf("bmux protocol version mismatch")
+			return protocol.MismatchError{Server: r.Version}
 		}
 		if r.Error != "" {
 			return fmt.Errorf("%s", r.Error)

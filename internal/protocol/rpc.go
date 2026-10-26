@@ -25,10 +25,23 @@ func Call(socket string, r Request) (Response, error) {
 		return response, err
 	}
 	if response.Version != Version {
-		return response, fmt.Errorf("bmux protocol version mismatch")
+		return response, MismatchError{Server: response.Version}
 	}
 	if response.Error != "" {
 		return response, fmt.Errorf("%s", response.Error)
 	}
 	return response, nil
+}
+
+// MismatchError is a reply from a server speaking another protocol version:
+// this bmux and the running server are different releases, as after bmux
+// update and before bmux restart. Server is the server's version, 0 if it
+// sent none.
+type MismatchError struct{ Server int }
+
+func (e MismatchError) Error() string {
+	if e.Server < Version {
+		return fmt.Sprintf("the running bmux server is an older version (protocol %d; this bmux speaks %d). Run bmux restart to switch it to this version: sessions come back, programs running in panes end", e.Server, Version)
+	}
+	return fmt.Sprintf("the running bmux server is a newer version (protocol %d; this bmux speaks %d). Use the bmux that started it, or run bmux restart to switch the server to this one", e.Server, Version)
 }

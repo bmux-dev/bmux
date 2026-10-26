@@ -2,6 +2,7 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -144,10 +145,16 @@ func Stop(socket string) (running, saved bool, err error) {
 	}
 	c.Close()
 	saved = true
-	if _, err = protocol.Call(socket, protocol.Request{Op: "shutdown"}); err != nil {
-		if !strings.Contains(err.Error(), "unknown operation") && !strings.Contains(err.Error(), "version mismatch") {
-			return true, false, err
-		}
+	response, err := protocol.Call(socket, protocol.Request{Op: "shutdown"})
+	var mismatch protocol.MismatchError
+	switch {
+	case err == nil:
+	case errors.As(err, &mismatch) && response.Error == "":
+		// Servers accept shutdown from any protocol version and save on the
+		// way out; only the reply's version differs.
+	case errors.As(err, &mismatch) || strings.Contains(err.Error(), "unknown operation"):
+		// A server too old to take shutdown from this version: SIGTERM
+		// stops it, saving too since v0.2.
 		data, readErr := os.ReadFile(filepath.Join(filepath.Dir(socket), "server.pid"))
 		pid, parseErr := strconv.Atoi(strings.TrimSpace(string(data)))
 		if readErr != nil || parseErr != nil || pid <= 1 {
@@ -157,6 +164,8 @@ func Stop(socket string) (running, saved bool, err error) {
 			return true, false, err
 		}
 		saved = false
+	default:
+		return true, false, err
 	}
 	// The socket closes first; the lock is released once the process exits,
 	// after its panes are stopped. Only then can a new server start.
