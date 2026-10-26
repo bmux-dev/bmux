@@ -869,7 +869,8 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 
 		height := e.Height()
 		bottom, _ := e.parser.Param(1, height)
-		if bottom < 1 {
+		// Like xterm, a bottom margin past the last row is the last row.
+		if bottom < 1 || bottom > height {
 			bottom = height
 		}
 
@@ -902,7 +903,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 
 			width := e.Width()
 			right, _, _ := params.Param(1, width)
-			if right < 1 {
+			if right < 1 || right > width {
 				right = width
 			}
 
