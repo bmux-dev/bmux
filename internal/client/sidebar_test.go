@@ -81,7 +81,7 @@ func TestSidebarLayoutOffsetsPanesAndListsAgents(t *testing.T) {
 	// Sessions in creation order, a divider, then every agent across sessions
 	// as two-line entries: icon, agent and state, then the session name.
 	want := []struct{ text, right string }{
-		{" SESSIONS", ""}, {" ● api", ""}, {"   web", ""}, {" ● db", ""},
+		{" SESSIONS", ""}, {" ● api", ""}, {" - web", ""}, {" ● db", ""}, // a session with no agent state shows a hyphen
 		{strings.Repeat("─", u.sidebarCols()-1), ""}, {" AGENTS 3", ""},
 		{" ● claude", "waiting"}, {"   api", ""},
 		{" ● codex", "working"}, {"   api", ""},

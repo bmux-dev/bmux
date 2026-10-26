@@ -478,6 +478,10 @@ func (u *ui) filtered() []protocol.Session {
 	for i, m := range matches {
 		result[i] = m.item
 	}
+	if u.query == "" {
+		// Searching ranks by match, so projects only group the plain list.
+		return groupedSessions(result, resolveRepo)
+	}
 	return result
 }
 
