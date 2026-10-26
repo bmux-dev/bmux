@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/config"
@@ -292,7 +293,10 @@ func (u *ui) openSidebarRow() {
 	}
 }
 
-// sidebarClick selects and opens the row under a click at screen row y.
+// sidebarClick selects the row under a click at screen row y and gives the
+// sidebar focus, so keys like d reach it right away instead of switching
+// sessions underfoot. A second click on the same row within the double-click
+// window (as for selecting words in a pane) opens it, like Enter.
 func (u *ui) sidebarClick(y, h int) {
 	rows, sessions := u.sidebarRows()
 	l := sidebarLayout(sessions, h)
@@ -311,8 +315,16 @@ func (u *ui) sidebarClick(y, h int) {
 	if index < 0 {
 		return
 	}
+	doubleClick := index == u.sidebarClickIndex && time.Since(u.sidebarLastClick) < 350*time.Millisecond
+	u.sidebarLastClick, u.sidebarClickIndex = time.Now(), index
 	u.sidebarSelected = sidebarTarget{rows[index].session.Name, rows[index].pane}
-	u.openSidebarRow()
+	if doubleClick {
+		u.openSidebarRow()
+		return
+	}
+	u.sidebarFocus = true
+	u.prefix = false
+	u.refreshSidebar()
 }
 
 func (u *ui) refreshSidebar() {
