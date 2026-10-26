@@ -209,7 +209,7 @@ func (u *ui) drawPicker(w, h int) {
 	for row := start; row < end; row++ {
 		l := lines[row]
 		if l.index < 0 {
-			u.screen.PutStrStyled(list.x, list.y+row-start, fit("    - "+l.header, list.w), uiMutedStyle.Bold(true)) // the - stands where a session's + does
+			u.screen.PutStrStyled(list.x, list.y+row-start, fit("      "+l.header, list.w), uiMutedStyle.Bold(true)) // under the session names
 			continue
 		}
 		s, i := l.session, l.index
