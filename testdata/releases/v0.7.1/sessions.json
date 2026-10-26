@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "sessions": [
+    {
+      "name": "work",
+      "dir": "@PROJ@",
+      "created": "2026-10-26T12:51:14.621115401-07:00",
+      "used": "2026-10-26T12:51:14.621958348-07:00",
+      "windows": [
+        {
+          "focused": 3,
+          "layout": {
+            "direction": "horizontal",
+            "ratio": 5000,
+            "first": {
+              "pane": 1
+            },
+            "second": {
+              "direction": "vertical",
+              "ratio": 5000,
+              "first": {
+                "pane": 2
+              },
+              "second": {
+                "pane": 3
+              }
+            }
+          }
+        },
+        {
+          "focused": 4,
+          "layout": {
+            "pane": 4
+          }
+        }
+      ],
+      "active": 1,
+      "panes": [
+        {
+          "id": 1,
+          "dir": "@PROJ@"
+        },
+        {
+          "id": 2,
+          "dir": "@PROJ@"
+        },
+        {
+          "id": 3,
+          "dir": "@PROJ@/sub"
+        },
+        {
+          "id": 4,
+          "dir": "@PROJ@/sub"
+        }
+      ]
+    }
+  ]
+}
