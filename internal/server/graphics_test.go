@@ -203,9 +203,8 @@ func TestFramesBlankPlaceholdersWithoutAnImage(t *testing.T) {
 
 func TestEvictedImagesDrawBlank(t *testing.T) {
 	size := int64(len(testImage(t, 0)))
-	store := graphics.NewStore(graphics.Limits{Pane: size + size/2, Total: size + size/2})
+	useImageStore(t, graphics.NewStore(graphics.Limits{Pane: size + size/2, Total: size + size/2}))
 	p, _ := scriptedPane(t, "sleep 30")
-	p.trackGraphics(store)
 	p.apply([]byte(pngAPC(t, "a=T,U=1,f=100,i=1,c=1,r=1,q=2", 1) + "\x1b[38;2;0;0;1m" + placeholderCell + "\x1b[0m"))
 	if f, _ := p.frame(0); firstRow(f)[0].Text != placeholderCell {
 		t.Fatal("image not shown before eviction")
