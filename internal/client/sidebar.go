@@ -37,8 +37,9 @@ type sidebarRow struct {
 	session  protocol.Session
 	pane     int
 	activity protocol.PaneActivity
-	nested   bool   // a session shown under a header
-	branch   string // the nested session's checked-out branch
+	nested   bool   // a worktree session, drawn on a tree branch
+	last     bool   // the last worktree of its group, which closes the tree
+	branch   string // the session's checked-out branch, for sessions in a project group
 }
 
 func (r sidebarRow) isHeader() bool { return r.header != "" }
@@ -91,7 +92,7 @@ func sidebarOrder(sessions []protocol.Session) []protocol.Session {
 func (u *ui) sidebarRows() (rows []sidebarRow, sessions int) {
 	lines := groupLines(creationOrder(u.sessions), resolveRepo)
 	for _, l := range lines {
-		rows = append(rows, sidebarRow{header: l.header, session: l.session, nested: l.nested, branch: l.branch})
+		rows = append(rows, sidebarRow{header: l.header, session: l.session, nested: l.nested, last: l.last, branch: l.branch})
 	}
 	for _, l := range lines {
 		for _, a := range l.session.Activity {
@@ -530,7 +531,9 @@ func (u *ui) putSidebarLine(y, width int, left string, style tcell.Style, right 
 
 func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	if row.isHeader() {
-		u.putSidebarLine(y, width, " "+row.header, sidebarMutedStyle.Bold(true), "", sidebarMutedStyle)
+		// No session of its own: a hyphen where session icons go.
+		u.putSidebarLine(y, width, "   "+row.header, sidebarMutedStyle.Bold(true), "", sidebarMutedStyle)
+		u.screen.PutStrStyled(1, y, "-", sidebarMutedStyle)
 		return
 	}
 	icon, iconStyle := sessionRollup(row.session)
@@ -543,7 +546,7 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	}
 	indent := "   "
 	if row.nested {
-		indent = "     "
+		indent = "      " // room for the tree branch
 	}
 	right, rightStyle := "", style
 	if row.session.Restored {
@@ -560,11 +563,18 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	}
 	u.putSidebarLine(y, width, indent+row.session.Name, style, right, rightStyle)
 	if icon != "" {
-		iconX := 1
-		if row.nested {
-			iconX = 3
+		u.screen.PutStrStyled(1, y, u.sidebarGlyph(icon), iconStyle)
+	}
+	if row.nested {
+		branch := "├"
+		if row.last {
+			branch = "└"
 		}
-		u.screen.PutStrStyled(iconX, y, u.sidebarGlyph(icon), iconStyle)
+		branchStyle := sidebarMutedStyle
+		if selected {
+			branchStyle = sidebarSelectedStyle
+		}
+		u.screen.PutStrStyled(3, y, u.sidebarGlyph(branch)+u.sidebarGlyph("─"), branchStyle)
 	}
 }
 
@@ -587,4 +597,4 @@ func (u *ui) drawAgentRow(row sidebarRow, y, width int, selected bool) {
 	u.putSidebarLine(y+1, width, "   "+row.session.Name, sessionStyle, "", sessionStyle)
 }
 
-var sidebarASCII = map[string]string{"●": "*", "○": "o", "─": "-"}
+var sidebarASCII = map[string]string{"●": "*", "○": "o", "─": "-", "├": "|", "└": "`"}

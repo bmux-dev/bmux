@@ -7,7 +7,8 @@ import "github.com/josephferrero/bmux/internal/protocol"
 type sessionLine struct {
 	header  string           // project name; set only on header lines
 	session protocol.Session // set on session lines
-	nested  bool             // a worktree session, indented under its project
+	nested  bool             // a worktree session, drawn on a branch of the tree under its project
+	last    bool             // the last worktree session of its group, which closes the tree
 	branch  string           // checked-out branch, for sessions in a project group
 	index   int              // position among session lines, -1 on headers
 }
@@ -65,6 +66,7 @@ func groupLines(sessions []protocol.Session, info func(dir string) repoInfo) []s
 				add(sessionLine{session: member, nested: true, branch: infos[j].Branch})
 			}
 		}
+		lines[len(lines)-1].last = true // a group always has a worktree session
 	}
 	return lines
 }
