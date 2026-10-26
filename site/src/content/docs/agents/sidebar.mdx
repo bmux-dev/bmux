@@ -9,10 +9,16 @@ import Screenshot from '../../../components/Screenshot.astro';
 
 The sidebar runs down the left side of the attached view, on the bar
 background. Its top section lists every session in creation order, marked
-with the most urgent state inside it. Below a divider, the **Agents** section
+with the most urgent state inside it, or a `-` when no agent has anything to
+show. Below a divider, the **Agents** section
 lists every agent in every session, each with its state and session name, plus
 any other pane waiting on you. Terminals narrower than 80 columns hide it;
 Ctrl-a b hides or shows it at any width that fits.
+
+Sessions in [git worktrees](/bmux/guides/sessions/#git-worktrees) sit under
+their main repository's own session on a tree (`├─`, `└─`), with the branch
+beside each name. A repository with no session of its own gets an unmarked
+header instead, which j/k skip.
 
 <Screenshot name="workspace" alt="bmux with the sidebar listing sessions and agents: claude blocked, codex working, opencode idle" />
 

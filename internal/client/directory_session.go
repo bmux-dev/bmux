@@ -73,13 +73,20 @@ func createDirectorySession(socket, cwd string, sessions []protocol.Session) (st
 	}
 }
 
+// directorySessionBase names a session after its directory. A worktree whose
+// folder name doesn't tell it from its siblings (every <ticket>/repo) is
+// named after its project and the folder holding it instead.
 func directorySessionBase(cwd string) string {
+	name := filepath.Base(filepath.Clean(cwd))
+	if worktree := worktreeSessionName(cwd); worktree != "" {
+		name = worktree
+	}
 	base := strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("._-", r) {
 			return r
 		}
 		return '-'
-	}, filepath.Base(filepath.Clean(cwd)))
+	}, name)
 	base = strings.Trim(base, "-")
 	if base == "" || base == "." || base == ".." {
 		return "session"
