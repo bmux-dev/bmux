@@ -408,6 +408,13 @@ func (e *Emulator) registerDefaultEscHandlers() {
 		return true
 	})
 
+	e.RegisterEscHandler('E', func() bool {
+		// Next Line [ansi.NEL]
+		e.index()
+		e.carriageReturn()
+		return true
+	})
+
 	e.RegisterEscHandler('H', func() bool {
 		// Horizontal Tab Set [ansi.HTS]
 		e.horizontalTabSet()
@@ -513,8 +520,8 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	e.RegisterCsiHandler('G', func(params ansi.Params) bool {
 		// Cursor Horizontal Absolute [ansi.CHA]
 		n, _, _ := params.Param(0, 1)
-		_, y := e.scr.CursorPosition()
-		e.setCursor(n-1, y)
+		_, y := e.reportedCursorPosition()
+		e.setCursorPosition(n-1, y)
 		return true
 	})
 
@@ -554,15 +561,12 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 			e.scr.FillArea(e.scr.blankCell(), rect1)
 			e.scr.FillArea(e.scr.blankCell(), rect2)
 		case 1: // Erase screen above (including cursor)
-			rect := uv.Rect(0, 0, width, y+1)
-			e.scr.FillArea(e.scr.blankCell(), rect)
+			e.scr.FillArea(e.scr.blankCell(), uv.Rect(0, 0, width, y))
+			e.scr.FillArea(e.scr.blankCell(), uv.Rect(0, y, x+1, 1))
 		case 2: // erase screen
 			// Save screen content to scrollback before clearing
 			e.scr.ClearWithScrollback()
-		case 3: // erase display (including scrollback in some terminals)
-			// For ED 3, we clear the screen but also clear scrollback
-			// This matches xterm behavior where ESC[3J clears scrollback
-			e.scr.Clear()
+		case 3: // Erase saved lines: xterm clears scrollback and leaves the screen
 			if sb := e.scr.Scrollback(); sb != nil {
 				sb.Clear()
 			}
@@ -664,18 +668,16 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	e.RegisterCsiHandler('`', func(params ansi.Params) bool {
 		// Horizontal Position Absolute [ansi.HPA]
 		n, _, _ := params.Param(0, 1)
-		width := e.Width()
-		_, y := e.scr.CursorPosition()
-		e.setCursorPosition(min(width-1, n-1), y)
+		_, y := e.reportedCursorPosition()
+		e.setCursorPosition(n-1, y)
 		return true
 	})
 
 	e.RegisterCsiHandler('a', func(params ansi.Params) bool {
 		// Horizontal Position Relative [ansi.HPR]
 		n, _, _ := params.Param(0, 1)
-		width := e.Width()
-		x, y := e.scr.CursorPosition()
-		e.setCursorPosition(min(width-1, x+n), y)
+		x, y := e.reportedCursorPosition()
+		e.setCursorPosition(x+n, y)
 		return true
 	})
 
@@ -722,29 +724,24 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	e.RegisterCsiHandler('d', func(params ansi.Params) bool {
 		// Vertical Position Absolute [ansi.VPA]
 		n, _, _ := params.Param(0, 1)
-		height := e.Height()
-		x, _ := e.scr.CursorPosition()
-		e.setCursorPosition(x, min(height-1, n-1))
+		x, _ := e.reportedCursorPosition()
+		e.setCursorPosition(x, n-1)
 		return true
 	})
 
 	e.RegisterCsiHandler('e', func(params ansi.Params) bool {
 		// Vertical Position Relative [ansi.VPR]
 		n, _, _ := params.Param(0, 1)
-		height := e.Height()
-		x, y := e.scr.CursorPosition()
-		e.setCursorPosition(x, min(height-1, y+n))
+		x, y := e.reportedCursorPosition()
+		e.setCursorPosition(x, y+n)
 		return true
 	})
 
 	e.RegisterCsiHandler('f', func(params ansi.Params) bool {
-		// Horizontal and Vertical Position [ansi.HVP]
-		width, height := e.Width(), e.Height()
+		// Horizontal and Vertical Position [ansi.HVP], the same as CUP
 		row, _, _ := params.Param(0, 1)
 		col, _, _ := params.Param(1, 1)
-		y := min(height-1, row-1)
-		x := min(width-1, col-1)
-		e.setCursor(x, y)
+		e.setCursorPosition(max(col, 1)-1, max(row, 1)-1)
 		return true
 	})
 
@@ -807,7 +804,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 			// See: https://vt100.net/docs/vt510-rm/DSR-OS.html
 			_, _ = io.WriteString(e.pw, ansi.DeviceStatusReport(ansi.DECStatusReport(0)))
 		case 6: // Cursor Position Report [ansi.CPR]
-			x, y := e.scr.CursorPosition()
+			x, y := e.reportedCursorPosition()
 			_, _ = io.WriteString(e.pw, ansi.CursorPositionReport(y+1, x+1))
 		default:
 			return false
@@ -824,7 +821,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 
 		switch n {
 		case 6: // Extended Cursor Position Report [ansi.DECXCPR]
-			x, y := e.scr.CursorPosition()
+			x, y := e.reportedCursorPosition()
 			_, _ = io.WriteString(e.pw, ansi.ExtendedCursorPositionReport(y+1, x+1, 0)) // We don't support page numbers //nolint:errcheck
 		default:
 			return false
@@ -932,6 +929,12 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 			e.scr.SaveCursor()
 		}
 
+		return true
+	})
+
+	e.RegisterCsiHandler('u', func(params ansi.Params) bool {
+		// Restore Current Cursor Position [ansi.SCORC]
+		e.scr.RestoreCursor()
 		return true
 	})
 }

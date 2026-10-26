@@ -189,13 +189,13 @@ var cases = []struct {
 			"\x1b[?6h",  // enable origin mode
 			"\x1b[?69h", // enable left/right margin mode
 			"\x1b[2;5s", // set left/right margin
-			"\x1b[4G",   // move to column 4
+			"\x1b[4G",   // column 4 of the margins, as in xterm: screen column 5
 			"A",
 			"\x1b[1G",
 			"\r",
 			"X",
 		},
-		want: []string{" X A      "},
+		want: []string{" X  A     "},
 		pos:  uv.Pos(2, 0),
 	},
 
@@ -1473,7 +1473,7 @@ var cases = []struct {
 		},
 		want: []string{
 			"        ",
-			"        ",
+			"  F     ", // erases up to and including the cursor, on E
 			"GHI     ",
 		},
 		pos: uv.Pos(1, 1),

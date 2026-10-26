@@ -34,8 +34,12 @@ func (e *Emulator) handleMode(params ansi.Params, set, isAnsi bool) {
 	}
 }
 
-// setAltScreenMode sets the alternate screen mode.
-func (e *Emulator) setAltScreenMode(on bool) {
+// modeAltScreenLegacy is DECSET 47, the original alternate screen switch.
+const modeAltScreenLegacy = ansi.DECMode(47)
+
+// setAltScreenMode switches to or from the alternate screen, erasing it on
+// the way in when clear is set (1047 and 1049, but not 47).
+func (e *Emulator) setAltScreenMode(on, clear bool) {
 	if (on && e.scr == &e.scrs[1]) || (!on && e.scr == &e.scrs[0]) {
 		// Already in alternate screen mode, or normal screen, do nothing.
 		return
@@ -44,9 +48,10 @@ func (e *Emulator) setAltScreenMode(on bool) {
 		e.kitty[1] = kittyKeyboard{}
 		e.scr = &e.scrs[1]
 		e.scrs[1].cur = e.scrs[0].cur
-		e.scr.Clear()
-		e.scr.ClearTouched()
-		e.setCursor(0, 0)
+		if clear {
+			e.scr.Clear()
+			e.scr.ClearTouched()
+		}
 	} else {
 		e.scr = &e.scrs[0]
 	}
@@ -75,22 +80,37 @@ func (e *Emulator) setMode(mode ansi.Mode, setting ansi.ModeSetting) {
 	switch mode {
 	case ansi.ModeTextCursorEnable:
 		e.scr.setCursorHidden(!setting.IsSet())
-	case ansi.ModeAltScreen:
-		e.setAltScreenMode(setting.IsSet())
+	case ansi.ModeInsertReplace:
+		e.insert = setting.IsSet()
+	case ansi.ModeOrigin:
+		// Home: the margins' top-left when set, the screen's when reset.
+		e.setCursorPosition(0, 0)
+	case ansi.ModeLeftRightMargin:
+		if !setting.IsSet() {
+			e.scr.setHorizontalMargins(0, e.Width())
+		}
+	case ansi.ModeAltScreen, modeAltScreenLegacy:
+		// Like xterm, 47 and 1047 keep the cursor where it is both ways.
+		pos := e.scr.cur.Position
+		e.setAltScreenMode(setting.IsSet(), mode == ansi.ModeAltScreen)
+		e.scr.setCursor(pos.X, pos.Y, false)
 	case ansi.ModeSaveCursor:
 		if setting.IsSet() {
 			e.saveCursor()
 		} else {
 			e.restoreCursor()
 		}
-	case ansi.ModeAltScreenSaveCursor: // Alternate Screen Save Cursor (1047 & 1048)
-		// Save primary screen cursor position
-		// Switch to alternate screen
-		// Doesn't support scrollback
+	case ansi.ModeAltScreenSaveCursor:
+		// Save the main screen's cursor, then enter a blank alternate screen
+		// with the cursor at home. Leaving returns to the main screen's cursor.
+		entering := setting.IsSet() && !e.IsAltScreen()
 		if setting.IsSet() {
 			e.saveCursor()
 		}
-		e.setAltScreenMode(setting.IsSet())
+		e.setAltScreenMode(setting.IsSet(), true)
+		if entering {
+			e.setCursor(0, 0)
+		}
 	case ansi.ModeInBandResize:
 		if setting.IsSet() {
 			pw, ph := e.pixelSize()
