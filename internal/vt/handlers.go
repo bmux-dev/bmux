@@ -845,6 +845,18 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 		return true
 	})
 
+	e.RegisterCsiHandler(ansi.Command(0, '*', 'y'), func(params ansi.Params) bool {
+		// Request Checksum of Rectangular Area [DECRQCRA]; see csi_checksum.go.
+		e.requestChecksum(params)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command(0, '!', 'p'), func(params ansi.Params) bool {
+		// Soft Terminal Reset [ansi.DECSTR]
+		e.softReset()
+		return true
+	})
+
 	e.RegisterCsiHandler(ansi.Command(0, ' ', 'q'), func(params ansi.Params) bool {
 		// Set Cursor Style [ansi.DECSCUSR]
 		n := 1
