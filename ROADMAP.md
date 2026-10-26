@@ -8,7 +8,7 @@ with everything built in and no plugin manager.
 | | Version | Theme |
 | --- | --- | --- |
 | **Shipped** | v0.7.0 | Theme presets, a reworked settings page, notices in a box ([already built](#already-built)) |
-| **Now** | [v0.8](#v08-alerts-and-hardening) | Activity alerts, and everything 1.0 needs |
+| **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
 
@@ -121,16 +121,14 @@ Shipped in v0.6.0:
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
 | Images in panes | L | Done: the Kitty graphics protocol with Unicode placeholders, stored per pane so images survive scrolling, splits, windows and reattaching; `ui.graphics` ([#47](https://github.com/bmux-dev/bmux/issues/47)) |
 
-## v0.8: alerts and hardening
+## v0.8: hardening
 
-**Goal:** the last feature release before 1.0, so that 1.0 itself changes nothing.
+**Goal:** everything 1.0 needs, so that 1.0 itself changes nothing.
 **Done when:** everything below is in place and nothing in a release breaks
 existing sessions without warning.
 
 | Item | Size | Notes |
 | --- | --- | --- |
-| Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
-| Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
 | Compatibility promise | M | Done: save files, configs and commands from every release are tested against today's code (`testdata/releases`, recorded per release); mismatches say to run `bmux restart` ([#112](https://github.com/bmux-dev/bmux/issues/112), [#114](https://github.com/bmux-dev/bmux/issues/114)). See [Compatibility](https://bmux-dev.github.io/bmux/reference/compatibility/) |
 | Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
