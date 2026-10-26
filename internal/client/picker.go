@@ -242,7 +242,7 @@ func (u *ui) drawPicker(w, h int) {
 			}
 			prefix = "  " + branch + " " + prefix
 		}
-		if l.branch != "" {
+		if u.settings.UI.ShowBranch && l.branch != "" {
 			label += " [" + l.branch + "]"
 		}
 		suffix := fmt.Sprintf(": %d panes%s", s.Panes, attachment)

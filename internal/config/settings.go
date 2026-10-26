@@ -114,6 +114,7 @@ var SettingTabs = []SettingTab{
 			boolSetting("ui.powerline-ascii", "ASCII separators", "Plain separators instead of powerline glyphs", func(c *Config) *bool { return &c.UI.PowerlineASCII }),
 			boolSetting("ui.terminal-padding", "Terminal padding", "Keep the outer terminal's padding", func(c *Config) *bool { return &c.UI.TerminalPadding }),
 			boolSetting("ui.set-title", "Set window title", "Name the terminal window after the session and pane", func(c *Config) *bool { return &c.UI.SetTitle }),
+			boolSetting("ui.show-branch", "Show branch", "Branch beside worktree sessions in the sidebar, picker and project list", func(c *Config) *bool { return &c.UI.ShowBranch }),
 			enumSetting("ui.icons", "Icons", "Tab icons: auto uses Nerd Font icons unless ASCII separators are on; plain needs no special font", []string{"auto", "nerd", "plain"}, false, func(c *Config) *string { return &c.UI.Icons }),
 			enumSetting("ui.graphics", "Images", "Show images programs draw: auto detects Kitty graphics, on assumes it, off never", []string{"auto", "on", "off"}, false, func(c *Config) *string { return &c.UI.Graphics }),
 		),

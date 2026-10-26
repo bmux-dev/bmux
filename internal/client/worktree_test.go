@@ -161,6 +161,7 @@ func TestGroupLinesPutsWorktreesUnderTheirProject(t *testing.T) {
 func TestSidebarGroupsWorktreeSessionsAndNavigationSkipsHeaders(t *testing.T) {
 	f := newWorktreeFixture(t)
 	u, _ := sidebarUI(t)
+	u.settings.UI.ShowBranch = true
 	now := time.Now()
 	u.sessions = []protocol.Session{
 		{Name: "two", Dir: f.two, Created: now.Add(3 * time.Second)},
@@ -226,6 +227,7 @@ func TestSidebarGroupsWorktreeSessionsAndNavigationSkipsHeaders(t *testing.T) {
 func TestPickerGroupsWorktreeSessionsUnlessSearching(t *testing.T) {
 	f := newWorktreeFixture(t)
 	u := pickerUI(t)
+	u.settings.UI.ShowBranch = true
 	u.sessions = []protocol.Session{
 		{Name: "scratch", Dir: f.home},
 		{Name: "two", Dir: f.two},
@@ -349,5 +351,30 @@ func TestMainSessionLeadsItsWorktreesInsteadOfAHeader(t *testing.T) {
 	u.moveSidebar(-1)
 	if u.sidebarSelected.name != "stl" {
 		t.Fatalf("up to the repository: %+v", u.sidebarSelected)
+	}
+}
+
+func TestShowBranchSettingControlsEveryListThatShowsBranches(t *testing.T) {
+	f := newWorktreeFixture(t)
+	sessions := []protocol.Session{{Name: "one", Dir: f.one, Created: time.Now()}}
+	projects := []project{{dir: "/p/stl", branch: "main"}, {dir: "/p/ws/one", nested: true, last: true, branch: "feat/one"}}
+	for _, show := range []bool{true, false} {
+		sidebar, _ := sidebarUI(t)
+		sidebar.settings.UI.ShowBranch = show
+		sidebar.sessions = sessions
+		sidebar.draw()
+		picker := pickerUI(t)
+		picker.settings.UI.ShowBranch = show
+		picker.sessions = sessions
+		picker.drawPicker(100, 24)
+		popup, _ := sidebarUI(t)
+		popup.settings.UI.ShowBranch = show
+		popup.projects = projectPicker{open: true, list: projects}
+		popup.drawProjects(100, 20)
+		for name, screen := range map[string]string{"sidebar": pickerScreenText(sidebar), "picker": pickerScreenText(picker), "projects": pickerScreenText(popup)} {
+			if has := strings.Contains(screen, "feat/"); has != show {
+				t.Errorf("show-branch %v: %s shows a branch = %v:\n%s", show, name, has, screen)
+			}
+		}
 	}
 }

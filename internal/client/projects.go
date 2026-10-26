@@ -526,7 +526,7 @@ func (u *ui) drawProjectList(ix, iy, iw, ih int) {
 				}
 				label = "  " + branch + " " + projectLabel(p.dir)
 			}
-			if p.branch != "" {
+			if u.settings.UI.ShowBranch && p.branch != "" {
 				label += "  [" + p.branch + "]"
 			}
 		}

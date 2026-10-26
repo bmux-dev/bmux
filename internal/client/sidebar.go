@@ -553,7 +553,7 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 		if !selected {
 			rightStyle = sidebarMutedStyle
 		}
-	} else if room := width - displayWidth(indent+row.session.Name) - 2; row.branch != "" && room >= 4 {
+	} else if room := width - displayWidth(indent+row.session.Name) - 2; u.settings.UI.ShowBranch && row.branch != "" && room >= 4 {
 		// The branch is a hint: it takes what the full name leaves, or nothing.
 		right = strings.TrimSpace(fit(row.branch, room))
 		if !selected {
