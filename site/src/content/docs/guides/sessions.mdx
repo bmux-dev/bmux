@@ -45,7 +45,7 @@ Sessions started in a [git worktree](https://git-scm.com/docs/git-worktree)
 are shown under their main repository, in the picker and in the
 [sidebar](/bmux/agents/sidebar/). The repository's own session leads the group
 and the worktree sessions hang off it on a tree (`├─`, `└─`), each with its
-branch. When the repository has no session, a header named after it stands in;
+branch (`ui.show-branch = false` hides the branches). When the repository has no session, a header named after it stands in;
 it isn't a session, so it can't be selected. A worktree can
 live anywhere, for example `~/projects/stl/workspaces/<ticket>/repo`: bmux
 reads the link from the worktree's `.git` file, so there is nothing to

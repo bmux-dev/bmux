@@ -45,6 +45,9 @@ type UI struct {
 	PowerlineASCII  bool   `toml:"powerline-ascii"`
 	TerminalPadding bool   `toml:"terminal-padding"`
 	SetTitle        bool   `toml:"set-title"`
+	// ShowBranch writes a worktree's branch beside its session in the sidebar
+	// and the session picker, and beside its folder in the new-session popup.
+	ShowBranch bool `toml:"show-branch"`
 	// ThemePanes draws cells that use the terminal's default colors in a named
 	// theme's foreground and background. dark and light never do.
 	ThemePanes bool `toml:"theme-panes"`
@@ -149,7 +152,7 @@ func Default() Config {
 		Theme:      "dark",
 		Prefix:     "C-a",
 		Onboarding: true,
-		UI:         UI{Accent: "theme", SetTitle: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto", Icons: "auto", NoticePosition: "top-right"},
+		UI:         UI{Accent: "theme", SetTitle: true, ShowBranch: true, ThemePanes: true, PaneBackground: "theme", Graphics: "auto", Icons: "auto", NoticePosition: "top-right"},
 		Sidebar:    Sidebar{Show: true, Width: 24, MinScreenWidth: 80},
 		Sound:      Sound{Enabled: true},
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
@@ -424,6 +427,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 # powerline-ascii = false   # plain separators instead of powerline glyphs
 # terminal-padding = false  # keep the outer terminal's padding
 # set-title = true          # name the terminal window after the session and pane
+# show-branch = true        # show a worktree's branch beside its session and folder
 # theme-panes = true        # panes use a named theme's background and foreground
                             # where programs set none; false keeps the terminal's
 # pane-background = "theme"  # "terminal" keeps your terminal's own background in panes
