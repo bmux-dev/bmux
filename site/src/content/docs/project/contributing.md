@@ -32,6 +32,17 @@ File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
 commit to `main`: work on a `feat/`, `fix/` or `docs/` branch and open a pull
 request that closes its issues with `Fixes #N`.
 
+## Conformance
+
+[esctest](https://github.com/ThomasDickey/esctest2) checks how a terminal
+answers several hundred escape sequences. `scripts/esctest.sh` runs it inside a
+bmux pane, so it tests bmux's emulator, and prints the summary; each failure's
+details go to `esctest.log`. Pass a regular expression to run some tests, for
+example `scripts/esctest.sh 'CUUTests|EDTests'`. It needs Python 3 and tmux.
+Compare the summary before and after an emulator change: the pass count
+shouldn't drop. Many failures are xterm features bmux doesn't implement, such
+as window operations and palette changes.
+
 ## Releasing
 
 A release is a tag on `main`. Pushing it runs CI and then GoReleaser
