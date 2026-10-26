@@ -531,9 +531,8 @@ func (u *ui) putSidebarLine(y, width int, left string, style tcell.Style, right 
 
 func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	if row.isHeader() {
-		// No session of its own: a hyphen where session icons go.
+		// Not a session, so no marker; the name lines up with the session names.
 		u.putSidebarLine(y, width, "   "+row.header, sidebarMutedStyle.Bold(true), "", sidebarMutedStyle)
-		u.screen.PutStrStyled(1, y, "-", sidebarMutedStyle)
 		return
 	}
 	icon, iconStyle := sessionRollup(row.session)
@@ -562,8 +561,16 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 		}
 	}
 	u.putSidebarLine(y, width, indent+row.session.Name, style, right, rightStyle)
-	if icon != "" {
+	switch {
+	case icon != "":
 		u.screen.PutStrStyled(1, y, u.sidebarGlyph(icon), iconStyle)
+	case !row.nested:
+		// A top-level session with no agent state to show: a hyphen keeps its marker column.
+		markerStyle := sidebarMutedStyle
+		if selected {
+			markerStyle = sidebarSelectedStyle
+		}
+		u.screen.PutStrStyled(1, y, "-", markerStyle)
 	}
 	if row.nested {
 		branch := "├"

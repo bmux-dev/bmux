@@ -208,10 +208,18 @@ func TestSidebarGroupsWorktreeSessionsAndNavigationSkipsHeaders(t *testing.T) {
 	}
 	u.draw()
 	screen := pickerScreenText(u)
-	for _, want := range []string{" - stl", "├─ one", "└─ two", "feat/one"} {
-		if !strings.Contains(screen, want) {
-			t.Fatalf("sidebar missing %q:\n%s", want, screen)
+	for row, want := range map[int]string{
+		1: "   stl ",   // a header isn't a session: no marker, name under the names
+		2: "   ├─ one", // worktree sessions hang off it
+		3: "   └─ two",
+		4: " - scratch", // a standalone session with no agent state shows a hyphen
+	} {
+		if line := pickerScreenLine(u, paneOriginY+row); !strings.HasPrefix(line, want) {
+			t.Fatalf("sidebar row %d = %q, want prefix %q:\n%s", row, line, want, screen)
 		}
+	}
+	if !strings.Contains(screen, "feat/one") {
+		t.Fatalf("sidebar missing the branch:\n%s", screen)
 	}
 }
 
@@ -234,7 +242,7 @@ func TestPickerGroupsWorktreeSessionsUnlessSearching(t *testing.T) {
 	u.chosen = 2
 	u.drawPicker(100, 24)
 	screen := pickerScreenText(u)
-	if !strings.Contains(screen, "- stl") || !strings.Contains(screen, "├─ (1) + two [feat/two]") || !strings.Contains(screen, "└─ (2) + one [feat/one]") {
+	if !strings.Contains(screen, "      stl") || !strings.Contains(screen, "├─ (1) + two [feat/two]") || !strings.Contains(screen, "└─ (2) + one [feat/one]") {
 		t.Fatalf("picker missing header, numbering or branch:\n%s", screen)
 	}
 	// A click on the header chooses nothing; a click on a session chooses it.
