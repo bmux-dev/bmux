@@ -1,0 +1,117 @@
+# ~/.config/bmux/config.toml
+# Uncomment only what you change. Reload with Ctrl-a r or bmux reload.
+
+# theme = "dark"            # "dark" or "light"
+# prefix = "C-a"            # any C-letter except C-h/j/k/l, C-i, C-m
+# onboarding = true         # welcome screen on the next attach; bmux sets false
+
+[ui]
+# accent = "cyan"           # cyan, amber, green or "#RRGGBB"
+# powerline-ascii = false   # plain separators instead of powerline glyphs
+# terminal-padding = false  # keep the outer terminal's padding
+# set-title = true          # name the terminal window after the session and pane
+
+[ui.agent-colors]           # "#RRGGBB"; empty keeps herdr's palette
+# working = ""
+# waiting = ""
+# blocked = ""
+# idle = ""
+
+[sidebar]
+# show = true               # Ctrl-a b toggles it
+# width = 24                # columns, 12-60
+# min-screen-width = 80     # hide it on narrower terminals
+
+[sound]
+# enabled = true            # when a background agent is ready or blocked
+# ready = ""                # sound files; empty uses the system sounds
+# blocked = ""
+
+[agents]
+# detect = true             # recognize agents running in panes
+# extra = []                # more program names, e.g. ["myagent"]
+# working-after = "2s"      # drawing this long = working
+# waiting-after = "2s"      # quiet this long = waiting
+
+[restore]
+# enabled = true            # save sessions and restore them after restarts
+
+[restore.resume]            # per-agent resume command; [] = plain shell
+# claude = ["claude", "--continue"]
+# codex = ["codex", "resume", "--last"]
+
+[projects]                  # folders the new-session popup lists, Ctrl-a n and bmux project
+# roots = ["~/code", "~/src", "~/projects", "~/dev"]  # searched for git repositories
+# depth = 3                 # how many levels down each root to look
+# zoxide = true             # also list zoxide's directories, when installed
+# start-dir = ""            # where the Create tab starts, e.g. "~"; empty = the current directory
+
+[scrollback]
+# lines = 10000             # history kept per pane, 100-200000; bmux reload applies it
+
+[update]
+# check = true              # look for a new release once a day; bmux update installs it
+
+# Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
+# Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:
+# navigate-left/down/up/right (Vim/Neovim-aware), focus-left/down/up/right,
+# next-pane, last-pane, resize-left/down/up/right, split-right, split-down,
+# zoom, close-pane, swap-pane-previous, swap-pane-next, rotate-window,
+# break-pane, join-pane, next-layout, layout-even-horizontal,
+# layout-even-vertical, layout-main-horizontal, layout-main-vertical,
+# layout-tiled, equalize-layout, new-window, close-window, rename-window,
+# next-window, previous-window, last-window, select-window-1 to
+# select-window-9, scrollback, search-scrollback, sessions, new-session, last-session, previous-session,
+# next-session, detach, copy, scroll-up, scroll-down, toggle-sidebar,
+# reload-config, help, integrations, settings, send-prefix.
+
+[keys]
+# pass-through = []         # programs that get Ctrl-h/j/k/l like Vim, e.g. ["fzf"]
+
+[keys.root]                 # without the prefix; unbound keys reach the app
+# "C-h" = "navigate-left"   # "none" gives Ctrl-h to the app
+# "C-j" = "navigate-down"
+# "C-k" = "navigate-up"
+# "C-l" = "navigate-right"  # "none" lets Ctrl-l clear the shell
+# "S-pageup" = "scroll-up"
+# "S-pagedown" = "scroll-down"
+
+[keys.prefix]               # after the prefix; the prefix twice sends it
+# "|" = "split-right"
+# "minus" = "split-down"
+# "x" = "close-pane"
+# "m" = "zoom"
+# "o" = "next-pane"
+# ";" = "last-pane"
+# "{" = "swap-pane-previous"
+# "}" = "swap-pane-next"
+# "C-o" = "rotate-window"
+# "!" = "break-pane"        # to a new window
+# "@" = "join-pane"         # into the last window, beside its focused pane
+# "space" = "next-layout"
+# "A-1" = "layout-even-horizontal"  # A-2 even-vertical, A-3 main-horizontal,
+#                                   # A-4 main-vertical, A-5 tiled
+# "E" = "equalize-layout"
+# "left" = "focus-left"     # and down, up, right
+# "h" = "resize-left"       # j down, k up, l right; repeat without the prefix
+# "s" = "sessions"
+# "n" = "new-session"       # find a project or create a session
+# "p" = "last-session"
+# "(" = "previous-session"
+# ")" = "next-session"
+# "c" = "new-window"        # in the focused pane's directory
+# "&" = "close-window"      # asks first if a program is running
+# "R" = "rename-window"
+# "]" = "next-window"
+# "[" = "previous-window"
+# "tab" = "last-window"
+# "1" = "select-window-1"   # through "9"
+# "d" = "detach"
+# "y" = "copy"
+# "v" = "scrollback"        # keyboard view of history: move, select, copy
+# "/" = "search-scrollback" # search history, newest first
+# "b" = "toggle-sidebar"
+# "r" = "reload-config"
+# "?" = "help"
+# "i" = "integrations"
+# "," = "settings"          # change settings; saved to this file

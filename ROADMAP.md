@@ -131,7 +131,7 @@ existing sessions without warning.
 | --- | --- | --- |
 | Activity alerts | M | Like tmux's `monitor-activity`: mark a background pane and its tab when it prints |
 | Silence alerts | S | Like `monitor-silence`: mark it when it's been quiet for N seconds, e.g. a build that finished. Agents already get this as "waiting" |
-| Compatibility promise | M | Stable CLI, config format and snapshot format, pinned by tests. Protocol changes never silently cost sessions (builds on `bmux restart`) |
+| Compatibility promise | M | Done: save files, configs and commands from every release are tested against today's code (`testdata/releases`, recorded per release); mismatches say to run `bmux restart` ([#112](https://github.com/bmux-dev/bmux/issues/112), [#114](https://github.com/bmux-dev/bmux/issues/114)). See [Compatibility](https://bmux-dev.github.io/bmux/reference/compatibility/) |
 | Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
 | Distribution | M | Homebrew tap, signed and notarized macOS binaries, release signatures |

@@ -140,6 +140,19 @@ curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | BMU
 It should install the new version. From the previous release, `bmux update --check`
 should offer it.
 
+### 7. Record its fixtures
+
+The [compatibility](/bmux/reference/compatibility/) tests keep every release's
+save file, config and command list working. Record the new one's, in a pull
+request like any other change (it needs `tmux`):
+
+```sh
+git switch -c "test/fixtures-$V" origin/main
+scripts/compat-fixtures.sh "$V"
+go test ./...
+git add "testdata/releases/$V" && git commit -m "test: compatibility fixtures for $V"
+```
+
 ### When something fails
 
 - **Before publishing** (CI fails, GoReleaser fails, the draft looks wrong):

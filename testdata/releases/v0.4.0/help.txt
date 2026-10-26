@@ -1,0 +1,78 @@
+bmux — persistent workspaces, ordinary terminal interaction.
+
+Agents: run bmux guide to learn how to read, drive and watch panes.
+
+Usage:
+  bmux                                   Create and attach a fresh session in this directory (bmux attach returns to one)
+  bmux new [--dir PATH] [--detach] NAME  Create a shell session
+  bmux attach [NAME]                     Attach by name, or to the most recently used session
+  bmux project [DIR]                     Open DIR's session, creating it if needed; without DIR, pick a project
+  bmux list                              List sessions
+  bmux rename OLD NEW                    Rename a session
+  bmux kill NAME                         Terminate a session and all its panes
+  bmux focus left|right|up|down          Move pane focus (for editors at an edge)
+  bmux agents [--json]                   List agent panes as SESSION:PANE targets, with state and seq
+  bmux capture [--json] TARGET           Print a pane's visible text; TARGET is SESSION or SESSION:PANE
+  bmux send TARGET [--if-seq N] (--key KEY | --text TEXT)...
+                                         Type into a pane: keys like enter, down or C-c, and text
+  bmux wait-agent [--state S,...] [--since SEQ] [--timeout D | --notify SESSION:PANE] [TARGET...]
+                                         Wait until an agent pane is blocked or idle; print it, or with --notify type it into a supervising agent
+  bmux agent STATE [NAME] [-- CMD...]    Report this pane's agent: working, blocked, idle, clear
+  bmux integration status|install|uninstall [AGENT]
+                                         Make claude, codex, omp, opencode and pi report exact state
+  bmux layout save [SESSION] | trust [DIR]
+                                         Save a session's windows as its folder's .bmux.toml, or trust a folder's file so its commands run
+  bmux restart                           Save sessions, restart the server, restore them
+  bmux reload                            Reread the config file (also Ctrl-a r)
+  bmux guide                             How agents read, drive and watch panes (Markdown)
+  bmux capabilities                      Commands, protocol version and the calling pane, as JSON
+  bmux default-config                    Print every setting with its default
+  bmux version                           Print the version
+  bmux help                              Print this help
+
+Inside a session:
+  Ctrl-a s   Session picker       Ctrl-a d   Detach (shell keeps running)
+  Ctrl-a f   Project picker: a folder's session, created if needed
+  Ctrl-a n   New session          Ctrl-a p   Last session
+  Ctrl-a ( / )   Previous / next session
+  Ctrl-a c   New window           Ctrl-a 1-9   Select window
+  Ctrl-a [ / ]   Previous / next window      Ctrl-a Tab   Last window
+  Ctrl-a ,   Rename window        Ctrl-a &   Close window
+  Ctrl-a y   Copy selection       Ctrl-a Ctrl-a   Send Ctrl-a to application
+  Ctrl-a |   Side-by-side split   Ctrl-a -   Stacked split
+  Ctrl-a ;   Last pane            Ctrl-a { / }   Swap with previous / next pane
+  Ctrl-a Ctrl-o   Rotate panes    Ctrl-a ! / @   Pane to new window / into last window
+  Ctrl-a Space   Next layout (Alt-1..5 pick one)   Ctrl-a E   Even out splits
+  Ctrl-a h/j/k/l   Resize divider by five cells
+                  Repeat plain h/j/k/l until a one-second pause
+  Ctrl-h/j/k/l    Navigate bmux panes, or forward to foreground Neovim/Vim
+  Ctrl-a arrows   Focus pane      Ctrl-a o   Cycle visible panes
+  Ctrl-a m   Zoom / unzoom        Click a pane to focus it
+  Ctrl-a x   Close pane (asks first if a program is running)
+  Ctrl-a b   Show / hide sidebar  Ctrl-a r   Reload config
+  Ctrl-a ?   List key bindings (rebind them in the config file)
+  Ctrl-a i   Agent integrations: exact agent state, installed on Enter
+
+Settings: ~/.config/bmux/config.toml (see bmux default-config).
+
+Sidebar (Ctrl-h from the leftmost pane):
+  j/k   Select session or agent  Enter/l   Open it
+  Esc   Back to panes            n         New session
+  d     Delete session (confirmation required)
+  ● working (yellow) · ● waiting or rang while unseen (teal) · ● blocked (red) · ○ idle (green)
+  A sound plays when a background agent becomes ready or blocked (BMUX_SOUND=0 mutes)
+
+Session picker:
+  j/k or arrows   Select          Enter   Attach
+  n   New session                d       Delete session (confirmation required)
+  r   Rename                     /       Optional search
+  The highlighted session's live terminal is shown below the list, read-only.
+  Native text, source colors, and your terminal's font; no image protocols.
+
+Drag to select and copy. Double-click words; triple-click lines.
+Mouse wheel scrolls history. Paste using your terminal's normal shortcut.
+Hold Alt to select instead of sending mouse events to a mouse-aware app.
+
+Sessions survive detach, restarts and reboots as layouts and directories with
+fresh shells; recognized agents reopen their conversations. Use bmux restart
+to upgrade the server.
