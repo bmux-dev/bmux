@@ -222,21 +222,43 @@ func TestLeftEdgeFocusesSidebarAndKeysPickRows(t *testing.T) {
 	noRequest(t, requests)
 }
 
-func TestSidebarClickOpensRow(t *testing.T) {
+func TestSidebarClickSelectsThenOpensOnDoubleClick(t *testing.T) {
 	u, requests := sidebarUI(t)
-	u.mouse(tcell.NewEventMouse(3, paneOriginY+7, tcell.Button1, tcell.ModNone)) // claude's session line
-	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
-		t.Fatalf("sidebar click: %+v", r)
+	click := func(y int) { u.mouse(tcell.NewEventMouse(3, y, tcell.Button1, tcell.ModNone)) }
+
+	// A first click on claude's agent line selects it and focuses the
+	// sidebar, so d and other sidebar keys work right away, but does not
+	// switch sessions.
+	click(paneOriginY + 7)
+	noRequest(t, requests)
+	if !u.sidebarFocus || u.sidebarSelected != (sidebarTarget{"api", 2}) {
+		t.Fatalf("click did not select and focus: focus %v selected %+v", u.sidebarFocus, u.sidebarSelected)
 	}
-	u.mouse(tcell.NewEventMouse(3, paneOriginY, tcell.Button1, tcell.ModNone))   // Sessions heading
-	u.mouse(tcell.NewEventMouse(3, paneOriginY+4, tcell.Button1, tcell.ModNone)) // divider
-	u.mouse(tcell.NewEventMouse(3, paneOriginY+5, tcell.Button1, tcell.ModNone)) // Agents heading
+	// A second click on the same row within the double-click window opens it.
+	click(paneOriginY + 7)
+	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
+		t.Fatalf("double-click: %+v", r)
+	}
+	if u.sidebarFocus {
+		t.Fatal("opening a row kept sidebar focus")
+	}
+
+	click(paneOriginY)     // Sessions heading
+	click(paneOriginY + 4) // divider
+	click(paneOriginY + 5) // Agents heading
 	u.mouse(tcell.NewEventMouse(3, paneOriginY+3, tcell.WheelDown, tcell.ModNone))
 	noRequest(t, requests)
-	// A session row opens that session's first pane waiting on you.
-	u.mouse(tcell.NewEventMouse(3, paneOriginY+1, tcell.Button1, tcell.ModNone))
+
+	// A single click on a different session row only selects it.
+	click(paneOriginY + 1)
+	noRequest(t, requests)
+	if got := u.sidebarSelected; got != (sidebarTarget{"api", 0}) {
+		t.Fatalf("session row click selection: %+v", got)
+	}
+	// Double-clicking it opens that session's first pane waiting on you.
+	click(paneOriginY + 1)
 	if r := nextRequest(t, requests); r.Op != "select-pane" || r.PaneID != 2 {
-		t.Fatalf("session row click: %+v", r)
+		t.Fatalf("session row double-click: %+v", r)
 	}
 	noRequest(t, requests)
 }
