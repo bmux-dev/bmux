@@ -7,16 +7,17 @@ import "github.com/josephferrero/bmux/internal/protocol"
 type sessionLine struct {
 	header  string           // project name; set only on header lines
 	session protocol.Session // set on session lines
-	nested  bool             // shown under a header
-	branch  string           // checked-out branch, for sessions under a header
+	nested  bool             // a worktree session, indented under its project
+	branch  string           // checked-out branch, for sessions in a project group
 	index   int              // position among session lines, -1 on headers
 }
 
 // groupLines arranges sessions, already in display order, into project
-// groups. Sessions in worktrees of one repository, and any session in that
-// repository itself, follow a header named after it; the group sits where its
-// first session was. Other sessions stay where they are, ungrouped. Order
-// within a group is the input order.
+// groups. A repository with worktree sessions leads its group: its own
+// session is the group's top line, and the worktree sessions follow it,
+// nested. With no session of its own, a header named after the repository
+// leads instead. The group sits where its first session was. Other sessions
+// stay where they are, ungrouped. Order within each part is the input order.
 func groupLines(sessions []protocol.Session, info func(dir string) repoInfo) []sessionLine {
 	infos := make([]repoInfo, len(sessions))
 	grouped := make(map[string]bool) // repositories with a worktree session
@@ -49,9 +50,18 @@ func groupLines(sessions []protocol.Session, info func(dir string) repoInfo) []s
 			continue
 		}
 		emitted[root] = true
-		add(sessionLine{header: projectName(root)})
+		mains := false
+		for j := range sessions {
+			if infos[j].Root == root && !infos[j].Worktree {
+				mains = true
+				add(sessionLine{session: sessions[j], branch: infos[j].Branch})
+			}
+		}
+		if !mains {
+			add(sessionLine{header: projectName(root)})
+		}
 		for j, member := range sessions {
-			if infos[j].Root == root {
+			if infos[j].Root == root && infos[j].Worktree {
 				add(sessionLine{session: member, nested: true, branch: infos[j].Branch})
 			}
 		}

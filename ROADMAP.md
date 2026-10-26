@@ -81,7 +81,7 @@ Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21
 | Preset layouts | M | Done: Ctrl-a Space cycles, Alt-1…5 pick, Ctrl-a E equalizes |
 | Last pane toggle | S | Done: Ctrl-a ; |
 | Project picker | M | Done: the Ctrl-a n popup (Projects and Create tabs) and `bmux project`, from sessions and `projects.roots` |
-| Git worktrees | M | Done: sessions in a worktree group under their main repository in the sidebar, picker and Projects tab, wherever the worktree lives ([#149](https://github.com/bmux-dev/bmux/issues/149)) |
+| Git worktrees | M | Done: sessions in a worktree group under their main repository's session in the sidebar, picker and Projects tab, wherever the worktree lives ([#149](https://github.com/bmux-dev/bmux/issues/149)) |
 | Layout files | M | Done: `.bmux.toml`, commands run once trusted; `bmux layout save` / `trust` |
 
 ## v0.5: keyboard scrollback

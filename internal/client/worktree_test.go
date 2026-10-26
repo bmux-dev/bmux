@@ -134,21 +134,24 @@ func TestGroupLinesPutsWorktreesUnderTheirProject(t *testing.T) {
 		entry := l.session.Name
 		if l.header != "" {
 			entry = "[" + l.header + "]"
-		} else if l.nested {
-			entry = "  " + entry + "@" + l.branch
+		} else if l.branch != "" {
+			entry += "@" + l.branch
+		}
+		if l.nested {
+			entry = "  " + entry
 		}
 		got = append(got, entry)
 	}
 	want := []string{
-		"[stl]", "  one@feat/1", "  stl@main", "  two@feat/2",
+		"stl@main", "  one@feat/1", "  two@feat/2", // the repository's own session leads its worktrees
 		"notes", "solo",
-		"[other]", "  orphan@fix",
+		"[other]", "  orphan@fix", // no session of its own: a header leads
 	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("lines:\n got %v\nwant %v", got, want)
 	}
 	for i, l := range groupLines(sessions, info) {
-		wantIndex := map[string]int{"one": 0, "stl": 1, "two": 2, "notes": 3, "solo": 4, "orphan": 5}[l.session.Name]
+		wantIndex := map[string]int{"stl": 0, "one": 1, "two": 2, "notes": 3, "solo": 4, "orphan": 5}[l.session.Name]
 		if (l.header != "") != (l.index < 0) || (l.header == "" && l.index != wantIndex) {
 			t.Fatalf("line %d %+v has index %d, want %d", i, l, l.index, wantIndex)
 		}
@@ -298,5 +301,45 @@ func TestWorktreeSessionNamesTellTicketFoldersApart(t *testing.T) {
 	mkdirs(t, sub)
 	if got := directorySessionBase(sub); got != "pkg" {
 		t.Fatalf("subdirectory keeps its name: %q", got)
+	}
+}
+
+func TestMainSessionLeadsItsWorktreesInsteadOfAHeader(t *testing.T) {
+	f := newWorktreeFixture(t)
+	u, _ := sidebarUI(t)
+	now := time.Now()
+	u.sessions = []protocol.Session{
+		{Name: "one", Dir: f.one, Created: now},
+		{Name: "stl", Dir: f.main, Created: now.Add(time.Second)},
+		{Name: "scratch", Dir: f.home, Created: now.Add(2 * time.Second)},
+		{Name: "two", Dir: f.two, Created: now.Add(3 * time.Second)},
+	}
+	u.name = "stl"
+	rows, count := u.sidebarRows()
+	var got []string
+	for _, r := range rows[:count] {
+		if r.isHeader() {
+			t.Fatalf("a header %q above the repository's own session", r.header)
+		}
+		entry := r.session.Name
+		if r.nested {
+			entry = "  " + entry
+		}
+		got = append(got, entry)
+	}
+	if want := "stl,  one,  two,scratch"; strings.Join(got, ",") != want {
+		t.Fatalf("rows %v, want %s", got, want)
+	}
+	// The repository's row is a session like any other: selectable, and the
+	// first stop when moving down from nothing.
+	u.sidebarFocus, u.sidebarSelected = true, sidebarTarget{name: "stl"}
+	u.moveSidebar(1)
+	if u.sidebarSelected.name != "one" {
+		t.Fatalf("down from the repository: %+v", u.sidebarSelected)
+	}
+	u.moveSidebar(-1)
+	u.moveSidebar(-1)
+	if u.sidebarSelected.name != "stl" {
+		t.Fatalf("up to the repository: %+v", u.sidebarSelected)
 	}
 }
