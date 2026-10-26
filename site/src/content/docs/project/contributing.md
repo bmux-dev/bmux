@@ -50,6 +50,17 @@ The others are `FuzzKittyCommands` (`internal/graphics`), `FuzzSessionRequests`
 writes its input to the package's `testdata/fuzz/`. Commit that file with the
 fix, so the input runs as a regression test from then on.
 
+## Conformance
+
+[esctest](https://github.com/ThomasDickey/esctest2) checks how a terminal
+answers several hundred escape sequences. `scripts/esctest.sh` runs it inside a
+bmux pane, so it tests bmux's emulator, and prints the summary; each failure's
+details go to `esctest.log`. Pass a regular expression to run some tests, for
+example `scripts/esctest.sh 'CUUTests|EDTests'`. It needs Python 3 and tmux.
+Compare the summary before and after an emulator change: the pass count
+shouldn't drop. Many failures are xterm features bmux doesn't implement, such
+as window operations and palette changes.
+
 ## Releasing
 
 A release is a tag on `main`. Pushing it runs CI and then GoReleaser
