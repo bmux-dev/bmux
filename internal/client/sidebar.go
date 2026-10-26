@@ -30,12 +30,18 @@ func (u *ui) sidebarMinScreen() int {
 	return config.Default().Sidebar.MinScreenWidth
 }
 
-// sidebarRow is a session (pane == 0) or an agent/attention pane in it.
+// sidebarRow is a project header, a session (pane == 0) or an agent/attention
+// pane in it. Headers are never selected.
 type sidebarRow struct {
+	header   string // project name; set only on header rows
 	session  protocol.Session
 	pane     int
 	activity protocol.PaneActivity
+	nested   bool   // a session shown under a header
+	branch   string // the nested session's checked-out branch
 }
+
+func (r sidebarRow) isHeader() bool { return r.header != "" }
 
 // sidebarTarget identifies the selected row across refreshes, which may add,
 // remove or reorder rows.
@@ -73,19 +79,26 @@ func creationOrder(sessions []protocol.Session) []protocol.Session {
 	return list
 }
 
-// sidebarRows lists sessions, then every agent row in the same session order;
-// j/k walk this order across the divider.
+// sidebarOrder is the order sessions are shown and cycled in: creation order,
+// with sessions of one project kept together.
+func sidebarOrder(sessions []protocol.Session) []protocol.Session {
+	return groupedSessions(creationOrder(sessions), resolveRepo)
+}
+
+// sidebarRows lists project headers and sessions, then every agent row in the
+// same session order; j/k walk this order across the divider, skipping
+// headers. The count covers headers and sessions.
 func (u *ui) sidebarRows() (rows []sidebarRow, sessions int) {
-	list := creationOrder(u.sessions)
-	for _, s := range list {
-		rows = append(rows, sidebarRow{session: s})
+	lines := groupLines(creationOrder(u.sessions), resolveRepo)
+	for _, l := range lines {
+		rows = append(rows, sidebarRow{header: l.header, session: l.session, nested: l.nested, branch: l.branch})
 	}
-	for _, s := range list {
-		for _, a := range s.Activity {
-			rows = append(rows, sidebarRow{session: s, pane: a.Pane, activity: a})
+	for _, l := range lines {
+		for _, a := range l.session.Activity {
+			rows = append(rows, sidebarRow{session: l.session, pane: a.Pane, activity: a})
 		}
 	}
-	return rows, len(list)
+	return rows, len(lines)
 }
 
 // cycleSession switches to the next (delta 1) or previous (-1) session in
@@ -107,7 +120,7 @@ func (u *ui) cycleSession(delta int) {
 // adjacentSession is the session delta steps from current in sidebar order,
 // or "" when there is no other session.
 func adjacentSession(sessions []protocol.Session, current string, delta int) string {
-	list := creationOrder(sessions)
+	list := sidebarOrder(sessions)
 	for i, s := range list {
 		if s.Name == current && len(list) > 1 {
 			return list[((i+delta)%len(list)+len(list))%len(list)].Name
@@ -163,12 +176,17 @@ func (u *ui) sidebarWindows(sessions int, l sidebarSections, rows []sidebarRow) 
 
 func (u *ui) sidebarIndex(rows []sidebarRow) int {
 	for i, r := range rows {
-		if r.session.Name == u.sidebarSelected.name && r.pane == u.sidebarSelected.pane {
+		if !r.isHeader() && r.session.Name == u.sidebarSelected.name && r.pane == u.sidebarSelected.pane {
 			return i
 		}
 	}
 	for i, r := range rows {
-		if r.session.Name == u.name && r.pane == 0 {
+		if !r.isHeader() && r.session.Name == u.name && r.pane == 0 {
+			return i
+		}
+	}
+	for i, r := range rows {
+		if !r.isHeader() {
 			return i
 		}
 	}
@@ -191,11 +209,15 @@ func (u *ui) toggleSidebar() {
 
 func (u *ui) moveSidebar(delta int) {
 	rows, _ := u.sidebarRows()
-	if len(rows) == 0 {
+	if len(rows) == 0 || delta == 0 {
 		return
 	}
-	i := max(0, min(u.sidebarIndex(rows)+delta, len(rows)-1))
-	u.sidebarSelected = sidebarTarget{rows[i].session.Name, rows[i].pane}
+	for i := u.sidebarIndex(rows) + delta; i >= 0 && i < len(rows); i += delta {
+		if !rows[i].isHeader() {
+			u.sidebarSelected = sidebarTarget{rows[i].session.Name, rows[i].pane}
+			return
+		}
+	}
 }
 
 // sidebarKey handles every key while the sidebar has focus; none reach panes.
@@ -312,7 +334,7 @@ func (u *ui) sidebarClick(y, h int) {
 			index = i
 		}
 	}
-	if index < 0 {
+	if index < 0 || rows[index].isHeader() {
 		return
 	}
 	doubleClick := index == u.sidebarClickIndex && time.Since(u.sidebarLastClick) < 350*time.Millisecond
@@ -507,6 +529,10 @@ func (u *ui) putSidebarLine(y, width int, left string, style tcell.Style, right 
 }
 
 func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
+	if row.isHeader() {
+		u.putSidebarLine(y, width, " "+row.header, sidebarMutedStyle.Bold(true), "", sidebarMutedStyle)
+		return
+	}
 	icon, iconStyle := sessionRollup(row.session)
 	style := sidebarBaseStyle
 	if row.session.Name == u.name {
@@ -515,16 +541,30 @@ func (u *ui) drawSessionRow(row sidebarRow, y, width int, selected bool) {
 	if selected {
 		style, iconStyle = sidebarSelectedStyle, sidebarSelectedStyle
 	}
+	indent := "   "
+	if row.nested {
+		indent = "     "
+	}
 	right, rightStyle := "", style
 	if row.session.Restored {
 		right = "restored"
 		if !selected {
 			rightStyle = sidebarMutedStyle
 		}
+	} else if room := width - displayWidth(indent+row.session.Name) - 2; row.branch != "" && room >= 4 {
+		// The branch is a hint: it takes what the full name leaves, or nothing.
+		right = strings.TrimSpace(fit(row.branch, room))
+		if !selected {
+			rightStyle = sidebarMutedStyle
+		}
 	}
-	u.putSidebarLine(y, width, "   "+row.session.Name, style, right, rightStyle)
+	u.putSidebarLine(y, width, indent+row.session.Name, style, right, rightStyle)
 	if icon != "" {
-		u.screen.PutStrStyled(1, y, u.sidebarGlyph(icon), iconStyle)
+		iconX := 1
+		if row.nested {
+			iconX = 3
+		}
+		u.screen.PutStrStyled(iconX, y, u.sidebarGlyph(icon), iconStyle)
 	}
 }
 

@@ -14,6 +14,10 @@ lists every agent in every session, each with its state and session name, plus
 any other pane waiting on you. Terminals narrower than 80 columns hide it;
 Ctrl-a b hides or shows it at any width that fits.
 
+Sessions in [git worktrees](/bmux/guides/sessions/#git-worktrees) sit under a
+header named after their main repository, with the branch beside each name.
+Moving with j/k skips the headers.
+
 <Screenshot name="workspace" alt="bmux with the sidebar listing sessions and agents: claude blocked, codex working, opencode idle" />
 
 bmux recognizes an agent when it is the foreground program of a pane:
