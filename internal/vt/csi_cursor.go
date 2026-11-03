@@ -97,6 +97,18 @@ func (e *Emulator) carriageReturn() {
 	e.atPhantom = false
 }
 
+// reportedCursorPosition is the cursor position as cursor position reports
+// give it: in origin mode, relative to the margins, which is how the program
+// moved there.
+func (e *Emulator) reportedCursorPosition() (x, y int) {
+	x, y = e.scr.CursorPosition()
+	if e.isModeSet(ansi.DECOM) {
+		scroll := e.scr.ScrollRegion()
+		x, y = x-scroll.Min.X, y-scroll.Min.Y
+	}
+	return x, y
+}
+
 // repeatPreviousCharacter repeats the previous character n times. This is
 // equivalent to typing the same character n times. This performs the same as
 // [ansi.REP].

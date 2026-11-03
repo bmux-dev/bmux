@@ -6,12 +6,14 @@ import "github.com/charmbracelet/x/ansi"
 func (e *Emulator) resetModes() {
 	e.modes = ansi.Modes{
 		// Recognized modes and their default values.
+		ansi.ModeInsertReplace:       ansi.ModeReset, // 4
 		ansi.ModeCursorKeys:          ansi.ModeReset, // ?1
 		ansi.ModeOrigin:              ansi.ModeReset, // ?6
 		ansi.ModeAutoWrap:            ansi.ModeSet,   // ?7
 		ansi.ModeMouseX10:            ansi.ModeReset, // ?9
 		ansi.ModeLineFeedNewLine:     ansi.ModeReset, // ?20
 		ansi.ModeTextCursorEnable:    ansi.ModeSet,   // ?25
+		modeAltScreenLegacy:          ansi.ModeReset, // ?47
 		ansi.ModeNumericKeypad:       ansi.ModeReset, // ?66
 		ansi.ModeLeftRightMargin:     ansi.ModeReset, // ?69
 		ansi.ModeMouseNormal:         ansi.ModeReset, // ?1000
