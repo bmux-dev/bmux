@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.1 | Theme presets, a reworked settings page, notices in a box; clearer upgrades in v0.7.1 ([already built](#already-built)) |
+| **Shipped** | v0.7.2 | Worktree groups in the sidebar, 6.6× faster output and nine terminal fixes ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -131,7 +131,7 @@ existing sessions without warning.
 | Item | Size | Notes |
 | --- | --- | --- |
 | Compatibility promise | M | Done: save files, configs and commands from every release are tested against today's code (`testdata/releases`, recorded per release); mismatches say to run `bmux restart` ([#112](https://github.com/bmux-dev/bmux/issues/112), [#114](https://github.com/bmux-dev/bmux/issues/114)). See [Compatibility](https://bmux-dev.github.io/bmux/reference/compatibility/) |
-| Quality | L | vttest/esctest conformance runs, fuzzing for the protocol and emulator input, memory caps for large scrollback, latency and memory comparison with tmux |
+| Quality | L | Partly done: fuzzing for the protocol and emulator input ([#133](https://github.com/bmux-dev/bmux/issues/133)), esctest conformance runs (`scripts/esctest.sh`), and a latency, throughput and memory comparison with tmux (`scripts/compare-tmux.py`). Still to do: memory caps for large scrollback ([#157](https://github.com/bmux-dev/bmux/issues/157)) and closing the gaps the comparison found ([#153](https://github.com/bmux-dev/bmux/issues/153)-[#156](https://github.com/bmux-dev/bmux/issues/156)) |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
 | Distribution | M | Homebrew tap, signed and notarized macOS binaries, release signatures |
 | Docs | M | Demo GIF, tmux migration guide (config and plugin equivalents), CHANGELOG |
@@ -251,3 +251,12 @@ mismatch", and `bmux restart` no longer reports lost changes when the old
 server saved them. A sidebar click now selects a row, and a double-click opens
 it. Compatibility tests check every release's save file, config and commands.
 Protocol version 10 is unchanged.
+
+v0.7.2 groups sessions in git worktrees under their main repository in the
+sidebar, the session picker and the Projects tab, with each session's branch
+(`ui.show-branch`), and a single click on a sidebar row opens it. Output that
+scrolls is 6.6 times faster. Nine terminal fixes found by esctest: `reset`
+now resets the terminal, and insert mode, NEL, ED 1 and 3, `CSI u`, origin
+mode and the original alternate screen (mode 47) behave as in xterm. Protocol
+version 10 is unchanged: run `bmux restart` after upgrading to get the new
+server behavior.
