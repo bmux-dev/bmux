@@ -32,6 +32,24 @@ File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
 commit to `main`: work on a `feat/`, `fix/` or `docs/` branch and open a pull
 request that closes its issues with `Fixes #N`.
 
+## Fuzzing
+
+Fuzz targets try random input where a crash would take the server down: the
+terminal emulator (everything programs print), Kitty image commands, requests
+to a session, config files, key names, `#{...}` formats and CLI targets.
+`go test ./...` runs each one's seeds and saved crashes; to fuzz one, name it
+and give it time:
+
+```sh
+go test ./internal/vt -run '^$' -fuzz '^FuzzEmulatorOutput$' -fuzztime 5m
+```
+
+The others are `FuzzKittyCommands` (`internal/graphics`), `FuzzSessionRequests`
+(`internal/server`), `FuzzLoad` and `FuzzKeyName` (`internal/config`),
+`FuzzExpand` (`internal/format`) and `FuzzParseTarget` (`cmd/bmux`). A crash
+writes its input to the package's `testdata/fuzz/`. Commit that file with the
+fix, so the input runs as a regression test from then on.
+
 ## Releasing
 
 A release is a tag on `main`. Pushing it runs CI and then GoReleaser
