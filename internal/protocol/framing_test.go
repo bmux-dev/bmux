@@ -11,9 +11,17 @@ import (
 )
 
 func TestFramingBoundsInitialAndPartialRequests(t *testing.T) {
-	for _, payload := range []string{"{\"op\":\"paste\",\"text\":\"" + strings.Repeat("x", MaxRequestBytes), "{\"op\":\"paste\""} {
+	for _, tc := range []struct {
+		payload string
+		timeout time.Duration
+	}{
+		// Only the size limit may end this read, however slowly a busy machine writes 1 MiB.
+		{"{\"op\":\"paste\",\"text\":\"" + strings.Repeat("x", MaxRequestBytes), 10 * time.Second},
+		{"{\"op\":\"paste\"", 50 * time.Millisecond},
+	} {
+		payload := tc.payload
 		a, b := net.Pipe()
-		reader := NewRequestReader(a, 50*time.Millisecond)
+		reader := NewRequestReader(a, tc.timeout)
 		go func() { _, _ = b.Write([]byte(payload)) }()
 		_, err := reader.Read()
 		if err == nil {

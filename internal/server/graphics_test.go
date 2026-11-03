@@ -39,7 +39,8 @@ func pngAPC(t *testing.T, control string, shade uint8) string {
 
 func TestPaneStoresImagesAndAnswersFromTheEmulator(t *testing.T) {
 	out := "replies"
-	p, dir := scriptedPane(t, "stty raw -echo; echo ready > ready; head -c 21 > "+out+"; sleep 30")
+	// head writes as it reads; renaming publishes the replies only once all 21 bytes are in.
+	p, dir := scriptedPane(t, "stty raw -echo; echo ready > ready; head -c 21 > part && mv part "+out+"; sleep 30")
 	awaitFile(t, filepath.Join(dir, "ready"))
 	if err := p.setGraphics(true, 9, 20); err != nil {
 		t.Fatal(err)
