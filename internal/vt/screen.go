@@ -1,6 +1,8 @@
 package vt
 
 import (
+	"slices"
+
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/exp/ordered"
 )
@@ -408,7 +410,7 @@ func (s *Screen) InsertLine(n int) bool {
 		return false
 	}
 
-	s.buf.InsertLineArea(y, n, s.blankCell(), s.scroll)
+	s.moveLines(y, n, s.scroll)
 	s.shiftFlags(y, n)
 
 	return true
@@ -444,7 +446,7 @@ func (s *Screen) DeleteLine(n int) bool {
 		s.scrollback.PushN(s.buf, s.flags, y, linesToSave)
 	}
 
-	s.buf.DeleteLineArea(y, n, s.blankCell(), scroll)
+	s.moveLines(y, -n, s.scroll)
 	s.shiftFlags(y, -n)
 
 	return true
@@ -461,6 +463,50 @@ func (s *Screen) blankCell() *uv.Cell {
 	c := uv.EmptyCell
 	c.Style.Bg = s.cur.Pen.Bg
 	return &c
+}
+
+// moveLines inserts (n > 0) or deletes (n < 0) |n| blank lines at row y of
+// area, like uv's InsertLineArea and DeleteLineArea. When the area spans the
+// full width, which every ordinary scroll does, it moves whole rows by
+// rotating their slices instead of copying every cell: printing a line at the
+// bottom of the screen then costs one row of cells, not the whole screen.
+// bmux: added for output throughput.
+func (s *Screen) moveLines(y, n int, area uv.Rectangle) {
+	if area.Min.X != 0 || area.Max.X != s.buf.Width() {
+		if n > 0 {
+			s.buf.InsertLineArea(y, n, s.blankCell(), area)
+		} else {
+			s.buf.DeleteLineArea(y, -n, s.blankCell(), area)
+		}
+		return
+	}
+	if n == 0 || y < area.Min.Y || y >= area.Max.Y || y >= s.buf.Height() {
+		return
+	}
+	rows := s.buf.Lines[y:area.Max.Y]
+	k := min(max(n, -n), len(rows))
+	// Rotate right by k to insert, left by k to delete, without allocating.
+	split := len(rows) - k
+	if n < 0 {
+		split = k
+	}
+	slices.Reverse(rows[:split])
+	slices.Reverse(rows[split:])
+	slices.Reverse(rows)
+	fresh := rows[:k]
+	if n < 0 {
+		fresh = rows[len(rows)-k:]
+	}
+	blank := uv.EmptyCell
+	if c := s.blankCell(); c != nil {
+		blank = *c
+	}
+	for _, row := range fresh {
+		for x := range row {
+			row[x] = blank
+		}
+	}
+	s.touchArea(uv.Rect(0, y, s.buf.Width(), len(rows)))
 }
 
 // touchArea marks all lines in the given area as touched.

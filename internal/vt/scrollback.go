@@ -62,9 +62,11 @@ func (s *Scrollback) PushLine(line uv.Line, flags LineFlags) {
 	cloned := slices.Clone(line[:end])
 
 	if len(s.lines) >= s.maxLines {
-		// Remove oldest line and append new one
-		s.lines = slices.Delete(s.lines, 0, 1)
-		s.flags = slices.Delete(s.flags, 0, 1)
+		// Drop the oldest line by reslicing rather than shifting every line:
+		// append copies the history only when it outgrows its array, so a
+		// push costs O(1) amortized. Clearing the slot frees its cells.
+		s.lines[0], s.lines = nil, s.lines[1:]
+		s.flags = s.flags[1:]
 	}
 	s.lines = append(s.lines, cloned)
 	s.flags = append(s.flags, flags)
@@ -112,10 +114,11 @@ func (s *Scrollback) SetMaxLines(maxLines int) {
 	}
 
 	s.maxLines = maxLines
-	if len(s.lines) > maxLines {
-		// Remove oldest lines
-		s.lines = s.lines[len(s.lines)-maxLines:]
-		s.flags = s.flags[len(s.flags)-maxLines:]
+	if excess := len(s.lines) - maxLines; excess > 0 {
+		// Remove oldest lines, freeing their cells.
+		clear(s.lines[:excess])
+		s.lines = s.lines[excess:]
+		s.flags = s.flags[excess:]
 	}
 }
 
