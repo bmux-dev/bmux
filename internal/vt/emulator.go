@@ -82,6 +82,9 @@ type Emulator struct {
 	// atPhantom indicates if the cursor is out of bounds.
 	// When true, and a character is written, the cursor is moved to the next line.
 	atPhantom bool
+
+	// insert mirrors insert mode (IRM), which every printed character checks.
+	insert bool
 }
 
 var _ Terminal = (*Emulator)(nil)

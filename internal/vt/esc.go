@@ -42,6 +42,7 @@ func (e *Emulator) fullReset() {
 // command sends. Like xterm, it leaves the screen, the cursor position and
 // autowrap alone, and turns off left and right margins.
 func (e *Emulator) softReset() {
+	x, y := e.scr.CursorPosition() // resetting DECOM below moves the cursor home
 	for mode, setting := range map[ansi.Mode]ansi.ModeSetting{
 		ansi.ModeTextCursorEnable: ansi.ModeSet,
 		ansi.ModeInsertReplace:    ansi.ModeReset,
@@ -54,6 +55,7 @@ func (e *Emulator) softReset() {
 	}
 	e.scr.setVerticalMargins(0, e.Height())
 	e.scr.setHorizontalMargins(0, e.Width())
+	e.scr.setCursor(x, y, false)
 	e.scr.cur.Pen, e.scr.cur.Link = uv.Style{}, uv.Link{}
 	e.scr.saved.Position, e.scr.saved.Pen, e.scr.saved.Link = uv.Position{}, uv.Style{}, uv.Link{}
 	e.gl, e.gr = 0, 1
