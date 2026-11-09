@@ -19,7 +19,8 @@ type session struct {
 	// mu owns layout, metadata and pane lookup. State order is session -> pane;
 	// neither lock is held by the PTY writer or acquired under Server.mu.
 	mu            sync.Mutex
-	id            uint64 // immutable
+	frameChanges  frameChanges // independent notification lock; never takes state locks
+	id            uint64       // immutable
 	info          protocol.Session
 	panes         map[int]*pane
 	windows       []*window // in order; empty once the last pane has left
@@ -62,6 +63,7 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 		panes: map[int]*pane{1: p}, windows: []*window{{root: &layout{id: 1}, focused: 1}}, nextID: 2,
 		width: w, height: h, shell: shell, revision: 1, done: make(chan struct{}), owned: map[*pane]struct{}{p: {}},
 	}
+	s.refreshFramePanesLocked()
 	s.watchPane(1, p)
 	go s.watchAgents()
 	return s, nil
@@ -71,6 +73,7 @@ func (s *session) watchPane(id int, p *pane) {
 	s.watchers.Add(1)
 	p.mu.Lock()
 	p.agentHook = func(state string) { s.hook("agent-"+state, id) }
+	p.frameChanged = s.frameChanges.notify
 	p.mu.Unlock()
 	go func() {
 		defer s.watchers.Done()
@@ -90,6 +93,10 @@ func (s *session) watchPane(id int, p *pane) {
 		s.shutdownMu.Unlock()
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		defer func() {
+			s.refreshFramePanesLocked()
+			s.frameChanges.notify()
+		}()
 		if s.panes[id] != p {
 			return
 		}
@@ -98,6 +105,7 @@ func (s *session) watchPane(id int, p *pane) {
 		// snapshot revisions remain monotonic even when a busy pane disappears.
 		s.revision += p.revision + 1
 		p.mu.Unlock()
+		p.frameActive.Store(false)
 		delete(s.panes, id)
 		i := s.windowOfLocked(id)
 		if i < 0 {
@@ -421,6 +429,10 @@ func (s *session) startPaneLocked(dir string, width, height int) (int, error) {
 // Caller holds session.mu. Both explicit focus and editor-aware navigation use
 // the same geometry and focus-notification rules.
 func (s *session) finishLayoutLocked() error {
+	defer func() {
+		s.refreshFramePanesLocked()
+		s.frameChanges.notify()
+	}()
 	s.revision++
 	s.updateViewedLocked()
 	return s.resizePanes()

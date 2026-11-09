@@ -132,6 +132,7 @@ func (s *Server) bumpRevisions() []*session {
 		item.mu.Lock()
 		item.revision++
 		item.mu.Unlock()
+		item.frameChanges.notify()
 	}
 	return items
 }

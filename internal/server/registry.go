@@ -116,6 +116,7 @@ func (s *Server) mutate(r protocol.Request) protocol.Response {
 		item.info.Name = r.NewName
 		item.revision++
 		item.mu.Unlock()
+		item.frameChanges.notify()
 	case "kill":
 		s.mu.Lock()
 		if s.sessions[r.Name] == item {

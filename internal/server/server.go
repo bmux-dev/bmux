@@ -459,8 +459,17 @@ func (s *Server) handle(conn net.Conn) {
 			}
 		}
 	}()
-	ticker := time.NewTicker(time.Second / 30)
-	defer ticker.Stop()
+	// Subscribe before the initial snapshot so output racing with it is not lost.
+	changes := item.frameChanges.subscribe()
+	defer item.frameChanges.unsubscribe(changes)
+	publication := framePublication{dirty: true}
+	var timer *time.Timer
+	var timerC <-chan time.Time
+	defer func() {
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
 	offsets, histories := make(map[int]int), make(map[int]int)
 	var revision uint64
 	ack := 0
@@ -476,6 +485,52 @@ func (s *Server) handle(conn net.Conn) {
 	}()
 	var paste protocol.PasteAssembly
 	for {
+		if delay, dirty := publication.delay(time.Now()); dirty {
+			if delay == 0 {
+				if timer != nil {
+					timer.Stop()
+				}
+				timerC = nil
+				// Consume hints before, never after, sampling state. A mutation
+				// during the snapshot/send leaves a hint for the next frame.
+				select {
+				case <-changes:
+				default:
+				}
+				publication.dirty = false
+				frame, rev := item.snapshot(offsets, histories, revision, force)
+				if frame != nil {
+					revision, force = rev, false
+					frame.Clipboard = item.clipboardSince(&clipboardSeen)
+					if !noticed {
+						frame.Notice, noticed = item.takeNotice(), true
+					}
+					_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+					if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
+						return
+					}
+					publication.sent(time.Now())
+					if len(frame.Panes) == 0 {
+						return
+					}
+				}
+				continue
+			}
+			if timerC == nil {
+				if timer == nil {
+					timer = time.NewTimer(delay)
+				} else {
+					timer.Reset(delay)
+				}
+				timerC = timer.C
+			}
+		}
+		wake := (<-chan struct{})(changes)
+		if timerC != nil {
+			// Coalesce sustained output without repeatedly selecting its hints.
+			// Requests still run, and cannot extend the trailing deadline.
+			wake = nil
+		}
 		select {
 		case err := <-readErrors:
 			_ = conn.SetWriteDeadline(time.Now().Add(time.Second))
@@ -533,29 +588,17 @@ func (s *Server) handle(conn net.Conn) {
 					offsets[id] += next.Delta
 				}
 				force = true
+				publication.dirty = true
 			} else if err := item.input(next); err != nil {
 				_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 				if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Error: err.Error()}) != nil {
 					return
 				}
 			}
-		case <-ticker.C:
-			frame, rev := item.snapshot(offsets, histories, revision, force)
-			if frame == nil {
-				continue
-			}
-			revision, force = rev, false
-			frame.Clipboard = item.clipboardSince(&clipboardSeen)
-			if !noticed {
-				frame.Notice, noticed = item.takeNotice(), true
-			}
-			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-			if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
-				return
-			}
-			if len(frame.Panes) == 0 {
-				return
-			}
+		case <-wake:
+			publication.dirty = true
+		case <-timerC:
+			timerC = nil
 		}
 	}
 }

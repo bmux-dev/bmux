@@ -309,6 +309,7 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 		}
 	}
 	s.info.Panes = len(s.panes)
+	s.refreshFramePanesLocked()
 	for id, p := range s.panes {
 		s.watchPane(id, p)
 	}
