@@ -169,3 +169,85 @@ func TestHookEventsBecomeReports(t *testing.T) {
 		}
 	}
 }
+
+func TestOpencodeIntegrationLifecycle(t *testing.T) {
+	for _, xdg := range []bool{false, true} {
+		t.Run(fmt.Sprintf("xdg=%v", xdg), func(t *testing.T) {
+			e := testEnv(t, "opencode")
+			if xdg {
+				e.Getenv = func(name string) string {
+					if name == "XDG_CONFIG_HOME" {
+						return filepath.Join(e.Home, "config")
+					}
+					return ""
+				}
+			}
+			a, _ := Find("opencode")
+			assertStatus := func(want Status) {
+				t.Helper()
+				if got, err := a.Status(e); got != want || err != nil {
+					t.Fatalf("status: %v %v; want %v", got, err, want)
+				}
+			}
+			assertStatus(Available)
+			dir := a.ConfigDir(e)
+			file := filepath.Join(dir, "plugins", "bmux-agent-state.js")
+			if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			config := filepath.Join(dir, "opencode.jsonc")
+			other := filepath.Join(dir, "plugins", "user.js")
+			for _, p := range []string{config, other} {
+				if err := os.WriteFile(p, []byte("// untouched\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// An installed V1-only generated plugin is an update, not current.
+			if err := os.WriteFile(file, []byte(headerLines("//", "opencode", 1)+"export const BmuxAgentState = async () => ({});\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			assertStatus(Outdated)
+			for range 2 {
+				if err := a.Install(e); err != nil {
+					t.Fatal(err)
+				}
+				assertStatus(Installed)
+			}
+			data, err := os.ReadFile(file)
+			if err != nil || string(data) != opencodePlugin(headerLines("//", "opencode", 2)) {
+				t.Fatalf("generated plugin: %v\n%s", err, data)
+			}
+			if info, err := os.Stat(file); err != nil || info.Mode().Perm() != 0o600 {
+				t.Fatalf("mode changed: %v %v", info, err)
+			}
+			for range 2 {
+				if err := a.Uninstall(e); err != nil {
+					t.Fatal(err)
+				}
+				assertStatus(Available)
+			}
+			if _, err := os.Stat(file); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("plugin left after uninstall: %v", err)
+			}
+			// Never overwrite or remove a user's file with the same name.
+			unmanaged := "export default { id: 'user', setup() {} };\n"
+			if err := os.WriteFile(file, []byte(unmanaged), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := a.Install(e); err == nil || !strings.Contains(err.Error(), "unmanaged") {
+				t.Fatalf("unmanaged install accepted: %v", err)
+			}
+			if err := a.Uninstall(e); err != nil {
+				t.Fatal(err)
+			}
+			if data, _ := os.ReadFile(file); string(data) != unmanaged {
+				t.Fatal("unmanaged plugin changed")
+			}
+			for _, p := range []string{config, other} {
+				if data, _ := os.ReadFile(p); string(data) != "// untouched\n" {
+					t.Fatalf("unrelated file changed: %s", p)
+				}
+			}
+		})
+	}
+}

@@ -290,10 +290,17 @@ the ask tool and other extensions' `agent:blocked` events on the shared
 report changes. Leaving the foreground already drops a recognized agent's
 reports, so extensions never report `clear`. omp refuses to install into a
 directory pi also loads, since each would run the other's extension.
-opencode gets a server plugin in the same style: the opencode process in a
-pane serves only that pane's TUI, so the plugin counts busy sessions
-(subagents included) and pending permission/question requests, and resumes
-the latest top-level session.
+opencode gets a dependency-free default plugin definition with a stable ID,
+separate V2 `setup(ctx)` and V1 `server()` entrypoints. V2 subscribes to public
+events using `event.data`, including permission and `form.*` events, and aborts
+the subscription and subprocess queue on unload. Its supported launch is a
+private `--standalone` server with `BMUX_OPENCODE_SESSION` identifying the root
+conversation. Each event's session is fetched and its parent chain checked;
+only the bound tree in this instance's directory can report. Instance state
+and queues are not module globals. The saved argv preserves the root binding
+and standalone mode. V1 retains its busy-session and permission/question counts.
+The V2 shared service cannot use a terminal's environment as a per-client pane
+binding; without an explicit root binding this plugin is deliberately inactive.
 
 JSON edits go through an ordered object type, so other keys keep their order
 and content; they remove every handler whose command names
