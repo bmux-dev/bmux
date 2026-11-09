@@ -142,6 +142,18 @@ pane dividers and mouse translation share `paneOriginY`. Chrome rejects app mous
 presses/motion/wheel events even while a stale pre-resize frame is visible, but
 releases there still end selections and release application mouse buttons.
 
+Each draw composes a complete frame in a reusable cell buffer, then writes only
+the final changed cells to tcell. Clearing and painting the composition never
+clears the physical screen: unchanged pane text is not re-sent when the clock,
+sidebar or an overlay refreshes. Removed text and closed overlays still erase
+their old cells, and resizing retains tcell's explicit screen synchronization.
+The picker's 100 ms preview timer does not redraw an attached viewport or a
+picker prompt; idle attachments still refresh their clock and sidebar once a
+second. These client optimizations do not change the server's 30 Hz snapshot cap.
+To compare terminal traffic, run `python3 scripts/measure-redraw.py BASELINE CANDIDATE`
+with two bmux binary paths. It measures a 120×40 attached PTY with unchanged text
+and a single-key echo, using copied binaries and isolated temporary servers.
+
 A press on a divider cell starts a `dividerDrag` holding the panes on either
 side; until release, every event belongs to it, including over the sidebar and
 status line. Motion to a new column/row sends `drag-divider` with that pane

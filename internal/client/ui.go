@@ -24,6 +24,7 @@ type update struct {
 }
 type ui struct {
 	screen                          tcell.Screen
+	paint                           paintScreen
 	socket, cwd                     string
 	conn                            *connection
 	updates                         chan update
@@ -267,8 +268,8 @@ func run(socket, cwd string, start func(*ui) error) error {
 				}
 			}
 		case <-previewTicker.C:
-			if u.picker && u.prompt == "" {
-				u.requestPreview()
+			if !u.tickPreview() {
+				continue
 			}
 		case <-ticker.C:
 			if u.picker && (u.prompt == "" || u.prompt == "delete") {
@@ -950,13 +951,25 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	}
 }
 
+// An attached viewport has no preview to refresh. Do not let the picker's
+// 100 ms timer repaint an otherwise idle terminal.
+func (u *ui) tickPreview() bool {
+	if !u.picker || u.prompt != "" {
+		return false
+	}
+	u.requestPreview()
+	return true
+}
+
 func (u *ui) draw() {
 	w, h := u.screen.Size()
 	if w <= 0 || h <= 0 {
 		return
 	}
-	u.screen.SetStyle(paneStyle) // what Clear paints, and so the blank space between panes
-	u.screen.Clear()
+	physical := u.screen
+	u.paint.begin(physical, w, h, paneStyle)
+	u.screen = &u.paint
+	defer func() { u.screen = physical }()
 	u.screen.HideCursor()
 	if u.projects.open && u.conn == nil && !u.picker {
 		u.screen.Fill(' ', uiBaseStyle) // bmux project: nothing behind the popup
@@ -1062,6 +1075,10 @@ func (u *ui) draw() {
 		u.drawUpdateHint(w, h, 1+displayWidth(footer))
 	}
 	u.drawNotice(w, h)
+	// Compose first: clearing the physical tcell buffer before repainting makes
+	// every nonblank cell dirty, even when the completed frame is unchanged.
+	u.screen = physical
+	u.paint.flush()
 	u.updateTitle()
 	u.drawImages()
 	u.screen.Show()
