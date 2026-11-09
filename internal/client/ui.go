@@ -404,7 +404,7 @@ func (u *ui) switchTo(name string) error {
 	go func() {
 		for {
 			var response protocol.Response
-			err := conn.dec.Decode(&response)
+			err := conn.readResponse(&response)
 			select {
 			case u.updates <- update{generation: generation, response: response, err: err}:
 			case <-u.done:

@@ -88,6 +88,9 @@ type Request struct {
 	// them (MaxImageChunk when 0) from Offset into the image.
 	ImageID uint32 `json:"image_id,omitempty"`
 	Offset  int    `json:"offset,omitempty"`
+	// FrameEncoding is an optional attach-only transport capability. Version 10
+	// peers that do not recognize it continue to send ordinary full snapshots.
+	FrameEncoding string `json:"frame_encoding,omitempty"`
 }
 
 // MaxImageChunk bounds one image-data reply, so a large image never holds up
@@ -238,7 +241,8 @@ type TerminalFrame struct {
 	// to them by Cell.Link, so a long URL is sent once per frame.
 	Links []string `json:"links,omitempty"`
 	// Images are the stored images the rows' placeholder cells show.
-	Images []Image `json:"images,omitempty"`
+	Images      []Image      `json:"images,omitempty"`
+	CompactRows *CompactRows `json:"compact_rows,omitempty"`
 }
 
 type PaneFrame struct {
@@ -331,6 +335,8 @@ type Response struct {
 	Panes []PaneInfo `json:"panes,omitempty"`
 	// ImageChunk is image-data's reply.
 	ImageChunk *ImageChunk `json:"image_chunk,omitempty"`
+	// FrameEncoding acknowledges the selected encoding on attachment only.
+	FrameEncoding string `json:"frame_encoding,omitempty"`
 }
 
 // PaneInfo describes a pane and its window and session, for bmux
