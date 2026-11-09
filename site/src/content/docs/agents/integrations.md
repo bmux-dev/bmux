@@ -48,6 +48,8 @@ session after a restart.
 
 ## OpenCode V2
 
+Available since **bmux v0.7.3**.
+
 The plugin supports OpenCode V2 (validated with 2.1.4) and the dual-entrypoint
 V1 plugin API in **1.18.29 and newer**. Older V1 releases are not supported by
 this integration version. The header's `v2` is the **bmux integration version**,
