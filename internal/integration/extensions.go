@@ -1,7 +1,9 @@
 package integration
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -164,35 +166,131 @@ var omp = fileAgent{
 	},
 }
 
-// opencodePlugin is a server plugin: one opencode process serves the TUI in
-// this pane. It counts busy sessions (subagents included) and pending
-// permission and question requests, and resumes the latest top-level session.
+// opencodePlugin has separate V1 and V2 entrypoints. V2 requires an explicit
+// root session binding: a shared service's environment is not its clients'.
 func opencodePlugin(header string) string {
 	return header + `import { execFile } from "node:child_process";
+import path from "node:path";
 
-const enabled = !!process.env.BMUX_SESSION;
-let queue = Promise.resolve();
-let last = "";
-
-function report(state, session) {
-  const args = ["agent", state, "opencode"];
-  if (session) args.push("--", "opencode", "--session", session);
-  const key = args.join("\0");
-  if (key === last) return;
-  last = key;
-  // One at a time, in order; failures (no server, no bmux) are ignored.
-  queue = queue.then(() => new Promise((resolve) => {
-    execFile("bmux", args, { timeout: 3000, windowsHide: true }, () => resolve());
-  }));
+// State and subprocess queues belong to an instance, not the imported module.
+function reporter(resume) {
+  let queue = Promise.resolve();
+  let last = "";
+  let stopped = false;
+  const controller = new AbortController();
+  const env = { ...process.env }; // retain the pane ID across session renames
+  return {
+    report(state) {
+      const args = ["agent", state, "opencode", ...resume()];
+      const key = args.join("\0");
+      if (stopped || key === last) return;
+      last = key;
+      queue = queue.then(() => new Promise((resolve) => {
+        if (stopped) return resolve();
+        execFile("bmux", args, { env, signal: controller.signal, timeout: 3000, windowsHide: true }, () => resolve());
+      }));
+    },
+    stop() { stopped = true; controller.abort(); },
+  };
 }
 
-export const BmuxAgentState = async () => {
-  if (!enabled) return {};
+// A plain definition avoids an npm dependency for this generated JS file.
+// V2 consumes setup; V1 >= 1.18.29 consumes server (the documented dual API).
+export default {
+  id: "bmux.agent-state",
+  setup(ctx) {
+    const root = process.env.BMUX_OPENCODE_SESSION;
+    if (!process.env.BMUX_SESSION || !/^[1-9][0-9]*$/.test(process.env.BMUX_PANE ?? "") ||
+        !/^[1-9][0-9]*$/.test(process.env.BMUX_SESSION_ID ?? "") ||
+        !/^ses[a-zA-Z0-9_]+$/.test(root ?? "")) return;
+    const directory = ctx.location.directory;
+    const controller = new AbortController();
+    const output = reporter(() => ["--", "env", "BMUX_OPENCODE_SESSION=" + root,
+      "opencode", "--standalone", "--session", root]);
+    const busy = new Set();
+    const waiting = new Map();
+    const belongs = async (sessionID) => {
+      // Fetch session context even after a reload, when creation was missed.
+      // Do not infer pane ownership from plugin location or event location.
+      const seen = new Set();
+      while (sessionID && !seen.has(sessionID)) {
+        seen.add(sessionID);
+        const info = await ctx.session.get({ sessionID }, { signal: controller.signal });
+        if (path.resolve(info.location.directory) !== path.resolve(directory)) return false;
+        if (info.id === root) return true;
+        sessionID = info.parentID;
+      }
+      return false;
+    };
+    const settle = (sessionID) => {
+      busy.delete(sessionID);
+      for (const [key, owner] of waiting) {
+        if (owner === sessionID) waiting.delete(key);
+      }
+    };
+    void (async () => {
+      try {
+        for await (const event of ctx.event.subscribe({ signal: controller.signal,
+          types: ["session.status", "session.idle", "session.execution.started",
+            "session.execution.succeeded", "session.execution.failed", "session.execution.interrupted",
+            "permission.asked", "permission.replied", "form.created", "form.replied", "form.cancelled"] })) {
+          try {
+            const p = event.data;
+            const sessionID = p.form?.sessionID ?? p.sessionID;
+            if (!sessionID || !await belongs(sessionID) || controller.signal.aborted) continue;
+            switch (event.type) {
+              case "session.execution.started":
+                busy.add(sessionID);
+                break;
+              case "session.status":
+                if (p.status.type === "idle") settle(sessionID);
+                else busy.add(sessionID); // busy or retry
+                break;
+              case "session.idle":
+              case "session.execution.succeeded":
+              case "session.execution.failed":
+              case "session.execution.interrupted":
+                settle(sessionID);
+                break;
+              case "permission.asked":
+                waiting.set("permission:" + p.id, sessionID);
+                break;
+              case "permission.replied":
+                waiting.delete("permission:" + p.requestID);
+                break;
+              case "form.created":
+                waiting.set("form:" + p.form.id, sessionID);
+                break;
+              case "form.replied":
+              case "form.cancelled":
+                waiting.delete("form:" + p.id);
+                break;
+              default:
+                continue;
+            }
+            output.report(waiting.size > 0 ? "blocked" : busy.size > 0 ? "working" : "idle");
+          } catch {
+            // Deleted/inaccessible sessions are unattributed; keep consuming.
+          }
+        }
+      } catch {
+        // Abort/unload and an unavailable event stream must not crash OpenCode.
+      }
+    })();
+    return () => { controller.abort(); output.stop(); };
+  },
+  server: opencodeV1,
+};
+
+async function opencodeV1() {
+  if (!process.env.BMUX_SESSION) return {};
   const children = new Set();
   const busy = new Set();
   const waiting = new Map(); // request id -> session id
   let current;
+  const output = reporter(() => current ? ["--", "opencode", "--session", current] : []);
   return {
+    dispose: () => output.stop(),
     event: async ({ event }) => {
       const p = event?.properties ?? {};
       switch (event?.type) {
@@ -221,10 +319,10 @@ export const BmuxAgentState = async () => {
         default:
           return;
       }
-      report(waiting.size > 0 ? "blocked" : busy.size > 0 ? "working" : "idle", current);
+      output.report(waiting.size > 0 ? "blocked" : busy.size > 0 ? "working" : "idle");
     },
   };
-};
+}
 `
 }
 
@@ -237,6 +335,20 @@ func opencodeDir(e Env) string {
 }
 
 var opencode = fileAgent{
-	name: "opencode", version: 1, file: filepath.Join("plugins", "bmux-agent-state.js"),
+	name: "opencode", version: 2, file: filepath.Join("plugins", "bmux-agent-state.js"),
 	text: opencodePlugin,
+	check: func(e Env) error {
+		file := filepath.Join(opencodeDir(e), "plugins", "bmux-agent-state.js")
+		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+		if version, err := fileVersion(file, "opencode"); err != nil {
+			return err
+		} else if version == 0 {
+			return fmt.Errorf("refusing to overwrite unmanaged OpenCode plugin %s; move it aside first", file)
+		}
+		return nil
+	},
 }
