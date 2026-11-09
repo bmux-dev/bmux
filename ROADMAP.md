@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.2 | Worktree groups in the sidebar, 6.6× faster output and nine terminal fixes ([already built](#already-built)) |
+| **Shipped** | v0.7.3 | OpenCode V2 plugin compatibility and safely bound standalone pane reporting ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -260,3 +260,13 @@ now resets the terminal, and insert mode, NEL, ED 1 and 3, `CSI u`, origin
 mode and the original alternate screen (mode 47) behave as in xterm. Protocol
 version 10 is unchanged: run `bmux restart` after upgrading to get the new
 server behavior.
+
+v0.7.3 fixes the OpenCode V2 integration's plugin entrypoint and public event
+handling. Exact pane reporting uses a private `--standalone` server with an
+explicit root conversation binding; unrelated projects and session trees are
+ignored, and resume commands preserve the binding. Shared-service pane reporting
+remains unsupported. The plugin retains a separate V1 entrypoint for OpenCode
+1.18.29 and newer, and installation protects unmanaged files. Protocol version
+10 is unchanged; no bmux server restart is needed just for this integration fix.
+After upgrading the binary, run `bmux integration install opencode` to update the
+managed plugin ([#166](https://github.com/bmux-dev/bmux/issues/166)).
