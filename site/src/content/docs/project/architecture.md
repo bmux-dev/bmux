@@ -127,6 +127,14 @@ when selected data changes; stable retained scrollback isn't substituted silentl
 
 ## Input and previews
 
+Ordinary attached keys and mouse-wheel events that only forward input do not
+repaint the old frame before the server responds. New server frames still draw
+normally. Local changes, including clearing a selection, returning from
+scrollback, changing pane/sidebar focus, ending resize hints, prefixes and
+overlays, redraw immediately; connection errors and other new notices do too.
+This avoids redundant client rendering, without changing the server's frame
+cadence or promising a particular input-to-visible latency.
+
 Picker deletion is a centered modal overlay over a dimmed list/cached terminal,
 with immutable session identity and explicit lowercase-y confirmation. The kill
 RPC runs outside the UI loop; a result channel delivers completion/errors without
