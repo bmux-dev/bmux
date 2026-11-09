@@ -188,23 +188,8 @@ func run(socket, cwd string, start func(*ui) error) error {
 			if !ok {
 				return nil
 			}
-			switch e := event.(type) {
-			case *rawPasteEvent:
-				u.handleRawPaste(e)
-			case *tcell.EventKey:
-				u.key(e)
-			case *tcell.EventMouse:
-				u.mouse(e)
-			case *tcell.EventResize:
-				u.sendResize()
-				u.requestPreview()
-				screen.Sync()
-			case *tcell.EventFocus:
-				if !e.Focused {
-					u.resizeUntil = time.Time{}
-				}
-				u.send(protocol.Request{Op: "focus", Focused: e.Focused && !u.picker})
-			}
+			u.handleEvent(event)
+			continue
 		case next := <-u.updates:
 			if next.generation != u.generation {
 				continue
@@ -282,6 +267,34 @@ func run(socket, cwd string, start func(*ui) error) error {
 		u.draw()
 	}
 	return nil
+}
+
+// handleEvent draws local input changes immediately, but lets a server frame
+// drive rendering when a key or wheel event only forwards input. Notices (in
+// particular synchronous send errors) must still appear without a reply.
+func (u *ui) handleEvent(event tcell.Event) {
+	redraw := true
+	message, messageUntil := u.message, u.messageUntil
+	switch e := event.(type) {
+	case *rawPasteEvent:
+		u.handleRawPaste(e)
+	case *tcell.EventKey:
+		redraw = u.key(e)
+	case *tcell.EventMouse:
+		redraw = u.mouse(e)
+	case *tcell.EventResize:
+		u.sendResize()
+		u.requestPreview()
+		u.screen.Sync()
+	case *tcell.EventFocus:
+		if !e.Focused {
+			u.resizeUntil = time.Time{}
+		}
+		u.send(protocol.Request{Op: "focus", Focused: e.Focused && !u.picker})
+	}
+	if redraw || u.message != message || u.messageUntil != messageUntil {
+		u.draw()
+	}
 }
 
 func (u *ui) endSession(name string) {
@@ -484,11 +497,14 @@ func (u *ui) filtered() []protocol.Session {
 	return result
 }
 
-func (u *ui) key(e *tcell.EventKey) {
-	u.keyAt(e, time.Now())
+func (u *ui) key(e *tcell.EventKey) bool {
+	return u.keyAt(e, time.Now())
 }
 
-func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
+// keyAt reports whether input changes local presentation. All bindings and
+// modal handlers redraw conservatively; only ordinary forwarding opts out.
+func (u *ui) keyAt(e *tcell.EventKey, now time.Time) (redraw bool) {
+	redraw = true
 	if u.projects.open {
 		u.resizeUntil = time.Time{}
 		u.projectsKey(e)
@@ -542,6 +558,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	}
 	// Anything other than a repeated resize key ends the repeat window, but
 	// still follows its ordinary binding (or goes to the application).
+	localChanged := !u.resizeUntil.IsZero() || u.selection.active || (u.frame != nil && u.frame.Offset > 0)
 	u.resizeUntil = time.Time{}
 	copyKey := e.Key() == tcell.KeyCtrlC || (e.Key() == tcell.KeyRune && (e.Rune() == 'c' || e.Rune() == 'C') && e.Modifiers()&tcell.ModCtrl != 0)
 	if copyKey && e.Modifiers()&tcell.ModShift != 0 && u.selection.active {
@@ -574,6 +591,7 @@ func (u *ui) keyAt(e *tcell.EventKey, now time.Time) {
 	if r.Code != 0 {
 		u.send(r)
 	}
+	return localChanged
 }
 
 func (u *ui) resumeLive() {
@@ -716,7 +734,10 @@ func (u *ui) appCopy(text string) {
 	}
 }
 
-func (u *ui) mouse(e *tcell.EventMouse) {
+func (u *ui) mouse(e *tcell.EventMouse) (redraw bool) {
+	redraw = true
+	resizeUntil, focused, sidebarFocus := u.resizeUntil, u.focused, u.sidebarFocus
+	otherButtons := e.Buttons() & ^(tcell.WheelUp | tcell.WheelDown)
 	if e.Buttons() != tcell.ButtonNone {
 		u.resizeUntil = time.Time{}
 	}
@@ -908,14 +929,21 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 			m.Mod |= int(uv.ModCtrl)
 		}
 		u.send(m)
+		if m.Kind == "wheel" {
+			// Only pure wheel events can opt out: mixed button events may
+			// also close the keyboard scrollback view or change selection.
+			redraw = otherButtons != 0 || resizeUntil != u.resizeUntil || focused != u.focused || sidebarFocus != u.sidebarFocus
+		}
 		return
 	}
 	if buttons&tcell.WheelUp != 0 {
 		u.scroll(3)
+		redraw = otherButtons != 0 || resizeUntil != u.resizeUntil || focused != u.focused || sidebarFocus != u.sidebarFocus
 		return
 	}
 	if buttons&tcell.WheelDown != 0 {
 		u.scroll(-3)
+		redraw = otherButtons != 0 || resizeUntil != u.resizeUntil || focused != u.focused || sidebarFocus != u.sidebarFocus
 		return
 	}
 	p := point{x, u.frame.Base + y}
@@ -949,6 +977,7 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 			u.selection = selection{}
 		}
 	}
+	return
 }
 
 // An attached viewport has no preview to refresh. Do not let the picker's
