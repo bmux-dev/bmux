@@ -459,7 +459,8 @@ func (s *Server) handle(conn net.Conn) {
 			}
 		}
 	}()
-	ticker := time.NewTicker(time.Second / 30)
+	// Read the server's experimental rate once per attachment, not per frame.
+	ticker := time.NewTicker(attachedFrameInterval(os.Getenv("BMUX_EXPERIMENT_MAX_FPS")))
 	defer ticker.Stop()
 	offsets, histories := make(map[int]int), make(map[int]int)
 	var revision uint64

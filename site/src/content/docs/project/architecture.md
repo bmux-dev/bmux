@@ -125,6 +125,27 @@ Absolute row IDs plus screen epoch/history floor distinguish retained rows from
 repainted/reset/evicted data. Selection cache and highlight are invalidated together
 when selected data changes; stable retained scrollback isn't substituted silently.
 
+## Experimental attached frame rate
+
+The attached server ticker defaults to 30 Hz. For isolated rate comparisons,
+`BMUX_EXPERIMENT_MAX_FPS=60` or `BMUX_EXPERIMENT_MAX_FPS=120` opts into a higher
+target; explicit `30` selects the default. Only these exact values are supported.
+An unset variable or any other value (including whitespace or unsupported rates)
+safely falls back to 30. This experiment is off by default and changes only the
+ticker interval, not scheduling, dirty checks, snapshots, encoding or input.
+
+This is a **server environment** setting, read once when each attachment starts.
+Set it in the environment that launches an isolated server, before creating its
+sessions. Setting it only on an attach command, or reinstalling/restarting only
+the client, does not change the environment of an already running server. Existing
+attachments keep their chosen interval. Preview-watch polling is unchanged.
+
+A 120 Hz display does not guarantee bmux can sustain 120 frames per second:
+snapshot, encoding, client rendering and terminal work can limit throughput or
+increase load. This setting is an experimental target, not a guarantee of reduced
+perceived lag or visible-pixel latency. Compare rates with the same binary and
+otherwise identical isolated workloads.
+
 ## Input and previews
 
 Picker deletion is a centered modal overlay over a dimmed list/cached terminal,
@@ -149,7 +170,7 @@ sidebar or an overlay refreshes. Removed text and closed overlays still erase
 their old cells, and resizing retains tcell's explicit screen synchronization.
 The picker's 100 ms preview timer does not redraw an attached viewport or a
 picker prompt; idle attachments still refresh their clock and sidebar once a
-second. These client optimizations do not change the server's 30 Hz snapshot cap.
+second. These client optimizations do not change the server's default 30 Hz snapshot cap.
 To compare terminal traffic, run `python3 scripts/measure-redraw.py BASELINE CANDIDATE`
 with two bmux binary paths. It measures a 120×40 attached PTY with unchanged text
 and a single-key echo, using copied binaries and isolated temporary servers.
@@ -406,7 +427,8 @@ Helix's config layout: kebab-case names and a top-level `theme`.
 
 ## User-visible behavior details
 
-- Attached-client snapshots are coalesced to at most 30 updates per second.
+- Attached-client snapshots default to at most 30 updates per second; the
+  server-only experimental rate override described above targets 60 or 120.
   Each snapshot carries the visible viewport for each displayed pane, not its
   full scrollback. Preview timing is described above.
 - Large pastes travel as bounded chunks. The server assembles and validates the
