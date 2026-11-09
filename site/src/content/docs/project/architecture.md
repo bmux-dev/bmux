@@ -125,6 +125,41 @@ Absolute row IDs plus screen epoch/history floor distinguish retained rows from
 repainted/reset/evicted data. Selection cache and highlight are invalidated together
 when selected data changes; stable retained scrollback isn't substituted silently.
 
+### Optional compact full-snapshot transport
+
+The compact snapshot experiment leaves snapshot construction, revisions, the
+30 Hz cap, and client rendering/input scheduling unchanged. An attach request may
+offer `frame_encoding: "cell-palette-runs-v1"`; the existing acknowledgement echoes
+that exact selection only when supported. Missing or unknown requests select
+legacy transport. A client without an acknowledgement uses legacy decoding;
+unexpected selections or unnegotiated compact rows fail the connection. This is
+an additive protocol-10 capability, disabled by default in the client through
+`BMUX_EXPERIMENT_FRAME_ENCODING`.
+
+Each compact terminal frame has `rows: null` and a `compact_rows` object containing
+`width`, `cells` (a dictionary of complete `Cell` values), and `rows`. A row uses
+either `i` (cell indices) or `r` (alternating index and positive repetition count).
+The shorter estimated integer-array encoding is chosen. The dictionary includes
+text, width, colors, attributes, underline and link index, preserving graphemes,
+wide-cell continuations and image placeholders without interpreting text.
+All other terminal, frame and response fields retain their normal representation.
+
+Packing copies transport headers without mutating the snapshot. A dictionary
+larger than half the pane's cell count selects ordinary rows instead; this cheap
+entropy guard is not a minimum-size guarantee. Nonrectangular/empty panes also
+stay ordinary. Compact panes expand to at most 500 columns by 200 rows, with at
+most 100,000 compact cells across one frame; additional panes stay ordinary.
+The client validates indices, representation exclusivity, dimensions and positive
+run lengths before expanding each pane, and publishes no partially expanded
+frame. These bounds cover **cell expansion**, not the existing JSON decoder's
+wire-buffer or string allocations. Legacy responses retain their existing limits.
+
+Expansion restores ordinary terminal rows before the UI receives the response.
+No frames or events are dropped, and clipboard/notice/message and acknowledgement
+handling stays unchanged. Dictionaries are frame-local: resize, reattach, window
+changes, and independent attached scrollback views need no delta bases or recovery.
+One-shot RPCs and preview streams do not negotiate this encoding.
+
 ## Input and previews
 
 Picker deletion is a centered modal overlay over a dimmed list/cached terminal,

@@ -429,7 +429,11 @@ func (s *Server) handle(conn net.Conn) {
 		item.mu.Unlock()
 		item.hook("client-detached", 0)
 	}()
-	if err := enc.Encode(protocol.Response{Version: protocol.Version}); err != nil {
+	frameEncoding := ""
+	if r.FrameEncoding == protocol.CellPaletteRunsV1 {
+		frameEncoding = protocol.CellPaletteRunsV1
+	}
+	if err := enc.Encode(protocol.Response{Version: protocol.Version, FrameEncoding: frameEncoding}); err != nil {
 		return
 	}
 	if r.Colors != nil {
@@ -550,6 +554,9 @@ func (s *Server) handle(conn net.Conn) {
 				frame.Notice, noticed = item.takeNotice(), true
 			}
 			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+			if frameEncoding == protocol.CellPaletteRunsV1 {
+				frame = protocol.CompactFrame(frame)
+			}
 			if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
 				return
 			}
