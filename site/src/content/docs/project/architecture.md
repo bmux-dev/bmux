@@ -117,6 +117,22 @@ fails instead of reading rows that moved.
 
 ## Snapshots and selection
 
+Attached frames are output-driven rather than polled. The first frame and an
+active-window change after idle are published immediately. Each attachment has
+an independent cooldown of 1/30 second after a frame is sent; changes during it
+are coalesced into a trailing frame at its fixed deadline, even if output stops.
+Continued output does not restart that timer. Input admission alone does not wake
+publication: the application's echo or redraw does, avoiding an unchanged frame
+that would consume the cooldown before the response arrives. Layout, viewport,
+message, rename and config/update changes also wake publication.
+
+Notifications use a separate short-held lock and one buffered wake channel per
+attachment. They never take state locks or wait for socket writes. Active-window
+membership is mirrored atomically on panes so output callbacks need not acquire
+the session lock. Background-window output still sends no frames; background
+clipboard writes are carried by the next frame, and attention uses the existing
+sidebar poll. Preview-watch polling is unchanged.
+
 `pane.anchoredFrame` computes cumulative-history adjustment, clamps the viewport
 and copies visible cells under one state acquisition. Per-client `lastTotals`
 records the returned observation, never a separately read earlier total.
@@ -406,7 +422,8 @@ Helix's config layout: kebab-case names and a top-level `theme`.
 
 ## User-visible behavior details
 
-- Attached-client snapshots are coalesced to at most 30 updates per second.
+- Attached-client snapshots publish promptly after idle and are coalesced to at
+  most 30 updates per second under sustained changes, with a bounded trailing frame.
   Each snapshot carries the visible viewport for each displayed pane, not its
   full scrollback. Preview timing is described above.
 - Large pastes travel as bounded chunks. The server assembles and validates the

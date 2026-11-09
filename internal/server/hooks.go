@@ -124,6 +124,7 @@ func (s *session) showMessage(text string) {
 	s.messageSeq++
 	s.revision++
 	s.mu.Unlock()
+	s.frameChanges.notify()
 }
 
 // hookDir is where a hook runs: the pane's directory, else its session's,

@@ -33,6 +33,8 @@ type pane struct {
 	pty          *os.File
 	cmd          *exec.Cmd
 	revision     uint64
+	frameActive  atomic.Bool // active-window membership, written under session.mu
+	frameChanged func()      // called under pane.mu; takes only the notification lock
 	title        string
 	background   string // OSC 11 pane background; "" uses the attached terminal's
 	visible      bool
@@ -137,6 +139,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		s.mu.Lock()
 		s.info.Exited = true
 		s.revision++
+		s.notifyFrameLocked()
 		s.mu.Unlock()
 		close(s.done)
 	}()
@@ -207,6 +210,7 @@ func (s *pane) apply(output []byte) {
 	_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
 	s.revision++
 	s.noteOutputLocked(time.Now())
+	s.notifyFrameLocked()
 }
 
 func (s *pane) closeIO() {
@@ -326,6 +330,9 @@ func (s *pane) input(r protocol.Request) error {
 		}
 	}
 	s.revision++
+	if r.Op == "resize" {
+		s.notifyFrameLocked()
+	}
 	return nil
 }
 
