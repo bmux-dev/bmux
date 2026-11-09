@@ -21,6 +21,24 @@ go vet ./...
 Read [AGENTS.md](https://github.com/bmux-dev/bmux/blob/main/AGENTS.md) and the [architecture guide](/bmux/project/architecture/)
 before changing terminal or session behavior.
 
+### OpenCode integration validation
+
+Install Node.js to run the generated plugin event fixtures in `go test` (they
+skip when Node is absent). To check the installed artifact against OpenCode's
+real loader and public form events, use Python 3 and an OpenCode V2 binary:
+
+```sh
+go build -o bin/bmux ./cmd/bmux
+python3 scripts/test-opencode-integration.py --bmux ./bin/bmux --opencode opencode
+```
+
+The script starts a throwaway private server with an isolated home, database
+and config inside the checkout, and a recording fake `bmux` on `PATH`. It does
+not inherit provider credentials or modify/restart the shared service. Pass
+`--v1` and a V1 binary path to smoke-test V1 plugin initialization. Failures
+save private server diagnostics locally in `.opencode-validation-error-v1.log`
+or `.opencode-validation-error-v2.log`; review and redact before sharing them.
+
 Releases are built by [GoReleaser](https://github.com/bmux-dev/bmux/blob/main/.goreleaser.yaml)
 from a tag; see [Releasing](#releasing). `goreleaser release --snapshot --clean`
 builds the same archives locally into `dist/`.

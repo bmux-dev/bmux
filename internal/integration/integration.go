@@ -52,7 +52,7 @@ var agents = []Agent{
 	withSkill(claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", "")),
 	codex.agent("Codex", "codex", "CODEX_HOME", ".codex", "Codex runs new hooks only after you trust them: open /hooks in Codex once."),
 	withSkill(omp.agent("omp", "omp", ompDir, "")),
-	opencode.agent("opencode", "opencode", opencodeDir, ""),
+	opencode.agent("opencode", "opencode", opencodeDir, "OpenCode V2: use --standalone with BMUX_OPENCODE_SESSION set to the --session ID; shared-service pane reporting is not supported."),
 	withSkill(pi.agent("pi", "pi", piDir, "")),
 }
 
