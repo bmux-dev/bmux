@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.2 | Worktree groups in the sidebar, 6.6× faster output and nine terminal fixes ([already built](#already-built)) |
+| **Shipped** | v0.7.4 | OpenCode V2 integration and opt-in client/server CPU and allocation profiling ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -260,3 +260,16 @@ now resets the terminal, and insert mode, NEL, ED 1 and 3, `CSI u`, origin
 mode and the original alternate screen (mode 47) behave as in xterm. Protocol
 version 10 is unchanged: run `bmux restart` after upgrading to get the new
 server behavior.
+
+v0.7.3 fixed OpenCode V2 plugin loading and added explicitly bound pane-state
+reporting, safe managed-plugin updates, and V1 compatibility. After installing
+the binary, update the managed plugin with `bmux integration install opencode`;
+exact V2 reporting requires a bound standalone conversation. Protocol version
+10 is unchanged.
+
+v0.7.4 added opt-in client and server CPU, allocation and heap profiles through
+private Unix sockets (`BMUX_PPROF_DIR`), a standard-library Python capture helper
+(`scripts/profile-bmux.py`), and isolated profiling instructions. Profiling is
+disabled by default; this release adds diagnostics, not rendering optimizations.
+Protocol version 10 is unchanged. To profile a server, start an isolated test
+server with profiling enabled rather than interrupting important running jobs.
