@@ -81,6 +81,10 @@ as window operations and palette changes.
 
 ## Comparing with tmux
 
+To capture CPU and allocation profiles for a particular workload, see
+[CPU and allocation profiles](/bmux/reference/troubleshooting/#cpu-and-allocation-profiles).
+Profile the client and server separately before selecting an optimization.
+
 `scripts/compare-tmux.py` measures bmux from your checkout against the installed
 tmux and prints Markdown tables for three things:
 
