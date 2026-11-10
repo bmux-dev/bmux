@@ -15,6 +15,7 @@ import (
 	"github.com/josephferrero/bmux/internal/client"
 	"github.com/josephferrero/bmux/internal/config"
 	"github.com/josephferrero/bmux/internal/daemon"
+	"github.com/josephferrero/bmux/internal/profiling"
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
@@ -31,6 +32,11 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 1 && args[0] == "--serve" {
+		stopProfile, err := profiling.Start(os.Getenv("BMUX_PPROF_DIR"), "server")
+		if err != nil {
+			return err
+		}
+		defer stopProfile()
 		socket, err := daemon.Prepare()
 		if err != nil {
 			return err
@@ -70,6 +76,13 @@ func run(args []string) error {
 		if err := daemon.Ensure(socket); err != nil {
 			return err
 		}
+	}
+	if startsClient(args) {
+		stopProfile, err := profiling.Start(os.Getenv("BMUX_PPROF_DIR"), "client")
+		if err != nil {
+			return err
+		}
+		defer stopProfile()
 	}
 	return c.run(socket, rest)
 }
