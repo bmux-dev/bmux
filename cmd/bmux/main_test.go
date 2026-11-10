@@ -79,6 +79,7 @@ func TestClientsRefuseToStartInsideAPane(t *testing.T) {
 	defer os.RemoveAll(dir)
 	t.Setenv("BMUX_RUNTIME_DIR", dir)
 	t.Setenv("BMUX_SESSION", "api")
+	t.Setenv("BMUX_PPROF_DIR", filepath.Join(dir, "profiles"))
 	for _, args := range [][]string{nil, {"attach"}, {"attach", "web"}, {"new", "web"}, {"new", "--dir", dir, "web"}, {"project"}, {"project", dir}} {
 		if err := run(args); err == nil || !strings.Contains(err.Error(), "already inside bmux session api") {
 			t.Errorf("bmux %v inside a pane: %v", args, err)
@@ -88,10 +89,25 @@ func TestClientsRefuseToStartInsideAPane(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "server.pid")); !os.IsNotExist(err) {
 		t.Fatal("a refused command started a server")
 	}
+	if _, err := os.Stat(filepath.Join(dir, "profiles")); !os.IsNotExist(err) {
+		t.Fatal("a refused command started a profiling listener")
+	}
 	for _, args := range [][]string{{"new", "--detach", "web"}, {"new", "-detach=true", "web"}, {"list"}, {"kill", "web"}} {
 		if startsClient(args) {
 			t.Errorf("bmux %v would be refused but doesn't attach", args)
 		}
+	}
+}
+
+func TestNonInteractiveCommandsDoNotStartProfiling(t *testing.T) {
+	// Even an invalid opt-in path must not affect short-lived commands.
+	path := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(path, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("BMUX_PPROF_DIR", path)
+	if err := run([]string{"version"}); err != nil {
+		t.Fatal(err)
 	}
 }
 

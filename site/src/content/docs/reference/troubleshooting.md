@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Fixes for protocol mismatches, a server that will not start, focus keys, powerline glyphs, padding and terminal compatibility."
+description: "Fixes for protocol mismatches, server startup, CPU profiling, focus keys, powerline glyphs, padding and terminal compatibility."
 sidebar:
   order: 3
 ---
@@ -27,6 +27,71 @@ try to upgrade a running server.
 Read `server.log` in the runtime directory. Check directory ownership and mode
 0700. For a runtime-path-too-long error, use a shorter private directory through
 `BMUX_RUNTIME_DIR`. Use the same value for every client connecting to that server.
+
+## CPU and allocation profiles
+
+Set `BMUX_PPROF_DIR` when starting a client or server to expose Go CPU,
+allocation and heap profiles. It is **disabled by default**. Each opted-in
+process creates a Unix socket named `client-PID.sock` or `server-PID.sock` in
+that directory. There is no TCP listener. The directory must be owned by your
+user, have mode 0700, and not be a symlink; bmux creates it privately if missing.
+Sockets have mode 0600 and are removed when their process exits normally.
+
+An already running server does not pick up this environment variable. A new
+client can be profiled without restarting that server, but a server profile
+requires a server started with the variable. Use an isolated test build instead
+of restarting important running jobs:
+
+```sh
+# From a checkout, create a short, private test directory.
+WORK=$(mktemp -d /tmp/bmux-prof.XXXXXX)
+go build -o "$WORK/bmux" ./cmd/bmux
+printf 'onboarding = false\n[update]\ncheck = false\n' > "$WORK/config.toml"
+
+# Run from an ordinary terminal, outside bmux. These paths isolate the server,
+# saved sessions and config from your main server.
+BMUX_RUNTIME_DIR="$WORK/r" BMUX_CONFIG="$WORK/config.toml" \
+  BMUX_PPROF_DIR="$WORK/p" "$WORK/bmux" new --dir "$WORK" profiled
+```
+
+In another terminal, substitute the same `WORK` path and capture both processes
+over the same 30-second window:
+
+```sh
+python3 scripts/profile-bmux.py --dir "$WORK/p" --output "$WORK/animated" --seconds 30
+```
+
+The script uses only Python's standard library, never starts or stops bmux, and
+writes private files named `client-PID.cpu.pprof`, `server-PID.cpu.pprof`, and
+matching `.allocs.pprof` files. It refuses to overwrite an earlier capture.
+Use a new output directory for each workload. For example, repeat with
+`--output "$WORK/idle"` after stopping the animation, keeping the pane size and
+contents otherwise unchanged. Allocation profiles cover the capture window,
+rather than cumulative allocations since startup.
+
+Inspect a captured file with the matching test binary:
+
+```sh
+go tool pprof -top "$WORK/bmux" "$WORK/animated/client-PID.cpu.pprof"
+go tool pprof -top -cum "$WORK/bmux" "$WORK/animated/server-PID.cpu.pprof"
+go tool pprof -top -alloc_space "$WORK/bmux" "$WORK/animated/client-PID.allocs.pprof"
+```
+
+Replace `PID` with the number in the captured filename. CPU profiles identify
+where CPU time is spent; allocation profiles show where memory was allocated,
+not necessarily a leak. Treat profiles as local diagnostics: they include
+function names and source paths. Check total CPU and input latency before and
+after a change, not only percentages within a profile.
+
+For manual captures, use `curl --unix-socket SOCKET` with
+`http://localhost/debug/pprof/profile?seconds=30`,
+`/debug/pprof/allocs?seconds=30`, or `/debug/pprof/heap`. The hostname is only an
+HTTP header; the connection stays on the private Unix socket.
+
+When finished, detach the test client with Ctrl-a d, then stop only the isolated
+server using `kill "$(cat "$WORK/r/server.pid")"`. This ends its test programs;
+it does not affect the main server. No temporary server should be left running
+after a profiling experiment.
 
 ## Backspace moves pane focus
 
