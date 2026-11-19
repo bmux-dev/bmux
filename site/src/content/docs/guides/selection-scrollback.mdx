@@ -54,7 +54,8 @@ gives one line, without a newline where it wrapped.
 ## Links
 
 **Ctrl-click** opens a link under the pointer, on the machine running the
-bmux client, so it works over SSH too. bmux recognises two kinds: hyperlinks a
+bmux client. Running bmux locally and SSHing from inside a pane, links open
+on your desktop. bmux recognises two kinds: hyperlinks a
 program marked with OSC 8 (`ls --hyperlink`, `rg --hyperlink-format`), and
 `http://`, `https://` and `mailto:` addresses printed as plain text,
 including one the terminal wrapped across rows. Trailing punctuation such as
@@ -66,6 +67,13 @@ Only `http`, `https` and `mailto` links are opened or passed on, because the
 text comes from whatever runs in the pane. bmux uses `open` on macOS and
 `xdg-open` on Linux. OSC 8 links are also passed through to your terminal, so
 a terminal that supports them can open one with its own gesture.
+
+When the client itself runs over SSH (you SSH in and then attach), or on Linux
+with no display, a browser started there would never reach you. Ctrl-click
+then copies the whole link to your clipboard instead, through OSC 52 over
+SSH, and the status line says so. Paste it into your browser. A link a
+program split over several rows (OAuth sign-in links often are) is copied
+whole when it's an OSC 8 link, where dragging would pick up the line breaks.
 
 bmux asks the terminal to report the mouse, and the mouse protocol has no
 Command key. Ghostty on macOS therefore sends a Cmd-click to bmux as a plain
