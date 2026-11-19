@@ -70,6 +70,8 @@ type ui struct {
 	appMouseButton                  int
 	linkHeld                        bool               // a Ctrl+click opened a link; swallow the rest of that press
 	opener                          func(string) error // opens links; nil means openLink
+	linksHere                       func() bool        // whether links open on this machine; nil means linksOpenHere
+	linkCopySeq                     uint64             // clipboard sequence of a link copied instead of opened
 	divider                         *dividerDrag       // divider being dragged, or nil
 	quitting                        bool
 	clipboard                       *clipboardWorker
@@ -696,6 +698,10 @@ func (u *ui) finishClipboard(result clipboardResult) {
 	}
 	if result.Err != nil {
 		u.notice("Clipboard failed: " + result.Err.Error())
+	} else if result.Seq == u.linkCopySeq && result.Available {
+		u.notice("No browser on this machine; link copied to the clipboard")
+	} else if result.Seq == u.linkCopySeq {
+		u.notice("No browser on this machine; link copied via OSC 52 (your terminal must allow it)")
 	} else if result.Available {
 		u.notice("Copied to system clipboard")
 	} else {
@@ -857,13 +863,7 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		// application never sees the click.
 		if link := linkAt(u.frame, x, y); link != "" {
 			u.linkHeld = true
-			open := u.opener
-			if open == nil {
-				open = openLink
-			}
-			if err := open(link); err != nil {
-				u.notice(err.Error())
-			}
+			u.followLink(link)
 			return
 		}
 	}

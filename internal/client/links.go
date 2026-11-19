@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -109,8 +110,25 @@ func linkAt(f *protocol.TerminalFrame, x, y int) string {
 	return ""
 }
 
+// linksOpenHere reports whether a browser this client starts would appear in
+// front of the user. Over SSH it would open on the remote machine, and on
+// Linux or BSD without a display there is no browser to open.
+func linksOpenHere(getenv func(string) string) bool {
+	if getenv("SSH_CONNECTION") != "" || getenv("SSH_TTY") != "" {
+		return false
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		return true
+	case "linux", "freebsd", "openbsd", "netbsd":
+		return getenv("DISPLAY") != "" || getenv("WAYLAND_DISPLAY") != ""
+	}
+	return false
+}
+
 // openLink opens raw with the desktop's handler on the machine running this
-// client, so it works from a remote session too.
+// client, so a link a program prints over SSH inside a pane still opens on
+// the user's desktop.
 func openLink(raw string) error {
 	if !openableLink(raw) {
 		return fmt.Errorf("won't open %q", raw)
@@ -130,4 +148,25 @@ func openLink(raw string) error {
 	}
 	go func() { _ = cmd.Wait() }()
 	return nil
+}
+
+// followLink opens a Ctrl+clicked link, or copies it when no browser here
+// would reach the user, so the click is never silently lost.
+func (u *ui) followLink(link string) {
+	here := u.linksHere
+	if here == nil {
+		here = func() bool { return linksOpenHere(os.Getenv) }
+	}
+	if !here() {
+		u.linkCopySeq = u.clipboardSeq + 1 // the sequence copyText assigns
+		u.copyText(link)
+		return
+	}
+	open := u.opener
+	if open == nil {
+		open = openLink
+	}
+	if err := open(link); err != nil {
+		u.notice(err.Error())
+	}
 }

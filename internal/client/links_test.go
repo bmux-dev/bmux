@@ -1,6 +1,8 @@
 package client
 
 import (
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -83,7 +85,57 @@ func linkUI(t *testing.T, rows [][]protocol.Cell, links []string, appMouse bool)
 	screen.SetSize(50, 12)
 	opened := &[]string{}
 	return &ui{screen: screen, name: "api", frame: &protocol.TerminalFrame{Rows: rows, Links: links, Mouse: appMouse},
-		opener: func(s string) error { *opened = append(*opened, s); return nil }}, opened
+		opener:    func(s string) error { *opened = append(*opened, s); return nil },
+		linksHere: func() bool { return true }}, opened
+}
+
+func TestCtrlClickWithNoBrowserHereCopiesTheLink(t *testing.T) {
+	row := cells("sign in")
+	for i := range row {
+		row[i].Link = 1
+	}
+	u, opened := linkUI(t, [][]protocol.Cell{row}, []string{"https://example.com/oauth?state=x"}, true)
+	u.linksHere = func() bool { return false }
+	u.mouse(tcell.NewEventMouse(2, paneOriginY, tcell.Button1, tcell.ModCtrl))
+	u.mouse(tcell.NewEventMouse(2, paneOriginY, tcell.ButtonNone, tcell.ModNone))
+	if len(*opened) != 0 {
+		t.Fatalf("opened %v on a machine with no browser", *opened)
+	}
+	if got := string(u.screen.(tcell.SimulationScreen).GetClipboardData()); got != "https://example.com/oauth?state=x" {
+		t.Fatalf("clipboard %q", got)
+	}
+	if !strings.Contains(u.message, "link copied") {
+		t.Fatalf("notice %q", u.message)
+	}
+	if u.appMouseDown || u.selection.active {
+		t.Fatal("the click reached the application or started a selection")
+	}
+	// A later selection copy gets the ordinary notice.
+	u.copyText("plain")
+	if strings.Contains(u.message, "link") {
+		t.Fatalf("selection copy notice: %q", u.message)
+	}
+}
+
+func TestLinksOpenHere(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("links don't open on " + runtime.GOOS)
+	}
+	for _, tc := range []struct {
+		name string
+		env  map[string]string
+		want bool
+	}{
+		{"ssh", map[string]string{"SSH_CONNECTION": "1 2 3 4", "DISPLAY": ":0", "WAYLAND_DISPLAY": "wayland-0"}, false},
+		{"ssh tty", map[string]string{"SSH_TTY": "/dev/pts/0", "DISPLAY": ":0"}, false},
+		{"wayland", map[string]string{"WAYLAND_DISPLAY": "wayland-0"}, true},
+		{"x11", map[string]string{"DISPLAY": ":0"}, true},
+		{"no display", map[string]string{}, runtime.GOOS == "darwin"},
+	} {
+		if got := linksOpenHere(func(k string) string { return tc.env[k] }); got != tc.want {
+			t.Errorf("%s: linksOpenHere = %v, want %v", tc.name, got, tc.want)
+		}
+	}
 }
 
 func TestCtrlClickOpensLinkWithoutSelecting(t *testing.T) {

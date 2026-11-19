@@ -123,6 +123,13 @@ newline key.
 Run `BMUX_TERMINAL_PADDING=1 bmux`. Modern terminal emulators normally use the
 default, with padding disabled.
 
+## Ctrl-click on a link does nothing
+
+If the bmux client runs over SSH, or on Linux with no display, it can't open
+a browser where you'd see it, so Ctrl-click copies the link instead and the
+status line says so. Paste it into your browser. In Ghostty on macOS,
+**Shift-Cmd-click** opens an OSC 8 link on your Mac directly.
+
 ## Terminal compatibility
 
 The sixel and iTerm2 image protocols are not supported yet. Links open with
