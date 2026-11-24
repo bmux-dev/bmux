@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,7 +11,78 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
-func (u *ui) applyFrame(f *protocol.Frame) {
+// reconstructFrame resolves any incremental delta TerminalFrames in f against
+// u.paneFrames and updates u.paneFrames to match the exact set of panes in f.
+// It is idempotent once resolved (reconstructed panes have Delta == false).
+func (u *ui) reconstructFrame(f *protocol.Frame) {
+	if f == nil {
+		return
+	}
+	if u.paneFrames == nil {
+		u.paneFrames = make(map[int]*protocol.TerminalFrame, len(f.Panes))
+	}
+	alive := make(map[int]bool, len(f.Panes))
+	for i := range f.Panes {
+		p := &f.Panes[i]
+		alive[p.ID] = true
+		resolved := protocol.ApplyTerminalDelta(u.paneFrames[p.ID], p.Terminal)
+		p.Terminal = resolved
+		u.paneFrames[p.ID] = resolved
+	}
+	for id := range u.paneFrames {
+		if !alive[id] {
+			delete(u.paneFrames, id)
+		}
+	}
+}
+
+func frameVisibleChanged(prev, next *protocol.Frame) bool {
+	if prev == nil || next == nil {
+		return true
+	}
+	if prev.Name != next.Name ||
+		prev.Focused != next.Focused ||
+		prev.Zoomed != next.Zoomed ||
+		prev.Width != next.Width ||
+		prev.Height != next.Height ||
+		prev.Edge != next.Edge ||
+		prev.EdgeDirection != next.EdgeDirection ||
+		prev.Config != next.Config ||
+		prev.MessageSeq != next.MessageSeq ||
+		prev.Message != next.Message ||
+		next.Notice != "" {
+		return true
+	}
+	if (prev.Update == nil) != (next.Update == nil) {
+		return true
+	}
+	if prev.Update != nil && *prev.Update != *next.Update {
+		return true
+	}
+	if len(prev.Windows) != len(next.Windows) {
+		return true
+	}
+	for i := range prev.Windows {
+		a, b := prev.Windows[i], next.Windows[i]
+		if a.Name != b.Name || a.Title != b.Title || a.Active != b.Active || !slices.Equal(a.Panes, b.Panes) {
+			return true
+		}
+	}
+	if len(prev.Panes) != len(next.Panes) {
+		return true
+	}
+	for i := range prev.Panes {
+		a, b := prev.Panes[i], next.Panes[i]
+		if a.ID != b.ID || a.X != b.X || a.Y != b.Y || a.Width != b.Width || a.Height != b.Height || a.Terminal != b.Terminal {
+			return true
+		}
+	}
+	return false
+}
+
+func (u *ui) applyFrame(f *protocol.Frame) bool {
+	u.reconstructFrame(f)
+	changed := frameVisibleChanged(u.workspace, f)
 	if u.selections == nil {
 		u.selections = make(map[int]selection)
 	}
@@ -87,6 +159,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 		}
 	}
 	u.noteViewFrame(u.frame)
+	return changed
 }
 
 func (u *ui) activatePane(id int) {
@@ -163,7 +236,15 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 	f := p.Terminal
 	// Layout coordinates start right of the sidebar; draw in screen columns.
 	p.X += u.paneOriginX(w)
-	if f == nil || p.Width < 1 || p.Height < 1 {
+	if p.Width < 1 || p.Height < 1 {
+		return
+	}
+	x0 := max(0, p.X)
+	x1 := min(w, p.X+p.Width)
+	y0 := max(paneOriginY, paneOriginY+p.Y)
+	y1 := min(h-1, paneOriginY+p.Y+p.Height)
+	if f == nil {
+		u.fillRect(x0, y0, x1-x0, y1-y0, paneStyle)
 		return
 	}
 	sel := u.selections[p.ID]
@@ -187,6 +268,7 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 		if viewing {
 			matches = searchMatches(row, u.view.query)
 		}
+		col := 0
 		for x, c := range row {
 			if x >= p.Width || p.X+x >= w {
 				break
@@ -222,7 +304,24 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 			} else if isPlaceholder(c) && text == c.Text {
 				text, style = u.placeholderCell(c, markers, x, y, style)
 			}
-			u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
+			_, cellW := u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
+			if cellW < 1 {
+				cellW = 1
+			}
+			if x+cellW > col {
+				col = x + cellW
+			}
+		}
+		for x := col; x < p.Width && p.X+x < w; x++ {
+			if p.X+x >= 0 {
+				u.screen.Put(p.X+x, paneOriginY+p.Y+y, " ", paneStyle)
+			}
+		}
+	}
+	if len(f.Rows) < p.Height {
+		padY := max(paneOriginY, paneOriginY+p.Y+len(f.Rows))
+		if padY < y1 {
+			u.fillRect(x0, padY, x1-x0, y1-padY, paneStyle)
 		}
 	}
 	if p.ID == u.focused && !viewing && f.CursorVisible && !f.Exited && f.CursorX >= 0 && f.CursorY >= 0 && f.CursorX < p.Width && f.CursorY < p.Height && p.X+f.CursorX >= 0 && p.X+f.CursorX < w && paneOriginY+p.Y+f.CursorY >= paneOriginY && paneOriginY+p.Y+f.CursorY < h-1 {

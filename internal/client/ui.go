@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +30,7 @@ type ui struct {
 	generation                      int
 	frame                           *protocol.TerminalFrame
 	workspace                       *protocol.Frame
+	paneFrames                      map[int]*protocol.TerminalFrame
 	focused                         int
 	selections                      map[int]selection
 	paneSizes                       map[int][2]int
@@ -109,6 +109,10 @@ type ui struct {
 	images                          *imageSender
 	imageResults                    chan imageResult
 	imageWake                       chan struct{} // more images wait for a redraw
+	dividers                        *dividerScratch
+	lastClock                       string
+	noticeVisible                   bool
+	resizeBannerVisible             bool
 }
 
 // Run attaches to session name, or opens the session picker when name is "".
@@ -182,81 +186,47 @@ func run(socket, cwd string, start func(*ui) error) error {
 	defer previewTicker.Stop()
 	u.draw()
 	for !u.quitting {
+		dirty := false
+		resized := false
 		select {
 		case event, ok := <-events:
 			if !ok {
 				return nil
 			}
-			switch e := event.(type) {
-			case *rawPasteEvent:
-				u.handleRawPaste(e)
-			case *tcell.EventKey:
-				u.key(e)
-			case *tcell.EventMouse:
-				u.mouse(e)
-			case *tcell.EventResize:
-				u.sendResize()
-				u.requestPreview()
-				screen.Sync()
-			case *tcell.EventFocus:
-				if !e.Focused {
-					u.resizeUntil = time.Time{}
-				}
-				u.send(protocol.Request{Op: "focus", Focused: e.Focused && !u.picker})
-			}
+			d, r := u.handleEvent(event)
+			dirty, resized = dirty || d, resized || r
 		case next := <-u.updates:
-			if next.generation != u.generation {
-				continue
-			}
-			if next.err != nil {
-				name := u.name
-				_ = u.conn.Close()
-				u.conn = nil
-				// A restarted server numbers images afresh.
-				_ = u.images.reset()
-				u.openPicker()
-				u.notice("Disconnected: " + next.err.Error())
-				u.reconnect(name)
-				continue
-			}
-			if next.response.Error != "" {
-				u.notice(next.response.Error)
-				if next.response.Ack >= u.pending {
-					u.pending = 0
-				}
-			}
-			if f := next.response.Frame; f != nil {
-				// Before the ack check: a frame skipped for being stale still
-				// carries the only copy of an app's clipboard write.
-				if f.Clipboard != "" {
-					u.appCopy(f.Clipboard)
-				}
-				if len(f.Panes) == 0 {
-					u.endSession(f.Name)
-					u.draw()
-					continue
-				}
-				if next.response.Ack < u.pending {
-					continue
-				}
-				u.pending = 0
-				u.applyFrame(f)
+			if u.handleUpdate(next) {
+				dirty = true
 			}
 		case result := <-u.imageResults:
-			u.images.accept(result)
+			if u.images.accept(result) {
+				dirty = true
+			}
 		case <-u.imageWake:
+			dirty = true
 		case result := <-u.previews:
-			u.acceptPreview(result)
+			if u.acceptPreview(result) {
+				dirty = true
+			}
 		case result := <-u.deletions:
 			u.finishDelete(result)
+			dirty = true
 		case result := <-u.clipboard.Results:
-			u.finishClipboard(result)
+			if u.finishClipboard(result) {
+				dirty = true
+			}
 		case result := <-u.sidebarResults:
-			u.finishSidebarRefresh(result)
+			if u.finishSidebarRefresh(result) {
+				dirty = true
+			}
 		case <-u.dragScrollC():
 			u.dragScrollTick()
 		case result := <-u.projectResults:
 			u.finishProjects(result)
+			if u.projects.open {
+				dirty = true
+			}
 		case name := <-u.reconnects:
 			// Only if nothing else was chosen while the server was away.
 			if u.conn == nil && u.picker && u.prompt == "" && !u.projects.open {
@@ -265,22 +235,180 @@ func run(socket, cwd string, start func(*ui) error) error {
 				} else {
 					u.notice("Reconnected to " + name)
 				}
+				dirty = true
 			}
 		case <-previewTicker.C:
 			if u.picker && u.prompt == "" {
+				prevFrame, prevErr, prevName := u.preview, u.previewError, u.previewName
 				u.requestPreview()
+				if u.preview != prevFrame || u.previewError != prevErr || u.previewName != prevName {
+					dirty = true
+				}
 			}
-		case <-ticker.C:
-			if u.picker && (u.prompt == "" || u.prompt == "delete") {
-				u.refresh()
-			} else if !u.picker && u.conn != nil {
-				// Also while the sidebar is hidden: alert sounds need fresh state.
-				u.refreshSidebar()
+		case now := <-ticker.C:
+			if u.handleTick(now) {
+				dirty = true
 			}
 		}
-		u.draw()
+		if !u.quitting {
+			d, r, closed := u.drainBurst(events)
+			if closed {
+				return nil
+			}
+			dirty = dirty || d
+			resized = resized || r
+		}
+		if resized && !u.quitting {
+			u.sendResize()
+			u.requestPreview()
+			dirty = true
+		}
+		if dirty && !u.quitting {
+			u.draw()
+		}
 	}
 	return nil
+}
+
+func (u *ui) handleEvent(event tcell.Event) (dirty, resized bool) {
+	switch e := event.(type) {
+	case *rawPasteEvent:
+		u.handleRawPaste(e)
+		return true, false
+	case *tcell.EventKey:
+		u.key(e)
+		return true, false
+	case *tcell.EventMouse:
+		if e.Buttons() == tcell.ButtonNone && !u.selection.dragging && !u.appMouseDown && u.divider == nil {
+			if u.linkHeld {
+				u.linkHeld = false
+			}
+			return false, false
+		}
+		if u.projects.open {
+			return false, false
+		}
+		u.mouse(e)
+		return true, false
+	case *tcell.EventResize:
+		return true, true
+	case *tcell.EventFocus:
+		if !e.Focused && !u.resizeUntil.IsZero() {
+			u.resizeUntil = time.Time{}
+			dirty = true
+		}
+		u.send(protocol.Request{Op: "focus", Focused: e.Focused && !u.picker})
+		return dirty, false
+	}
+	return false, false
+}
+
+func (u *ui) handleUpdate(next update) bool {
+	if next.generation != u.generation {
+		return false
+	}
+	if next.err != nil {
+		name := u.name
+		_ = u.conn.Close()
+		u.conn = nil
+		// A restarted server numbers images afresh.
+		_ = u.images.reset()
+		u.openPicker()
+		u.notice("Disconnected: " + next.err.Error())
+		u.reconnect(name)
+		return true
+	}
+	dirty := false
+	if next.response.Error != "" {
+		u.notice(next.response.Error)
+		dirty = true
+		if next.response.Ack >= u.pending {
+			u.pending = 0
+		}
+	}
+	if f := next.response.Frame; f != nil {
+		// Before the ack check: a frame skipped for being stale still
+		// carries the only copy of an app's clipboard write.
+		if f.Clipboard != "" {
+			u.appCopy(f.Clipboard)
+		}
+		if len(f.Panes) == 0 {
+			u.endSession(f.Name)
+			return true
+		}
+		// Keep wire-level per-pane delta state synchronized with the server
+		// even when this frame is skipped for Ack < u.pending.
+		u.reconstructFrame(f)
+		if next.response.Ack < u.pending {
+			return dirty
+		}
+		u.pending = 0
+		if u.applyFrame(f) {
+			return true
+		}
+		return dirty
+	}
+	return dirty
+}
+
+func (u *ui) handleTick(now time.Time) bool {
+	dirty := false
+	if u.picker && (u.prompt == "" || u.prompt == "delete") {
+		prevSessions := u.sessions
+		prevChosen := u.chosen
+		prevMsg, prevUntil := u.message, u.messageUntil
+		u.refresh()
+		if !sessionsEqual(prevSessions, u.sessions) || u.chosen != prevChosen || u.message != prevMsg || !u.messageUntil.Equal(prevUntil) {
+			dirty = true
+		}
+	} else if !u.picker && u.conn != nil {
+		// Also while the sidebar is hidden: alert sounds need fresh state.
+		u.refreshSidebar()
+	}
+	if u.noticeVisible && !now.Before(u.messageUntil) {
+		dirty = true
+	}
+	if u.resizeBannerVisible && !now.Before(u.resizeUntil) {
+		dirty = true
+	}
+	clockShown := !(u.projects.open && u.conn == nil && !u.picker) && !(u.picker && u.searching)
+	if clockShown && u.screen != nil {
+		w, _ := u.screen.Size()
+		if w > 0 && powerlineClock(w, now) != u.lastClock {
+			dirty = true
+		}
+	}
+	return dirty
+}
+
+// drainBurst coalesces already-queued input events and server updates before a
+// single redraw, preserving every edge, clipboard, notice, and message change.
+func (u *ui) drainBurst(events <-chan tcell.Event) (dirty, resized, closed bool) {
+	for i := 0; i < cap(events) && !u.quitting; i++ {
+		select {
+		case event, ok := <-events:
+			if !ok {
+				return dirty, resized, true
+			}
+			d, r := u.handleEvent(event)
+			dirty = dirty || d
+			resized = resized || r
+		default:
+			goto drainUpdates
+		}
+	}
+drainUpdates:
+	for i := 0; i < cap(u.updates) && !u.quitting; i++ {
+		select {
+		case next := <-u.updates:
+			if u.handleUpdate(next) {
+				dirty = true
+			}
+		default:
+			return dirty, resized, false
+		}
+	}
+	return dirty, resized, false
 }
 
 func (u *ui) endSession(name string) {
@@ -293,6 +421,7 @@ func (u *ui) endSession(name string) {
 	u.generation++
 	u.pending = 0
 	u.workspace, u.frame = nil, nil
+	u.paneFrames = nil
 	u.focused = 0
 	u.edgeKnown, u.configKnown, u.messageKnown = false, false, false
 	u.sidebarFocus = false
@@ -382,6 +511,7 @@ func (u *ui) switchTo(name string) error {
 	}
 	u.conn, u.name, u.frame = conn, name, nil
 	u.workspace, u.focused, u.selections = nil, 0, make(map[int]selection)
+	u.paneFrames = nil
 	u.paneSizes = make(map[int][2]int)
 	u.pending = 0
 	u.resizeUntil = time.Time{}
@@ -678,7 +808,7 @@ func (u *ui) copyText(text string) bool {
 	return true
 }
 
-func (u *ui) finishClipboard(result clipboardResult) {
+func (u *ui) finishClipboard(result clipboardResult) bool {
 	// Execute fallback writes in serialized copy order, but an old completion
 	// must not replace the notice for a newer copy intent.
 	if result.Err == nil && !result.Available {
@@ -688,11 +818,12 @@ func (u *ui) finishClipboard(result clipboardResult) {
 		// An app's OSC 52 write, like Neovim yanking: quiet unless it fails.
 		if result.Err != nil {
 			u.notice("Clipboard failed for an app's copy: " + result.Err.Error())
+			return true
 		}
-		return
+		return false
 	}
 	if result.Seq != u.clipboardSeq {
-		return
+		return false
 	}
 	if result.Err != nil {
 		u.notice("Clipboard failed: " + result.Err.Error())
@@ -701,6 +832,7 @@ func (u *ui) finishClipboard(result clipboardResult) {
 	} else {
 		u.notice("Clipboard requested via OSC 52; your terminal must allow it")
 	}
+	return true
 }
 
 // appCopy copies text an app in the session sent with OSC 52 through the
@@ -827,8 +959,12 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 		}
 		if u.appMouseDown {
 			visibleRows := min(len(u.frame.Rows), pos.Height, max(0, screenHeight-1-paneOriginY-pos.Y))
+			cols := 0
+			if len(u.frame.Rows) > 0 {
+				cols = len(u.frame.Rows[0])
+			}
 			u.send(protocol.Request{Op: "mouse", Kind: "release", Button: u.appMouseButton,
-				X: max(0, min(x, len(u.frame.Rows[0])-1)), Y: max(0, min(y-paneOriginY, visibleRows-1))})
+				X: max(0, min(x, cols-1)), Y: max(0, min(y-paneOriginY, visibleRows-1))})
 			u.appMouseDown = false
 			return
 		}
@@ -955,23 +1091,42 @@ func (u *ui) draw() {
 	if w <= 0 || h <= 0 {
 		return
 	}
-	u.screen.SetStyle(paneStyle) // what Clear paints, and so the blank space between panes
-	u.screen.Clear()
+	now := time.Now()
+	u.screen.SetStyle(paneStyle)
 	u.screen.HideCursor()
+	u.resizeBannerVisible = false
 	if u.projects.open && u.conn == nil && !u.picker {
-		u.screen.Fill(' ', uiBaseStyle) // bmux project: nothing behind the popup
+		// bmux project: nothing behind the popup; only paint uncovered cells so
+		// tcell keeps differential rendering intact for the popup contents.
+		u.lastClock = ""
+		u.fillRect(0, 0, w, 1, uiBaseStyle)
+		body := pickerArea{0, 1, w, max(0, h-2)}
+		if w >= 20 && h >= 8 {
+			bw := min(w, max(20, w*4/5))
+			bh := min(h-2, max(6, h*4/5))
+			popup := pickerArea{(w - bw) / 2, 1 + (h-2-bh)/2, bw, bh}
+			u.fillOutsideRect(body, popup, uiBaseStyle)
+		} else {
+			u.fillRect(body.x, body.y, body.w, body.h, uiBaseStyle)
+		}
 	} else if u.picker {
-		u.screen.Fill(' ', uiBaseStyle)
 		u.drawPicker(w, h)
 	} else {
+		ox := u.paneOriginX(w)
+		vp := pickerArea{ox, paneOriginY, max(0, w-ox), max(0, h-1-paneOriginY)}
 		if u.workspace != nil {
 			for _, p := range u.workspace.Panes {
 				u.drawPane(p, w, h)
 			}
+			u.drawPaneDividers(w, h)
+			u.fillUncovered(u.workspace, vp, paneStyle)
 		} else if u.frame != nil {
-			u.drawPane(u.focusedPlacement(), w, h)
+			p := u.focusedPlacement()
+			u.drawPane(p, w, h)
+			u.fillOutsideRect(vp, pickerArea{ox + p.X, paneOriginY + p.Y, p.Width, p.Height}, paneStyle)
+		} else {
+			u.fillRect(vp.x, vp.y, vp.w, vp.h, paneStyle)
 		}
-		u.drawPaneDividers(w, h)
 		u.drawSidebar(w, h)
 		if u.sidebarFocus {
 			u.screen.HideCursor()
@@ -988,7 +1143,7 @@ func (u *ui) draw() {
 		if u.prompt == "delete" {
 			u.drawDeleteModal(w, h)
 		}
-		u.drawPowerline(w, time.Now())
+		u.drawPowerline(w, now)
 	}
 	if u.projects.open {
 		u.drawProjects(w, h)
@@ -1032,9 +1187,10 @@ func (u *ui) draw() {
 		}
 	} else if u.welcome {
 		footer = "Welcome: Enter continues · Esc skips"
-	} else if time.Now().Before(u.resizeUntil) {
+	} else if now.Before(u.resizeUntil) {
 		_, prefix := u.keyTables()
 		footer = "Resizing: " + directionKeys(prefix, "resize") + " to continue · stops after 1s pause or another key"
+		u.resizeBannerVisible = true
 	}
 	if !u.picker && !u.projects.open {
 		identity := u.name + " | " + u.focusedPaneLabel()
@@ -1061,7 +1217,7 @@ func (u *ui) draw() {
 		u.screen.PutStrStyled(0, h-1, fit(" "+footer, w), barStyle)
 		u.drawUpdateHint(w, h, 1+displayWidth(footer))
 	}
-	u.drawNotice(w, h)
+	u.drawNoticeAt(w, h, now)
 	u.updateTitle()
 	u.drawImages()
 	u.screen.Show()
@@ -1105,9 +1261,53 @@ func tailFit(s string, width int) string {
 	return s
 }
 
+func parseHexNibble(b byte) (int32, bool) {
+	switch {
+	case b >= '0' && b <= '9':
+		return int32(b - '0'), true
+	case b >= 'a' && b <= 'f':
+		return int32(b-'a') + 10, true
+	case b >= 'A' && b <= 'F':
+		return int32(b-'A') + 10, true
+	default:
+		return 0, false
+	}
+}
+
 func cellColor(name string) tcell.Color {
-	if index, err := strconv.Atoi(name); err == nil && index >= 0 && index <= 255 {
-		return tcell.PaletteColor(index)
+	n := len(name)
+	if n == 0 {
+		return tcell.ColorDefault
+	}
+	if n == 7 && name[0] == '#' {
+		r1, ok1 := parseHexNibble(name[1])
+		r2, ok2 := parseHexNibble(name[2])
+		g1, ok3 := parseHexNibble(name[3])
+		g2, ok4 := parseHexNibble(name[4])
+		b1, ok5 := parseHexNibble(name[5])
+		b2, ok6 := parseHexNibble(name[6])
+		if ok1 && ok2 && ok3 && ok4 && ok5 && ok6 {
+			return tcell.NewRGBColor((r1<<4)|r2, (g1<<4)|g2, (b1<<4)|b2)
+		}
+		return tcell.ColorDefault
+	}
+	if n <= 3 && name[0] >= '0' && name[0] <= '9' {
+		v := 0
+		valid := true
+		for i := 0; i < n; i++ {
+			c := name[i]
+			if c < '0' || c > '9' {
+				valid = false
+				break
+			}
+			v = v*10 + int(c-'0')
+		}
+		if valid {
+			if v <= 255 {
+				return tcell.PaletteColor(v)
+			}
+			return tcell.ColorDefault
+		}
 	}
 	return tcell.GetColor(name)
 }

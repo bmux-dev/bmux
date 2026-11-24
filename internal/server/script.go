@@ -9,7 +9,6 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
 )
 
 // Scripting operations (bmux capture, bmux send) act on one pane from
@@ -159,17 +158,33 @@ func (s *session) sendInput(t paneTarget, ifSeq uint64, input []protocol.Input) 
 func (s *pane) textLocked() string {
 	var text strings.Builder
 	blankRows := 0
+	width := s.term.Width()
 	for y := range s.term.Height() {
+		cells := s.term.RowCells(y)
 		var row strings.Builder
-		for x := range s.term.Width() {
-			c := s.term.CellAt(x, y)
-			switch {
-			case c == nil || c.Content == "" && c.Width > 0 || vt.IsPlaceholder(c.Content):
+		for x := range width {
+			if x >= len(cells) {
 				row.WriteByte(' ')
-			case c.Width == 0:
+				continue
+			}
+			c := cells[x]
+			switch {
+			case c.IsPlaceholder():
+				row.WriteByte(' ')
+			case c.Width() == 0:
 				// The second column of a wide character.
+			case c.HasGrapheme():
+				if g := s.term.CellGrapheme(x, y); g != "" {
+					row.WriteString(g)
+				} else if c.Rune != 0 {
+					row.WriteRune(c.Rune)
+				} else {
+					row.WriteByte(' ')
+				}
+			case c.Rune == 0:
+				row.WriteByte(' ')
 			default:
-				row.WriteString(c.Content)
+				row.WriteRune(c.Rune)
 			}
 		}
 		line := strings.TrimRight(row.String(), " ")
@@ -208,7 +223,7 @@ func (s *pane) send(id int, ifSeq uint64, input []protocol.Input) (protocol.Pane
 		if in.Paste != "" {
 			reserve += len(in.Paste) + protocol.PasteMarkerBytes
 		} else {
-			reserve += 16
+			reserve += 32 // longest: CSI code;mods;text u with 7-digit runes
 		}
 	}
 	if reserve > protocol.MaxInputBytes {
@@ -233,6 +248,5 @@ func (s *pane) send(id int, ifSeq uint64, input []protocol.Input) (protocol.Pane
 	if err := s.bridge.finishUserInput(s.term.InputPipe()); err != nil {
 		return a, err
 	}
-	s.revision++
 	return a, nil
 }

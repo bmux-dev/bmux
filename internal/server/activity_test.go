@@ -449,3 +449,29 @@ func TestSampledForegroundAgentAppearsAndLeaves(t *testing.T) {
 	}
 	await("agent exit", func(a protocol.PaneActivity, ok bool) bool { return !ok })
 }
+
+func TestForegroundAgentSkipsIdleShell(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	s, err := newSession("idle", t.TempDir(), "/bin/sh", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.stop()
+	p := s.panes[1]
+	// Wait briefly for the shell to take ownership of its foreground PTY group.
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		group, err := foregroundPTYGroup(p.pty)
+		if err == nil && group == p.cmd.Process.Pid {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("idle shell never owned foreground group: group=%d pid=%d err=%v", group, p.cmd.Process.Pid, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	detected, err := p.foregroundAgent()
+	if err != nil || detected != "" {
+		t.Fatalf("idle shell foregroundAgent() = (%q, %v), want (\"\", nil)", detected, err)
+	}
+}

@@ -149,10 +149,11 @@ func watchPreview(ctx context.Context, socket string, request protocol.Request, 
 	}
 }
 
-func (u *ui) acceptPreview(result previewResult) {
+func (u *ui) acceptPreview(result previewResult) bool {
 	if !u.picker || result.epoch != u.previewEpoch || result.name != u.previewName {
-		return
+		return false
 	}
+	prevFrame, prevErr := u.preview, u.previewError
 	if result.ended {
 		u.stopPreview()
 	}
@@ -172,20 +173,21 @@ func (u *ui) acceptPreview(result previewResult) {
 			u.previewError = "Update the server to enable previews"
 		}
 		u.notice(u.previewError)
-		return
+		return true
 	}
 	u.previewRevision = result.revision
 	u.previewError = ""
 	if result.notModified {
-		return
+		return u.previewError != prevErr
 	}
 	if result.frame == nil || (result.frame.PreviewMode != "terminal-viewport" && result.frame.PreviewMode != "overview") {
 		u.stopPreview()
 		u.preview = nil
 		u.previewUnsupported = true
 		u.previewError = "Update the server for native terminal viewports"
-		return
+		return u.preview != prevFrame || u.previewError != prevErr
 	}
 	u.preview = result.frame
 	u.previewError = ""
+	return true
 }

@@ -125,11 +125,46 @@ func (se *SafeEmulator) IndexedColor(index int) color.Color {
 	return se.Emulator.IndexedColor(index)
 }
 
-// Touched returns the touched lines in a concurrency-safe manner.
-func (se *SafeEmulator) Touched() []*uv.LineData {
+// RowRev returns the per-row monotonic revision in a concurrency-safe manner.
+func (se *SafeEmulator) RowRev(y int) uint64 {
 	se.mu.RLock()
 	defer se.mu.RUnlock()
-	return se.Emulator.Touched()
+	return se.Emulator.RowRev(y)
+}
+
+// ScrollCount returns the main screen scroll-up counter in a concurrency-safe manner.
+func (se *SafeEmulator) ScrollCount() uint64 {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.ScrollCount()
+}
+
+// ScrollbackTotal returns the total pushed scrollback lines in a concurrency-safe manner.
+func (se *SafeEmulator) ScrollbackTotal() uint64 {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.ScrollbackTotal()
+}
+
+// ScrollbackEpoch returns the scrollback epoch in a concurrency-safe manner.
+func (se *SafeEmulator) ScrollbackEpoch() uint64 {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.ScrollbackEpoch()
+}
+
+// Style returns the interned Style for id in a concurrency-safe manner.
+func (se *SafeEmulator) Style(id uint32) Style {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.Style(id)
+}
+
+// HasScrollback reports whether scrollback is enabled in a concurrency-safe manner.
+func (se *SafeEmulator) HasScrollback() bool {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.HasScrollback()
 }
 
 // Height returns the height of the emulator in a concurrency-safe manner.
