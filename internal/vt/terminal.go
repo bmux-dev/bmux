@@ -54,7 +54,6 @@ type Terminal interface {
 	SetLogger(l Logger)
 	SetScrollbackSize(maxLines int)
 	String() string
-	Touched() []*uv.LineData
 	Width() int
 	WidthMethod() uv.WidthMethod
 	Write(p []byte) (n int, err error)

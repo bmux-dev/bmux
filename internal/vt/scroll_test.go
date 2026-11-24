@@ -12,34 +12,52 @@ import (
 // cell-by-cell copy leaves, for every position, count and region.
 func TestMoveLinesMatchesCellCopy(t *testing.T) {
 	const w, h = 6, 5
-	fill := func(s *Screen) {
+	fillScreen := func(s *Screen) {
 		for y := range h {
 			for x := range w {
-				s.buf.Lines[y][x] = uv.Cell{Content: string(rune('a' + y*w + x)), Width: 1}
+				s.SetCell(x, y, &uv.Cell{Content: string(rune('a' + y*w + x)), Width: 1})
 			}
 		}
-		s.buf.Lines[2][1] = uv.Cell{Content: "界", Width: 2} // a wide character and its placeholder
-		s.buf.Lines[2][2] = uv.Cell{}
+		s.SetCell(1, 2, &uv.Cell{Content: "界", Width: 2})
+	}
+	fillUV := func(b *uv.Buffer) {
+		for y := range h {
+			for x := range w {
+				b.Lines[y][x] = uv.Cell{Content: string(rune('a' + y*w + x)), Width: 1}
+			}
+		}
+		b.Lines[2][1] = uv.Cell{Content: "界", Width: 2}
+		b.Lines[2][2] = uv.Cell{}
 	}
 	for _, region := range [][2]int{{0, h}, {1, 4}} {
 		for _, bg := range []color.Color{nil, color.RGBA{R: 200, A: 255}} {
 			for y := region[0]; y < region[1]; y++ {
 				for n := -h - 1; n <= h+1; n++ {
 					name := fmt.Sprintf("region %v bg %v y %d n %d", region, bg != nil, y, n)
-					fast, slow := NewScreen(w, h), NewScreen(w, h)
-					fill(fast)
-					fill(slow)
+					fast := NewScreen(w, h)
+					slow := uv.NewBuffer(w, h)
+					fillScreen(fast)
+					fillUV(slow)
 					area := uv.Rect(0, region[0], w, region[1]-region[0])
-					fast.cur.Pen.Bg, slow.cur.Pen.Bg = bg, bg
+					fast.cur.Pen.Bg = bg
+					fast.syncCursorStyle()
+					var blank *uv.Cell
+					if bg != nil {
+						c := uv.EmptyCell
+						c.Style.Bg = bg
+						blank = &c
+					}
 					fast.moveLines(y, n, area)
 					if n > 0 {
-						slow.buf.InsertLineArea(y, n, slow.blankCell(), area)
+						slow.InsertLineArea(y, n, blank, area)
 					} else if n < 0 {
-						slow.buf.DeleteLineArea(y, -n, slow.blankCell(), area)
+						slow.DeleteLineArea(y, -n, blank, area)
 					}
 					for row := range h {
 						for x := range w {
-							if got, want := fast.buf.Lines[row][x], slow.buf.Lines[row][x]; !got.Equal(&want) {
+							got := fast.CellAt(x, row)
+							want := slow.Lines[row][x]
+							if got == nil || !got.Equal(&want) {
 								t.Fatalf("%s: cell %d,%d is %+v, want %+v", name, x, row, got, want)
 							}
 						}
@@ -54,10 +72,10 @@ func TestMoveLinesMatchesCellCopy(t *testing.T) {
 // writing to one must not show up in another.
 func TestMoveLinesKeepsRowsDistinct(t *testing.T) {
 	s := NewScreen(4, 3)
-	s.moveLines(0, -1, s.buf.Bounds())
-	s.buf.Lines[2][0] = uv.Cell{Content: "z", Width: 1}
+	s.moveLines(0, -1, s.Bounds())
+	s.SetCell(0, 2, &uv.Cell{Content: "z", Width: 1})
 	for y := range 2 {
-		if s.buf.Lines[y][0].Content == "z" {
+		if c := s.CellAt(0, y); c != nil && c.Content == "z" {
 			t.Fatalf("row %d shares cells with the freed row", y)
 		}
 	}

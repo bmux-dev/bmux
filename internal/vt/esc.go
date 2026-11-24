@@ -57,6 +57,7 @@ func (e *Emulator) softReset() {
 	e.scr.setHorizontalMargins(0, e.Width())
 	e.scr.setCursor(x, y, false)
 	e.scr.cur.Pen, e.scr.cur.Link = uv.Style{}, uv.Link{}
+	e.scr.syncCursorStyle()
 	e.scr.saved.Position, e.scr.saved.Pen, e.scr.saved.Link = uv.Position{}, uv.Style{}, uv.Link{}
 	e.gl, e.gr = 0, 1
 	e.gsingle = 0

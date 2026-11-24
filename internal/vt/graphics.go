@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -83,23 +82,22 @@ func (e *Emulator) pixelSize() (width, height int) {
 // screen or in scrollback show.
 func (e *Emulator) PlaceholderImageIDs() map[uint32]struct{} {
 	ids := make(map[uint32]struct{})
-	note := func(c *uv.Cell) {
-		if c != nil && IsPlaceholder(c.Content) {
-			ids[PlaceholderID(c.Style.Fg)] = struct{}{}
-		}
-	}
 	for i := range e.scrs {
 		scr := &e.scrs[i]
-		for y := 0; y < scr.Height(); y++ {
-			for x := 0; x < scr.Width(); x++ {
-				note(scr.CellAt(x, y))
+		for _, row := range scr.rows {
+			for _, c := range row {
+				if c.IsPlaceholder() {
+					ids[e.styles.Get(c.StyleID).Fg.PlaceholderID()] = struct{}{}
+				}
 			}
 		}
 	}
 	if sb := e.Scrollback(); sb != nil {
-		for _, line := range sb.Lines() {
-			for x := range line {
-				note(&line[x])
+		for y := range sb.Len() {
+			for _, c := range sb.RowCells(y) {
+				if c.IsPlaceholder() {
+					ids[e.styles.Get(c.StyleID).Fg.PlaceholderID()] = struct{}{}
+				}
 			}
 		}
 	}
