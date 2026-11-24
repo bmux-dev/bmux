@@ -565,8 +565,15 @@ func (s *session) selectPaneDirectionLocked(w *window, direction string, from in
 
 // snapshot coalesces revisions from the active window's PTYs while retaining a
 // separate viewport for every pane in each attached client. Caller owns
-// offsets and lastTotals.
+// offsets and lastTotals. Always emits full (non-delta) TerminalFrames.
 func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force bool) (*protocol.Frame, uint64) {
+	return s.snapshotDelta(offsets, lastTotals, nil, last, force)
+}
+
+// snapshotDelta is like snapshot, but when states is non-nil emits incremental
+// dirty-row / scroll-up deltas and Unchanged markers per pane and keeps states
+// aligned with the exact set of panes sent in this frame.
+func (s *session) snapshotDelta(offsets, lastTotals map[int]int, states map[int]*paneDeltaState, last uint64, force bool) (*protocol.Frame, uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	revision := s.revisionLocked()
@@ -585,9 +592,29 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 			delete(lastTotals, id)
 		}
 	}
-	for _, pos := range s.placements() {
+	placements := s.placements()
+	if states != nil {
+		active := make(map[int]bool, len(placements))
+		for _, pos := range placements {
+			active[pos.id] = true
+		}
+		for id := range states {
+			if !active[id] {
+				delete(states, id)
+			}
+		}
+	}
+	for _, pos := range placements {
 		p := s.panes[pos.id]
-		terminal, _ := p.anchoredFrame(offsets[pos.id], lastTotals[pos.id])
+		var st *paneDeltaState
+		if states != nil {
+			st = states[pos.id]
+			if st == nil {
+				st = &paneDeltaState{}
+				states[pos.id] = st
+			}
+		}
+		terminal, _ := p.anchoredDeltaFrame(offsets[pos.id], lastTotals[pos.id], st)
 		offsets[pos.id], lastTotals[pos.id] = terminal.Offset, terminal.Base+terminal.Offset
 		f.Panes = append(f.Panes, protocol.PaneFrame{ID: pos.id, X: pos.x, Y: pos.y, Width: pos.w, Height: pos.h, Terminal: terminal})
 	}

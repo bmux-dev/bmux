@@ -493,6 +493,7 @@ func (s *Server) handle(conn net.Conn) {
 		}
 	}()
 	offsets, histories := make(map[int]int), make(map[int]int)
+	paneStates := make(map[int]*paneDeltaState)
 	var revision uint64
 	ack := 0
 	force := true
@@ -522,7 +523,7 @@ func (s *Server) handle(conn net.Conn) {
 	}
 	defer stopCoalesce()
 	sendFrame := func() bool {
-		frame, rev := item.snapshot(offsets, histories, revision, force)
+		frame, rev := item.snapshotDelta(offsets, histories, paneStates, revision, force)
 		if frame == nil {
 			return false
 		}

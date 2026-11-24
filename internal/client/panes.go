@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,7 +11,78 @@ import (
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
-func (u *ui) applyFrame(f *protocol.Frame) {
+// reconstructFrame resolves any incremental delta TerminalFrames in f against
+// u.paneFrames and updates u.paneFrames to match the exact set of panes in f.
+// It is idempotent once resolved (reconstructed panes have Delta == false).
+func (u *ui) reconstructFrame(f *protocol.Frame) {
+	if f == nil {
+		return
+	}
+	if u.paneFrames == nil {
+		u.paneFrames = make(map[int]*protocol.TerminalFrame, len(f.Panes))
+	}
+	alive := make(map[int]bool, len(f.Panes))
+	for i := range f.Panes {
+		p := &f.Panes[i]
+		alive[p.ID] = true
+		resolved := protocol.ApplyTerminalDelta(u.paneFrames[p.ID], p.Terminal)
+		p.Terminal = resolved
+		u.paneFrames[p.ID] = resolved
+	}
+	for id := range u.paneFrames {
+		if !alive[id] {
+			delete(u.paneFrames, id)
+		}
+	}
+}
+
+func frameVisibleChanged(prev, next *protocol.Frame) bool {
+	if prev == nil || next == nil {
+		return true
+	}
+	if prev.Name != next.Name ||
+		prev.Focused != next.Focused ||
+		prev.Zoomed != next.Zoomed ||
+		prev.Width != next.Width ||
+		prev.Height != next.Height ||
+		prev.Edge != next.Edge ||
+		prev.EdgeDirection != next.EdgeDirection ||
+		prev.Config != next.Config ||
+		prev.MessageSeq != next.MessageSeq ||
+		prev.Message != next.Message ||
+		next.Notice != "" {
+		return true
+	}
+	if (prev.Update == nil) != (next.Update == nil) {
+		return true
+	}
+	if prev.Update != nil && *prev.Update != *next.Update {
+		return true
+	}
+	if len(prev.Windows) != len(next.Windows) {
+		return true
+	}
+	for i := range prev.Windows {
+		a, b := prev.Windows[i], next.Windows[i]
+		if a.Name != b.Name || a.Title != b.Title || a.Active != b.Active || !slices.Equal(a.Panes, b.Panes) {
+			return true
+		}
+	}
+	if len(prev.Panes) != len(next.Panes) {
+		return true
+	}
+	for i := range prev.Panes {
+		a, b := prev.Panes[i], next.Panes[i]
+		if a.ID != b.ID || a.X != b.X || a.Y != b.Y || a.Width != b.Width || a.Height != b.Height || a.Terminal != b.Terminal {
+			return true
+		}
+	}
+	return false
+}
+
+func (u *ui) applyFrame(f *protocol.Frame) bool {
+	u.reconstructFrame(f)
+	changed := frameVisibleChanged(u.workspace, f)
 	if u.selections == nil {
 		u.selections = make(map[int]selection)
 	}
@@ -87,6 +159,7 @@ func (u *ui) applyFrame(f *protocol.Frame) {
 		}
 	}
 	u.noteViewFrame(u.frame)
+	return changed
 }
 
 func (u *ui) activatePane(id int) {

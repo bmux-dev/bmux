@@ -480,11 +480,20 @@ func (s *Scrollback) Clear() {
 
 // replaceCompact swaps in a whole new compact history, newest last, trimmed
 // to maxLines and packed into fresh pages with zero backing-array pinning.
-func (s *Scrollback) replaceCompact(rows [][]Cell, extras []rowExtra, flags []LineFlags) {
+// When bumpEpoch is true (width reflow or rows pulled back off scrollback),
+// epoch increments; otherwise (height-only resize appending rows in order)
+// epoch stays unchanged and totalPushed advances by the exact net lines added.
+func (s *Scrollback) replaceCompact(rows [][]Cell, extras []rowExtra, flags []LineFlags, bumpEpoch bool) {
 	if s == nil {
 		return
 	}
 	savedTotal := s.totalPushed
+	savedEpoch := s.epoch
+	origLen := s.count
+	newTotalRows := len(rows)
+	if !bumpEpoch && newTotalRows < origLen {
+		bumpEpoch = true
+	}
 	s.Clear()
 	if excess := len(rows) - s.maxLines; excess > 0 {
 		rows = rows[excess:]
@@ -510,10 +519,14 @@ func (s *Scrollback) replaceCompact(rows [][]Cell, extras []rowExtra, flags []Li
 		}
 		s.pushCompact(row, ex, f)
 	}
-	// Preserve monotonic totalPushed across reflow rewrites while bumping epoch
-	// (already done by Clear).
-	if savedTotal > s.totalPushed {
-		s.totalPushed = savedTotal
+	if bumpEpoch {
+		s.epoch = savedEpoch + 1
+		if savedTotal > s.totalPushed {
+			s.totalPushed = savedTotal
+		}
+	} else {
+		s.epoch = savedEpoch
+		s.totalPushed = savedTotal + uint64(newTotalRows-origLen)
 	}
 }
 

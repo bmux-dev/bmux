@@ -29,12 +29,18 @@ func attachTestClient(t *testing.T, addr, name string, width, height int) (net.C
 	frames := make(chan *protocol.Frame, 256)
 	go func() {
 		defer close(frames)
+		panes := make(map[int]*protocol.TerminalFrame)
 		for {
 			var r protocol.Response
 			if dec.Decode(&r) != nil {
 				return
 			}
 			if r.Frame != nil {
+				for i := range r.Frame.Panes {
+					p := &r.Frame.Panes[i]
+					p.Terminal = protocol.ApplyTerminalDelta(panes[p.ID], p.Terminal)
+					panes[p.ID] = p.Terminal
+				}
 				frames <- r.Frame
 			}
 		}

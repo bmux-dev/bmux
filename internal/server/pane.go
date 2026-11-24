@@ -35,6 +35,8 @@ type pane struct {
 	revision     uint64
 	title        string
 	background   string // OSC 11 pane background; "" uses the attached terminal's
+	paletteSeq   uint64 // incremented on OSC 4/104 palette redefinitions
+	rgbCache     map[uint32]string
 	visible      bool
 	style        vt.CursorStyle
 	blink        bool
@@ -335,41 +337,84 @@ func (s *pane) input(r protocol.Request) error {
 	return nil
 }
 
+const hexDigits = "0123456789abcdef"
+
+var asciiStrings = func() [128]string {
+	var t [128]string
+	for i := range t {
+		t[i] = string(byte(i))
+	}
+	return t
+}()
+
+func formatHexRGB(r, g, b uint8) string {
+	var buf [7]byte
+	buf[0] = '#'
+	buf[1] = hexDigits[r>>4]
+	buf[2] = hexDigits[r&0x0f]
+	buf[3] = hexDigits[g>>4]
+	buf[4] = hexDigits[g&0x0f]
+	buf[5] = hexDigits[b>>4]
+	buf[6] = hexDigits[b&0x0f]
+	return string(buf[:])
+}
+
 func rgb(c color.Color) string {
 	if c == nil {
 		return ""
 	}
 	r, g, b, _ := c.RGBA()
-	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+	return formatHexRGB(uint8(r>>8), uint8(g>>8), uint8(b>>8))
 }
 
-// cellColor keeps palette colors as indexes so the attached terminal renders
-// them with its own theme. Entries an application redefined are sent exactly.
-func (s *pane) cellColor(c color.Color) string {
-	var index int
-	switch c := c.(type) {
-	case nil:
+func (s *pane) hexRGB(r, g, b uint8) string {
+	key := uint32(r)<<16 | uint32(g)<<8 | uint32(b)
+	if str, ok := s.rgbCache[key]; ok {
+		return str
+	}
+	str := formatHexRGB(r, g, b)
+	if s.rgbCache == nil {
+		s.rgbCache = make(map[uint32]string, 32)
+	} else if len(s.rgbCache) >= 4096 {
+		clear(s.rgbCache)
+	}
+	s.rgbCache[key] = str
+	return str
+}
+
+func (s *pane) rgbColor(c color.Color) string {
+	if c == nil {
 		return ""
-	case ansi.BasicColor:
-		index = int(c)
-	case ansi.IndexedColor:
-		index = int(c)
-	default:
-		return rgb(c)
 	}
-	palette := s.term.IndexedColor(index)
-	if _, standard := palette.(ansi.IndexedColor); standard {
-		return protocol.PaletteColor(index)
+	r, g, b, _ := c.RGBA()
+	return s.hexRGB(uint8(r>>8), uint8(g>>8), uint8(b>>8))
+}
+
+// vtColor keeps palette colors as indexes so the attached terminal renders
+// them with its own theme. Entries an application redefined are sent exactly.
+func (s *pane) vtColor(c vt.Color) string {
+	if c.IsDefault() {
+		return ""
 	}
-	return rgb(palette)
+	if c.IsIndexed() {
+		index := int(c.Index())
+		palette := s.term.IndexedColor(index)
+		if _, standard := palette.(ansi.IndexedColor); standard {
+			return protocol.PaletteColor(index)
+		}
+		return s.rgbColor(palette)
+	}
+	r, g, b := c.RGB()
+	return s.hexRGB(r, g, b)
 }
 
 // trackBackground records the background an application sets with OSC 11 and
-// clears it on OSC 111. The emulator's own BackgroundColor cannot tell "never
-// set" from black, and the attached terminal never sees the OSC itself, so
-// without this an app's background (opencode, pi themes) is silently dropped.
-// Handlers return false so the emulator still updates its state and answers
-// OSC 11 queries.
+// clears it on OSC 111, and tracks OSC 4/104 palette redefinitions so delta
+// frames refresh when indexed colors change. The emulator's own BackgroundColor
+// cannot tell "never set" from black, and the attached terminal never sees the
+// OSC itself, so without this an app's background (opencode, pi themes) is
+// silently dropped. Handlers return false so the emulator still updates its
+// state and answers queries.
 func (s *pane) trackBackground() {
 	s.term.RegisterOscHandler(11, func(data []byte) bool {
 		_, arg, _ := strings.Cut(string(data), ";")
@@ -387,6 +432,14 @@ func (s *pane) trackBackground() {
 		s.background = ""
 		return false
 	})
+	s.term.RegisterOscHandler(4, func([]byte) bool {
+		s.paletteSeq++
+		return false
+	})
+	s.term.RegisterOscHandler(104, func([]byte) bool {
+		s.paletteSeq++
+		return false
+	})
 }
 
 // defaultBG is the pane background an application set with OSC 11, or "" so
@@ -395,20 +448,93 @@ func (s *pane) defaultBG() string {
 	return s.background
 }
 
-// cell converts an emulator cell; bg replaces the default background. A cell
-// inside an OSC 8 hyperlink is added to links, which may be nil to leave
-// links out. A placeholder cell's image id is remapped through placed.
-func (s *pane) cell(c *uv.Cell, bg string, links *[]string, placed *frameImages) protocol.Cell {
-	cellBG := s.cellColor(c.Style.Bg)
-	if cellBG == "" {
-		cellBG = bg
+// convertRow converts len(dst) cells starting at column startX from src into
+// dst using compact vt.Cell getters with zero per-cell allocations for ASCII,
+// default/palette, and cached RGB styles. Caller holds pane.mu.
+func (s *pane) convertRow(dst []protocol.Cell, src []vt.Cell, startX, srcY int, fromScrollback bool, bg string, links *[]string, placed *frameImages) {
+	var (
+		hasLastStyle  bool
+		lastStyleID   uint32
+		lastFG        string
+		lastBG        string
+		lastAttrs     uint8
+		lastUnderline bool
+		lastFgColor   vt.Color
+	)
+	for i := range dst {
+		x := startX + i
+		if x < 0 || x >= len(src) {
+			dst[i] = protocol.Cell{BG: bg}
+			continue
+		}
+		c := src[x]
+		if c.IsZero() {
+			dst[i] = protocol.Cell{BG: bg}
+			continue
+		}
+		var text string
+		if c.HasGrapheme() {
+			if fromScrollback {
+				text = s.term.ScrollbackCellGrapheme(x, srcY)
+			} else {
+				text = s.term.CellGrapheme(x, srcY)
+			}
+		}
+		if text == "" {
+			if r := c.Rune; r > 0 {
+				if r < 128 {
+					text = asciiStrings[r]
+				} else if r == vt.PlaceholderRune {
+					text = vt.Placeholder
+				} else {
+					text = string(r)
+				}
+			}
+		}
+		var out protocol.Cell
+		var fgColor vt.Color
+		if c.StyleID == 0 {
+			out = protocol.Cell{Text: text, Width: c.Width(), BG: bg}
+		} else {
+			if !hasLastStyle || c.StyleID != lastStyleID {
+				st := s.term.Style(c.StyleID)
+				lastStyleID = c.StyleID
+				hasLastStyle = true
+				lastFgColor = st.Fg
+				lastFG = s.vtColor(st.Fg)
+				lastBG = s.vtColor(st.Bg)
+				if lastBG == "" {
+					lastBG = bg
+				}
+				lastAttrs = st.Attrs
+				lastUnderline = st.Underline != 0
+			}
+			fgColor = lastFgColor
+			out = protocol.Cell{
+				Text:      text,
+				Width:     c.Width(),
+				FG:        lastFG,
+				BG:        lastBG,
+				Attrs:     lastAttrs,
+				Underline: lastUnderline,
+			}
+		}
+		if links != nil && c.HasLink() {
+			var link uv.Link
+			if fromScrollback {
+				link = s.term.ScrollbackCellLink(x, srcY)
+			} else {
+				link = s.term.CellLink(x, srcY)
+			}
+			if link.URL != "" {
+				out.Link = linkIndex(links, link.URL)
+			}
+		}
+		if c.IsPlaceholder() {
+			out = placed.remapCompact(out, fgColor, s.hexRGB)
+		}
+		dst[i] = out
 	}
-	out := protocol.Cell{Text: c.Content, Width: c.Width, FG: s.cellColor(c.Style.Fg), BG: cellBG,
-		Attrs: c.Style.Attrs, Underline: c.Style.Underline != 0}
-	if links != nil && c.Link.URL != "" {
-		out.Link = linkIndex(links, c.Link.URL)
-	}
-	return placed.remap(out, c.Style.Fg)
 }
 
 // linkIndex returns 1 + the position of url in links, appending it when new.
@@ -423,6 +549,75 @@ func linkIndex(links *[]string, url string) int {
 	return len(*links)
 }
 
+// paneDeltaState tracks the last TerminalFrame state sent for one pane on a
+// single client attachment, enabling incremental ScrollUp / RowDelta frames
+// and Unchanged short-circuits.
+type paneDeltaState struct {
+	valid         bool
+	width, height int
+	epoch         uint64
+	alt           bool
+	offset        int
+	history       int
+	base          int
+	historyStart  int
+	scrollCount   uint64
+	paneRevision  uint64
+	background    string
+	paletteSeq    uint64
+	name          string
+	title         string
+	cursorX       int
+	cursorY       int
+	cursorVisible bool
+	cursorStyle   int
+	cursorBlink   bool
+	mouse         bool
+	exited        bool
+	rowRevs       []uint64
+	links         []string
+	hadImages     bool
+	lastPlaced    map[uint32]graphics.Info
+}
+
+func (st *paneDeltaState) record(
+	w, h int, epoch uint64, alt bool, offset, history, base, historyStart int,
+	scrollCount, paneRevision uint64, background string, paletteSeq uint64,
+	name, title string, cursorX, cursorY int, cursorVisible bool, cursorStyle int,
+	cursorBlink, mouse, exited bool, term *vt.Emulator, links []string, placed *frameImages,
+) {
+	st.valid = true
+	st.width, st.height = w, h
+	st.epoch, st.alt = epoch, alt
+	st.offset, st.history, st.base, st.historyStart = offset, history, base, historyStart
+	st.scrollCount, st.paneRevision = scrollCount, paneRevision
+	st.background, st.paletteSeq = background, paletteSeq
+	st.name, st.title = name, title
+	st.cursorX, st.cursorY = cursorX, cursorY
+	st.cursorVisible, st.cursorStyle, st.cursorBlink = cursorVisible, cursorStyle, cursorBlink
+	st.mouse, st.exited = mouse, exited
+	if cap(st.rowRevs) < h {
+		st.rowRevs = make([]uint64, h)
+	} else {
+		st.rowRevs = st.rowRevs[:h]
+	}
+	for y := range h {
+		st.rowRevs[y] = term.RowRev(y)
+	}
+	if len(links) == 0 {
+		st.links = nil
+	} else {
+		st.links = links
+	}
+	if placed != nil {
+		st.hadImages = true
+		st.lastPlaced = clonePlaced(placed.byApp)
+	} else {
+		st.hadImages = false
+		st.lastPlaced = nil
+	}
+}
+
 // frame returns only the requested viewport, not the entire scrollback buffer.
 // A slow client cannot block PTY output while rendering or writing to its socket.
 func (s *pane) frame(offset int) (*protocol.TerminalFrame, uint64) {
@@ -434,6 +629,10 @@ func (s *pane) frame(offset int) (*protocol.TerminalFrame, uint64) {
 // Anchor adjustment and visible-row construction share one state acquisition.
 // Output cannot advance history between the coordinate check and cell copy.
 func (s *pane) anchoredFrame(offset, previousTotal int) (*protocol.TerminalFrame, uint64) {
+	return s.anchoredDeltaFrame(offset, previousTotal, nil)
+}
+
+func (s *pane) anchoredDeltaFrame(offset, previousTotal int, state *paneDeltaState) (*protocol.TerminalFrame, uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	total := max(s.historyTotal, s.term.ScrollbackLen())
@@ -445,39 +644,163 @@ func (s *pane) anchoredFrame(offset, previousTotal int) (*protocol.TerminalFrame
 	} else if offset > 0 {
 		offset += total - previousTotal
 	}
-	return s.frameLocked(offset)
+	return s.frameDeltaLocked(offset, state)
 }
 
 // Caller holds pane.mu.
 func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
+	return s.frameDeltaLocked(offset, nil)
+}
+
+// Caller holds pane.mu. When state is non-nil, emits an incremental delta or
+// Unchanged marker whenever possible and updates state to match the sent frame.
+func (s *pane) frameDeltaLocked(offset int, state *paneDeltaState) (*protocol.TerminalFrame, uint64) {
 	history := s.term.ScrollbackLen()
 	total := max(s.historyTotal, history)
-	if s.term.IsAltScreen() {
+	alt := s.term.IsAltScreen()
+	if alt {
 		offset = 0
 		history = 0
 		total = 0
 	}
 	offset = max(0, min(offset, history))
+	base := total - offset
+	historyStart := total - history
+	w, h := s.term.Width(), s.term.Height()
 	p := s.term.CursorPosition()
-	f := &protocol.TerminalFrame{
-		Name: s.info.Name, Title: s.title, Base: total - offset, Epoch: s.epoch, HistoryStart: total - history,
-		Offset: offset, History: history, CursorX: p.X, CursorY: p.Y,
-		CursorVisible: s.visible && offset == 0, CursorStyle: int(s.style), CursorBlink: s.blink,
-		Alt: s.term.IsAltScreen(), Exited: s.info.Exited,
-		Mouse: s.modes[9] || s.modes[1000] || s.modes[1002] || s.modes[1003],
-	}
+	cursorVisible := s.visible && offset == 0
+	cursorStyle := int(s.style)
+	cursorBlink := s.blink
+	mouse := s.modes[9] || s.modes[1000] || s.modes[1002] || s.modes[1003]
 	bg := s.defaultBG()
 	placed := s.frameImages()
+	curScroll := s.term.ScrollCount()
+
+	if state != nil && state.valid &&
+		state.width == w && state.height == h &&
+		state.epoch == s.epoch && state.alt == alt &&
+		state.background == bg && state.paletteSeq == s.paletteSeq {
+		metaSame := state.name == s.info.Name &&
+			state.title == s.title &&
+			state.base == base &&
+			state.offset == offset &&
+			state.history == history &&
+			state.historyStart == historyStart &&
+			state.cursorX == p.X && state.cursorY == p.Y &&
+			state.cursorVisible == cursorVisible &&
+			state.cursorStyle == cursorStyle &&
+			state.cursorBlink == cursorBlink &&
+			state.mouse == mouse &&
+			state.exited == s.info.Exited
+		imagesUnchanged := (placed == nil && !state.hadImages) ||
+			(placed != nil && state.hadImages && placedEqual(placed.byApp, state.lastPlaced))
+
+		if offset > 0 {
+			if metaSame && imagesUnchanged && s.revision == state.paneRevision {
+				return &protocol.TerminalFrame{
+					Delta: true, Unchanged: true,
+					Name: s.info.Name, Base: base, Offset: offset, History: history,
+				}, s.revision
+			}
+		} else if state.offset == 0 {
+			scrollUp := 0
+			if !alt && curScroll > state.scrollCount {
+				if d := curScroll - state.scrollCount; d < uint64(h) {
+					scrollUp = int(d)
+				} else {
+					scrollUp = h
+				}
+			}
+			if scrollUp < h {
+				var dirtyBuf [64]int
+				dirty := dirtyBuf[:0]
+				for y := range h {
+					var expected uint64
+					if y+scrollUp < h {
+						expected = state.rowRevs[y+scrollUp]
+					}
+					if s.term.RowRev(y) != expected {
+						dirty = append(dirty, y)
+					}
+				}
+				if scrollUp == 0 && len(dirty) == 0 && metaSame && imagesUnchanged {
+					state.paneRevision = s.revision
+					state.scrollCount = curScroll
+					return &protocol.TerminalFrame{
+						Delta: true, Unchanged: true,
+						Name: s.info.Name, Base: base, Offset: offset, History: history,
+					}, s.revision
+				}
+				if placed == nil && !state.hadImages && (scrollUp > 0 || len(dirty) < h) {
+					var links []string
+					if len(state.links) > 0 {
+						links = append(make([]string, 0, len(state.links)+4), state.links...)
+					}
+					var deltas []protocol.RowDelta
+					if len(dirty) > 0 {
+						deltas = make([]protocol.RowDelta, len(dirty))
+						for i, y := range dirty {
+							row := make([]protocol.Cell, w)
+							s.convertRow(row, s.term.RowCells(y), 0, y, false, bg, &links, nil)
+							deltas[i] = protocol.RowDelta{
+								Y:       y,
+								Cells:   row,
+								Wrapped: s.term.LineWrapped(y),
+							}
+						}
+					}
+					if len(links) <= 64 {
+						f := &protocol.TerminalFrame{
+							Delta:         true,
+							ScrollUp:      scrollUp,
+							RowDeltas:     deltas,
+							Name:          s.info.Name,
+							Title:         s.title,
+							Base:          base,
+							Epoch:         s.epoch,
+							HistoryStart:  historyStart,
+							Offset:        offset,
+							History:       history,
+							CursorX:       p.X,
+							CursorY:       p.Y,
+							CursorVisible: cursorVisible,
+							CursorStyle:   cursorStyle,
+							CursorBlink:   cursorBlink,
+							Alt:           alt,
+							Exited:        s.info.Exited,
+							Mouse:         mouse,
+							Links:         links,
+						}
+						state.record(w, h, s.epoch, alt, offset, history, base, historyStart,
+							curScroll, s.revision, bg, s.paletteSeq, s.info.Name, s.title,
+							p.X, p.Y, cursorVisible, cursorStyle, cursorBlink, mouse, s.info.Exited,
+							s.term, links, nil)
+						return f, s.revision
+					}
+				}
+			}
+		}
+	}
+
+	f := &protocol.TerminalFrame{
+		Name: s.info.Name, Title: s.title, Base: base, Epoch: s.epoch, HistoryStart: historyStart,
+		Offset: offset, History: history, CursorX: p.X, CursorY: p.Y,
+		CursorVisible: cursorVisible, CursorStyle: cursorStyle, CursorBlink: cursorBlink,
+		Alt: alt, Exited: s.info.Exited, Mouse: mouse,
+	}
 	defer placed.finish(f)
-	f.Rows = make([][]protocol.Cell, s.term.Height())
+	f.Rows = make([][]protocol.Cell, h)
 	for y := range f.Rows {
-		f.Rows[y] = make([]protocol.Cell, s.term.Width())
+		f.Rows[y] = make([]protocol.Cell, w)
 		row := history - offset + y
 		wrapped := false
 		if row < history {
 			wrapped = s.term.ScrollbackWrapped(row)
+			s.convertRow(f.Rows[y], s.term.ScrollbackRowCells(row), 0, row, true, bg, &f.Links, placed)
 		} else {
-			wrapped = s.term.LineWrapped(row - history)
+			screenY := row - history
+			wrapped = s.term.LineWrapped(screenY)
+			s.convertRow(f.Rows[y], s.term.RowCells(screenY), 0, screenY, false, bg, &f.Links, placed)
 		}
 		if wrapped {
 			if f.Wrapped == nil {
@@ -485,19 +808,12 @@ func (s *pane) frameLocked(offset int) (*protocol.TerminalFrame, uint64) {
 			}
 			f.Wrapped[y] = true
 		}
-		for x := range f.Rows[y] {
-			var c *uv.Cell
-			if row < history {
-				c = s.term.ScrollbackCellAt(x, row)
-			} else {
-				c = s.term.CellAt(x, row-history)
-			}
-			if c != nil {
-				f.Rows[y][x] = s.cell(c, bg, &f.Links, placed)
-			} else {
-				f.Rows[y][x].BG = bg
-			}
-		}
+	}
+	if state != nil {
+		state.record(w, h, s.epoch, alt, offset, history, base, historyStart,
+			curScroll, s.revision, bg, s.paletteSeq, s.info.Name, s.title,
+			p.X, p.Y, cursorVisible, cursorStyle, cursorBlink, mouse, s.info.Exited,
+			s.term, f.Links, placed)
 	}
 	return f, s.revision
 }
@@ -524,13 +840,7 @@ func (s *pane) preview(width, height int) *protocol.TerminalFrame {
 	defer placed.finish(f)
 	for y := 0; y < height; y++ {
 		row := make([]protocol.Cell, width)
-		for x := range row {
-			if c := s.term.CellAt(startX+x, startY+y); c != nil {
-				row[x] = s.cell(c, bg, nil, placed)
-			} else {
-				row[x].BG = bg
-			}
-		}
+		s.convertRow(row, s.term.RowCells(startY+y), startX, startY+y, false, bg, nil, placed)
 		f.Rows = append(f.Rows, row)
 	}
 	return f

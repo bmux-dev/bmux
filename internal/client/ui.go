@@ -30,6 +30,7 @@ type ui struct {
 	generation                      int
 	frame                           *protocol.TerminalFrame
 	workspace                       *protocol.Frame
+	paneFrames                      map[int]*protocol.TerminalFrame
 	focused                         int
 	selections                      map[int]selection
 	paneSizes                       map[int][2]int
@@ -335,12 +336,17 @@ func (u *ui) handleUpdate(next update) bool {
 			u.endSession(f.Name)
 			return true
 		}
+		// Keep wire-level per-pane delta state synchronized with the server
+		// even when this frame is skipped for Ack < u.pending.
+		u.reconstructFrame(f)
 		if next.response.Ack < u.pending {
 			return dirty
 		}
 		u.pending = 0
-		u.applyFrame(f)
-		return true
+		if u.applyFrame(f) {
+			return true
+		}
+		return dirty
 	}
 	return dirty
 }
@@ -415,6 +421,7 @@ func (u *ui) endSession(name string) {
 	u.generation++
 	u.pending = 0
 	u.workspace, u.frame = nil, nil
+	u.paneFrames = nil
 	u.focused = 0
 	u.edgeKnown, u.configKnown, u.messageKnown = false, false, false
 	u.sidebarFocus = false
@@ -504,6 +511,7 @@ func (u *ui) switchTo(name string) error {
 	}
 	u.conn, u.name, u.frame = conn, name, nil
 	u.workspace, u.focused, u.selections = nil, 0, make(map[int]selection)
+	u.paneFrames = nil
 	u.paneSizes = make(map[int][2]int)
 	u.pending = 0
 	u.resizeUntil = time.Time{}

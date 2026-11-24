@@ -338,7 +338,9 @@ func (s *Screen) reflow(width, height int, phantom bool) bool {
 	if s.scrollback != nil {
 		// replaceCompact copies trimmed cells into fresh packed pages,
 		// so no oversized backing arrays are ever retained in scrollback.
-		s.scrollback.replaceCompact(history, historyExtras, historyFlags)
+		// Only a width change (rewrapping) bumps scrollback epoch; a
+		// height-only resize moves rows in order and keeps existing row IDs.
+		s.scrollback.replaceCompact(history, historyExtras, historyFlags, width != oldWidth)
 	}
 
 	s.width = width
