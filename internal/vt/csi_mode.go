@@ -48,9 +48,9 @@ func (e *Emulator) setAltScreenMode(on, clear bool) {
 		e.kitty[1] = kittyKeyboard{}
 		e.scr = &e.scrs[1]
 		e.scrs[1].cur = e.scrs[0].cur
+		e.scrs[1].syncCursorStyle()
 		if clear {
 			e.scr.Clear()
-			e.scr.ClearTouched()
 		}
 	} else {
 		e.scr = &e.scrs[0]
@@ -82,10 +82,16 @@ func (e *Emulator) setMode(mode ansi.Mode, setting ansi.ModeSetting) {
 		e.scr.setCursorHidden(!setting.IsSet())
 	case ansi.ModeInsertReplace:
 		e.insert = setting.IsSet()
+	case ansi.ModeAutoWrap:
+		e.autoWrap = setting.IsSet()
+	case ansi.ModeLineFeedNewLine:
+		e.lineFeedNewLine = setting.IsSet()
 	case ansi.ModeOrigin:
+		e.origin = setting.IsSet()
 		// Home: the margins' top-left when set, the screen's when reset.
 		e.setCursorPosition(0, 0)
 	case ansi.ModeLeftRightMargin:
+		e.leftRightMargin = setting.IsSet()
 		if !setting.IsSet() {
 			e.scr.setHorizontalMargins(0, e.Width())
 		}

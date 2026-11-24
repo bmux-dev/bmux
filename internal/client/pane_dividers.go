@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/josephferrero/bmux/internal/protocol"
 )
 
@@ -12,19 +13,62 @@ type paneDivider struct {
 	arrow                rune
 }
 
+// dividerScratch holds reusable maps and slices for drawDividers so multi-pane
+// frames do not reallocate them on every redraw.
+type dividerScratch struct {
+	cells      map[point]paneDivider
+	arrows     map[point]rune
+	markers    map[point]rune
+	candidates []point
+	pass2      []point
+	seen       map[point]bool
+}
+
+func (u *ui) dividerBuf() *dividerScratch {
+	if u.dividers == nil {
+		u.dividers = &dividerScratch{
+			cells:   make(map[point]paneDivider),
+			arrows:  make(map[point]rune),
+			markers: make(map[point]rune),
+			seen:    make(map[point]bool),
+		}
+	}
+	return u.dividers
+}
+
 // drawPaneDividers must run after every drawPane call. No chrome is permitted
 // inside a pane rectangle, even if that terminal has no rows or has exited.
 func (u *ui) drawPaneDividers(width, height int) {
+	if u.workspace == nil || len(u.workspace.Panes) <= 1 {
+		if u.dividers != nil {
+			clear(u.dividers.cells)
+		}
+		return
+	}
 	x := u.paneOriginX(width)
 	u.drawDividers(u.workspace, pickerArea{x, paneOriginY, max(0, width-x), max(0, height-1-paneOriginY)})
 }
 
 func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
-	if frame == nil {
+	if frame == nil || len(frame.Panes) <= 1 || area.w <= 0 || area.h <= 0 {
+		if u.dividers != nil {
+			clear(u.dividers.cells)
+		}
 		return
 	}
 	panes := frame.Panes
-	dividers := make(map[point]paneDivider)
+	buf := u.dividerBuf()
+	dividers := buf.cells
+	arrows := buf.arrows
+	markers := buf.markers
+	seen := buf.seen
+	clear(dividers)
+	clear(arrows)
+	clear(markers)
+	clear(seen)
+	candidates := buf.candidates[:0]
+	pass2 := buf.pass2[:0]
+
 	coveredByPane := func(x, y int) bool {
 		for _, p := range panes {
 			if x >= p.X && x < p.X+p.Width && y >= p.Y && y < p.Y+p.Height {
@@ -49,47 +93,81 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 		}
 		dividers[at] = d
 	}
+	addCandidate := func(x, y int, dst *[]point) {
+		if x < 0 || x >= area.w || y < 0 || y >= area.h {
+			return
+		}
+		at := point{x, y}
+		if seen[at] {
+			return
+		}
+		seen[at] = true
+		*dst = append(*dst, at)
+	}
 	for _, p := range panes {
 		if p.Width < 1 || p.Height < 1 {
 			continue
 		}
-		for y := max(0, p.Y); y < min(p.Y+p.Height, area.h); y++ {
-			add(p.X+p.Width, y, true)
+		rx := p.X + p.Width
+		if rx >= 0 && rx < area.w {
+			for y := max(0, p.Y); y < min(p.Y+p.Height, area.h); y++ {
+				add(rx, y, true)
+			}
 		}
-		for x := max(0, p.X); x < min(p.X+p.Width, area.w); x++ {
-			add(x, p.Y+p.Height, false)
+		by := p.Y + p.Height
+		if by >= 0 && by < area.h {
+			for x := max(0, p.X); x < min(p.X+p.Width, area.w); x++ {
+				add(x, by, false)
+			}
 		}
+		// Unowned T-junction and crossing cells sit at pane border endpoints.
+		addCandidate(rx, by, &candidates)
+		addCandidate(rx, p.Y-1, &candidates)
+		addCandidate(p.X-1, by, &candidates)
 	}
 	// A T-junction or crossing cell belongs to no pane edge, so the border is
 	// interrupted exactly where segments meet. A cell continues a divider when
-	// neighbors on both sides carry that orientation; two passes also cover
-	// cells whose own continuity depends on another filled cell. Segment
-	// ownership stays pane-derived: only genuinely uncovered cells fill in.
-	for pass := 0; pass < 2; pass++ {
-		for y := 0; y < area.h; y++ {
-			for x := 0; x < area.w; x++ {
-				at := point{x, y}
-				if _, ok := dividers[at]; ok {
-					continue
-				}
-				if coveredByPane(x, y) {
-					continue
-				}
-				var d paneDivider
-				if dividers[point{x, y - 1}].vertical && dividers[point{x, y + 1}].vertical {
-					d.vertical = true
-				}
-				if dividers[point{x - 1, y}].horizontal && dividers[point{x + 1, y}].horizontal {
-					d.horizontal = true
-				}
-				if d.vertical || d.horizontal {
-					dividers[at] = d
-				}
-			}
+	// neighbors on both sides carry that orientation; two passes over candidate
+	// endpoints and their neighbors cover cells whose own continuity depends on
+	// another filled cell without scanning the full terminal grid.
+	tryFill := func(at point) bool {
+		if _, ok := dividers[at]; ok {
+			return false
+		}
+		if coveredByPane(at.x, at.y) {
+			return false
+		}
+		var d paneDivider
+		if dividers[point{at.x, at.y - 1}].vertical && dividers[point{at.x, at.y + 1}].vertical {
+			d.vertical = true
+		}
+		if dividers[point{at.x - 1, at.y}].horizontal && dividers[point{at.x + 1, at.y}].horizontal {
+			d.horizontal = true
+		}
+		if d.vertical || d.horizontal {
+			dividers[at] = d
+			return true
+		}
+		return false
+	}
+	for _, at := range candidates {
+		if tryFill(at) {
+			addCandidate(at.x, at.y-1, &pass2)
+			addCandidate(at.x, at.y+1, &pass2)
+			addCandidate(at.x-1, at.y, &pass2)
+			addCandidate(at.x+1, at.y, &pass2)
 		}
 	}
+	for _, at := range candidates {
+		tryFill(at)
+	}
+	for _, at := range pass2 {
+		tryFill(at)
+	}
+	buf.candidates = candidates[:0]
+	buf.pass2 = pass2[:0]
+
 	// Focus attribution runs over the final cell set, junction cells included.
-	arrows := make(map[point]rune, len(dividers))
 	for at, d := range dividers {
 		for _, p := range panes {
 			if p.ID != frame.Focused || p.Width < 1 || p.Height < 1 {
@@ -116,7 +194,6 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 	}
 	// A marker at the midpoint of each uninterrupted ownership segment remains
 	// legible in monochrome and in one-cell splits. Never place it on a junction.
-	markers := make(map[point]rune)
 	for at, d := range dividers {
 		if d.arrow == 0 {
 			continue
@@ -155,10 +232,11 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 		if glyph := dividerGlyph(dividers, at, d); glyph == "│" || glyph == "─" {
 			continue
 		}
-		for _, n := range []struct {
+		neighbors := [4]struct {
 			at       point
 			vertical bool
-		}{{point{at.x, at.y - 1}, true}, {point{at.x, at.y + 1}, true}, {point{at.x - 1, at.y}, false}, {point{at.x + 1, at.y}, false}} {
+		}{{point{at.x, at.y - 1}, true}, {point{at.x, at.y + 1}, true}, {point{at.x - 1, at.y}, false}, {point{at.x + 1, at.y}, false}}
+		for _, n := range neighbors {
 			neighbor := dividers[n.at]
 			if arrow := arrows[n.at]; arrow != 0 && (n.vertical && neighbor.vertical || !n.vertical && neighbor.horizontal) {
 				d.arrow = arrow
@@ -181,9 +259,121 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 			}
 		}
 		if marker := markers[at]; marker != 0 {
-			text = string(marker)
+			text = arrowString(marker)
 		}
 		u.screen.Put(area.x+at.x, area.y+at.y, text, style)
+	}
+}
+
+func arrowString(r rune) string {
+	switch r {
+	case '<':
+		return "<"
+	case '>':
+		return ">"
+	case '^':
+		return "^"
+	case 'v':
+		return "v"
+	default:
+		return string(r)
+	}
+}
+
+// fillRect writes spaces in style across [x, x+w) x [y, y+h). Using Put
+// preserves tcell's differential cell state when cells are already blank.
+func (u *ui) fillRect(x, y, w, h int, style tcell.Style) {
+	if w <= 0 || h <= 0 {
+		return
+	}
+	for row := y; row < y+h; row++ {
+		for col := x; col < x+w; col++ {
+			u.screen.Put(col, row, " ", style)
+		}
+	}
+}
+
+// fillOutsideRect fills every cell in outer that lies outside inner with spaces
+// in style, without touching cells inside inner.
+func (u *ui) fillOutsideRect(outer, inner pickerArea, style tcell.Style) {
+	if outer.w <= 0 || outer.h <= 0 {
+		return
+	}
+	ix0 := max(outer.x, inner.x)
+	iy0 := max(outer.y, inner.y)
+	ix1 := min(outer.x+outer.w, inner.x+inner.w)
+	iy1 := min(outer.y+outer.h, inner.y+inner.h)
+	if ix0 >= ix1 || iy0 >= iy1 {
+		u.fillRect(outer.x, outer.y, outer.w, outer.h, style)
+		return
+	}
+	if ix0 == outer.x && iy0 == outer.y && ix1 == outer.x+outer.w && iy1 == outer.y+outer.h {
+		return
+	}
+	u.fillRect(outer.x, outer.y, outer.w, iy0-outer.y, style)
+	u.fillRect(outer.x, iy1, outer.w, outer.y+outer.h-iy1, style)
+	u.fillRect(outer.x, iy0, ix0-outer.x, iy1-iy0, style)
+	u.fillRect(ix1, iy0, outer.x+outer.w-ix1, iy1-iy0, style)
+}
+
+// fillUncovered paints any cells in area not covered by frame's panes or the
+// dividers drawn for frame with spaces in style. Must run right after
+// drawDividers(frame, area).
+func (u *ui) fillUncovered(frame *protocol.Frame, area pickerArea, style tcell.Style) {
+	if area.w <= 0 || area.h <= 0 {
+		return
+	}
+	if frame == nil || len(frame.Panes) == 0 {
+		u.fillRect(area.x, area.y, area.w, area.h, style)
+		return
+	}
+	panes := frame.Panes
+	if len(panes) == 1 {
+		p := panes[0]
+		u.fillOutsideRect(area, pickerArea{area.x + p.X, area.y + p.Y, p.Width, p.Height}, style)
+		return
+	}
+	disjoint := true
+	covered := 0
+	for i, p := range panes {
+		x0, y0 := max(0, p.X), max(0, p.Y)
+		x1, y1 := min(area.w, p.X+p.Width), min(area.h, p.Y+p.Height)
+		if x0 >= x1 || y0 >= y1 {
+			continue
+		}
+		covered += (x1 - x0) * (y1 - y0)
+		for j := i + 1; j < len(panes) && disjoint; j++ {
+			q := panes[j]
+			qx0, qy0 := max(0, q.X), max(0, q.Y)
+			qx1, qy1 := min(area.w, q.X+q.Width), min(area.h, q.Y+q.Height)
+			if qx0 < qx1 && qy0 < qy1 && x0 < qx1 && qx0 < x1 && y0 < qy1 && qy0 < y1 {
+				disjoint = false
+			}
+		}
+	}
+	var dividers map[point]paneDivider
+	if u.dividers != nil {
+		dividers = u.dividers.cells
+	}
+	if disjoint && covered+len(dividers) == area.w*area.h {
+		return
+	}
+	for y := 0; y < area.h; y++ {
+		for x := 0; x < area.w; x++ {
+			if _, ok := dividers[point{x, y}]; ok {
+				continue
+			}
+			inPane := false
+			for _, p := range panes {
+				if x >= p.X && x < p.X+p.Width && y >= p.Y && y < p.Y+p.Height {
+					inPane = true
+					break
+				}
+			}
+			if !inPane {
+				u.screen.Put(area.x+x, area.y+y, " ", style)
+			}
+		}
 	}
 }
 

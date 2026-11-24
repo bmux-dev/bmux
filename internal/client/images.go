@@ -118,17 +118,18 @@ func (s *imageSender) want(images []protocol.Image) {
 	}
 }
 
-// accept takes a finished fetch.
-func (s *imageSender) accept(r imageResult) {
+// accept takes a finished fetch and reports whether an image is now ready to flush.
+func (s *imageSender) accept(r imageResult) bool {
 	if r.generation != s.generation {
-		return
+		return false
 	}
 	delete(s.loading, r.id)
 	if r.err != nil || len(r.data) == 0 {
 		s.failedAt[r.id] = time.Now()
-		return
+		return false
 	}
 	s.ready[r.id] = r.data
+	return true
 }
 
 // flush sends fetched images that are on screen, re-places any whose grid

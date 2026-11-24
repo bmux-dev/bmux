@@ -1,53 +1,282 @@
 package vt
 
 import (
-	"slices"
-
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
 // DefaultScrollbackSize is the default maximum number of lines in the scrollback buffer.
 const DefaultScrollbackSize = 10000
 
-// Scrollback represents a scrollback buffer that stores lines scrolled off the screen.
+const (
+	// scrollPageCells is the default cell capacity of one scrollback arena page.
+	// 4096 * 12 bytes = 48 KiB of pointer-free Cell storage (GC noscan).
+	scrollPageCells = 4096
+	// maxRecycledPages bounds how many empty pages we keep for zero-alloc
+	// steady-state scrolling while freeing excess pages on shrink/clear.
+	maxRecycledPages = 4
+)
+
+// scrollPage is a contiguous pointer-free arena of compact Cells backing
+// multiple scrollback rows.
+type scrollPage struct {
+	cells []Cell
+	used  int
+	refs  int
+}
+
+// sbRow is a pointer-free ring slot describing one scrollback line.
+// pageIdx is 1-based into Scrollback.pages; 0 denotes an empty (0-cell) line.
+type sbRow struct {
+	pageIdx uint32
+	start   uint32
+	length  uint32
+	flags   LineFlags
+}
+
+// Scrollback represents a ring-buffered compact scrollback store for lines
+// scrolled off the main screen.
 type Scrollback struct {
-	lines []uv.Line
-	// bmux: flags[i] is what's known about lines[i] besides its cells; see
-	// [LineFlags].
-	flags    []LineFlags
-	maxLines int
+	ring         []sbRow
+	head         int // index of oldest line in ring
+	count        int // number of live lines in ring
+	maxLines     int
+	pages        []*scrollPage
+	freePages    []uint32 // 1-based page indices whose refs == 0
+	tailPage     uint32   // 1-based index of page currently receiving appends (0 = none)
+	extras       map[int]rowExtra
+	styles       *StyleTable
+	totalPushed  uint64
+	epoch        uint64
 }
 
 // NewScrollback creates a new scrollback buffer with the given maximum number of lines.
 func NewScrollback(maxLines int) *Scrollback {
+	return newScrollback(maxLines, nil)
+}
+
+func newScrollback(maxLines int, styles *StyleTable) *Scrollback {
 	if maxLines <= 0 {
 		maxLines = DefaultScrollbackSize
 	}
+	if styles == nil {
+		styles = &StyleTable{}
+	}
 	return &Scrollback{
-		lines:    make([]uv.Line, 0, min(maxLines, 1000)), // Pre-allocate reasonable capacity
-		flags:    make([]LineFlags, 0, min(maxLines, 1000)),
 		maxLines: maxLines,
+		styles:   styles,
+		epoch:    1,
 	}
 }
 
-// Push adds a line without flags to the scrollback buffer.
+// slotIndex maps logical index i (0 = oldest, count-1 = newest) to its ring slot.
+func (s *Scrollback) slotIndex(i int) int {
+	idx := s.head + i
+	if idx >= len(s.ring) {
+		idx -= len(s.ring)
+	}
+	return idx
+}
+
+// ensureRingCapacity grows the ring slice lazily without reallocating on every
+// SetMaxLines call (for example when trackHistory temporarily doubles maxLines).
+func (s *Scrollback) ensureRingCapacity(needed int) {
+	if needed <= len(s.ring) {
+		return
+	}
+	newCap := len(s.ring)
+	if newCap == 0 {
+		newCap = min(s.maxLines, 256)
+	}
+	for newCap < needed {
+		newCap *= 2
+	}
+	if newCap > s.maxLines {
+		newCap = s.maxLines
+	}
+	if newCap < needed {
+		newCap = needed
+	}
+	newRing := make([]sbRow, newCap)
+	var newExtras map[int]rowExtra
+	if len(s.extras) > 0 {
+		newExtras = make(map[int]rowExtra, len(s.extras))
+	}
+	for i := range s.count {
+		oldSlot := s.slotIndex(i)
+		newRing[i] = s.ring[oldSlot]
+		if newExtras != nil {
+			if ex, ok := s.extras[oldSlot]; ok {
+				newExtras[i] = ex
+			}
+		}
+	}
+	clear(s.ring)
+	s.ring = newRing
+	s.head = 0
+	s.extras = newExtras
+}
+
+func (s *Scrollback) pageCapacity(minCells int) int {
+	capCells := min(scrollPageCells, max(256, s.maxLines*64))
+	if minCells > capCells {
+		return minCells
+	}
+	return capCells
+}
+
+// allocCells reserves n contiguous cells from the tail page (recycling an
+// evicted page when available) and returns (pageIdx, start, destSlice).
+func (s *Scrollback) allocCells(n int) (uint32, uint32, []Cell) {
+	if n <= 0 {
+		return 0, 0, nil
+	}
+	if s.tailPage != 0 {
+		p := s.pages[s.tailPage-1]
+		if p != nil && len(p.cells)-p.used >= n {
+			start := p.used
+			p.used += n
+			p.refs++
+			return s.tailPage, uint32(start), p.cells[start : start+n]
+		}
+	}
+
+	// Acquire a recycled page or allocate a new one.
+	var pageIdx uint32
+	for len(s.freePages) > 0 {
+		last := len(s.freePages) - 1
+		idx := s.freePages[last]
+		s.freePages = s.freePages[:last]
+		p := s.pages[idx-1]
+		if p != nil && len(p.cells) >= n {
+			p.used = n
+			p.refs = 1
+			s.tailPage = idx
+			return idx, 0, p.cells[:n]
+		}
+		if p == nil {
+			pageIdx = idx
+			break
+		}
+		// Recycled page is too small for this oversized line; release it and reuse its slot.
+		s.pages[idx-1] = nil
+		pageIdx = idx
+		break
+	}
+
+	p := &scrollPage{
+		cells: make([]Cell, s.pageCapacity(n)),
+		used:  n,
+		refs:  1,
+	}
+	if pageIdx != 0 {
+		s.pages[pageIdx-1] = p
+	} else {
+		s.pages = append(s.pages, p)
+		pageIdx = uint32(len(s.pages))
+	}
+	s.tailPage = pageIdx
+	return pageIdx, 0, p.cells[:n]
+}
+
+// releaseSlot releases the cell page reference and side-table entry for ring slot.
+func (s *Scrollback) releaseSlot(slot int) {
+	row := s.ring[slot]
+	s.ring[slot] = sbRow{}
+	if len(s.extras) > 0 {
+		delete(s.extras, slot)
+	}
+	if row.pageIdx == 0 {
+		return
+	}
+	p := s.pages[row.pageIdx-1]
+	if p == nil {
+		return
+	}
+	p.refs--
+	if p.refs == 0 {
+		if s.tailPage == row.pageIdx {
+			// Active tail page became completely empty: reset it in place!
+			p.used = 0
+			return
+		}
+		// Count live allocated recycled pages to decide whether to recycle or free.
+		recycled := 0
+		for _, idx := range s.freePages {
+			if s.pages[idx-1] != nil {
+				recycled++
+			}
+		}
+		if recycled < maxRecycledPages && len(p.cells) <= scrollPageCells {
+			p.used = 0
+		} else {
+			s.pages[row.pageIdx-1] = nil
+		}
+		s.freePages = append(s.freePages, row.pageIdx)
+	}
+}
+
+// pushCompact appends a compact cell row and its optional side-table + flags.
+// A wrapped row retains trailing spaces; an unwrapped row trims them.
+func (s *Scrollback) pushCompact(row []Cell, ex rowExtra, flags LineFlags) {
+	if s == nil || s.maxLines <= 0 {
+		return
+	}
+	end := len(row)
+	if flags&FlagWrapped == 0 {
+		end = len(trimCompactRow(row))
+	}
+
+	if s.count >= s.maxLines {
+		// Evict oldest slot before allocating so a full ring recycles pages at 0 allocs.
+		s.releaseSlot(s.head)
+		s.head++
+		if s.head >= len(s.ring) {
+			s.head = 0
+		}
+		s.count--
+	}
+
+	s.ensureRingCapacity(s.count + 1)
+	slot := s.slotIndex(s.count)
+	s.count++
+	s.totalPushed++
+
+	if end == 0 {
+		s.ring[slot] = sbRow{flags: flags}
+		return
+	}
+
+	pageIdx, start, dst := s.allocCells(end)
+	copy(dst, row[:end])
+	s.ring[slot] = sbRow{
+		pageIdx: pageIdx,
+		start:   start,
+		length:  uint32(end),
+		flags:   flags,
+	}
+	if cloned := cloneRowExtra(ex, end); cloned != nil {
+		if s.extras == nil {
+			s.extras = make(map[int]rowExtra)
+		}
+		s.extras[slot] = cloned
+	}
+}
+
+// Push adds a uv.Line without flags to the scrollback buffer.
 // If the buffer is full, the oldest line is removed.
 func (s *Scrollback) Push(line uv.Line) {
 	s.PushLine(line, 0)
 }
 
-// PushLine adds a line with its flags. A wrapped line keeps every cell,
-// trailing blanks included, because they are part of the text that
-// continues; other lines lose trailing blanks. bmux: added for reflow.
+// PushLine adds a uv.Line with its flags. A wrapped line keeps every cell,
+// trailing blanks included, because they are part of the text that continues;
+// other lines lose trailing blanks.
 func (s *Scrollback) PushLine(line uv.Line, flags LineFlags) {
 	if s == nil || s.maxLines <= 0 {
 		return
 	}
-
 	end := len(line)
 	if flags&FlagWrapped == 0 {
-		// Find last non-empty cell to trim trailing empty cells.
-		// This helps with wrapping and window resizing.
 		end = 0
 		for i := len(line) - 1; i >= 0; i-- {
 			c := &line[i]
@@ -57,36 +286,38 @@ func (s *Scrollback) PushLine(line uv.Line, flags LineFlags) {
 			}
 		}
 	}
-
-	// Clone the line content up to and including the last kept cell
-	cloned := slices.Clone(line[:end])
-
-	if len(s.lines) >= s.maxLines {
-		// Drop the oldest line by reslicing rather than shifting every line:
-		// append copies the history only when it outgrows its array, so a
-		// push costs O(1) amortized. Clearing the slot frees its cells.
-		s.lines[0], s.lines = nil, s.lines[1:]
-		s.flags = s.flags[1:]
-	}
-	s.lines = append(s.lines, cloned)
-	s.flags = append(s.flags, flags)
-}
-
-// PushN adds n lines from the screen starting at line y to the scrollback,
-// with their flags (indexed by screen row; may be nil).
-func (s *Scrollback) PushN(buf *uv.RenderBuffer, flags []LineFlags, y, n int) {
-	if s == nil || buf == nil || n <= 0 {
+	if end == 0 {
+		s.pushCompact(nil, nil, flags)
 		return
 	}
-
-	for i := range min(n, buf.Height()-y) {
-		if line := buf.Line(y + i); line != nil {
-			var f LineFlags
-			if y+i < len(flags) {
-				f = flags[y+i]
+	compact := make([]Cell, end)
+	var ex rowExtra
+	for i := range end {
+		cell, ce, has := compactFromUV(&line[i], s.styles)
+		compact[i] = cell
+		if has {
+			if ex == nil {
+				ex = make(rowExtra)
 			}
-			s.PushLine(line, f)
+			ex[i] = ce
 		}
+	}
+	s.pushCompact(compact, ex, flags)
+}
+
+// pushScreenLines pushes n lines from screen s starting at row y into scrollback.
+func (s *Scrollback) pushScreenLines(scr *Screen, y, n int) {
+	if s == nil || scr == nil || n <= 0 {
+		return
+	}
+	limit := min(n, scr.height-y)
+	for i := range limit {
+		rowY := y + i
+		var f LineFlags
+		if rowY < len(scr.flags) {
+			f = scr.flags[rowY]
+		}
+		s.pushCompact(scr.rows[rowY], scr.extras[rowY], f)
 	}
 }
 
@@ -95,7 +326,7 @@ func (s *Scrollback) Len() int {
 	if s == nil {
 		return 0
 	}
-	return len(s.lines)
+	return s.count
 }
 
 // MaxLines returns the maximum number of lines the scrollback buffer can hold.
@@ -106,83 +337,222 @@ func (s *Scrollback) MaxLines() int {
 	return s.maxLines
 }
 
+// TotalPushed returns the monotonic total number of lines ever pushed into
+// this scrollback buffer, even after eviction wraps the ring.
+func (s *Scrollback) TotalPushed() uint64 {
+	if s == nil {
+		return 0
+	}
+	return s.totalPushed
+}
+
+// Epoch returns a monotonic counter incremented when scrollback history is
+// cleared or rewritten (for example by reflow).
+func (s *Scrollback) Epoch() uint64 {
+	if s == nil {
+		return 0
+	}
+	return s.epoch
+}
+
 // SetMaxLines sets the maximum number of lines in the scrollback buffer.
-// If the current number of lines exceeds the new maximum, oldest lines are removed.
+// If the current number of lines exceeds the new maximum, oldest lines are
+// evicted and their slots are cleared.
 func (s *Scrollback) SetMaxLines(maxLines int) {
 	if s == nil || maxLines <= 0 {
 		return
 	}
-
 	s.maxLines = maxLines
-	if excess := len(s.lines) - maxLines; excess > 0 {
-		// Remove oldest lines, freeing their cells.
-		clear(s.lines[:excess])
-		s.lines = s.lines[excess:]
-		s.flags = s.flags[excess:]
+	if excess := s.count - maxLines; excess > 0 {
+		for range excess {
+			s.releaseSlot(s.head)
+			s.head++
+			if s.head >= len(s.ring) {
+				s.head = 0
+			}
+		}
+		s.count -= excess
 	}
 }
 
-// Line returns the line at the given index.
-// Index 0 is the oldest line, Len()-1 is the most recent.
-// Returns nil if index is out of bounds.
-func (s *Scrollback) Line(index int) uv.Line {
-	if s == nil || index < 0 || index >= len(s.lines) {
+// RowCells returns a zero-alloc read-only slice of compact Cells for
+// scrollback line index (0 = oldest, Len()-1 = most recent).
+// Returns nil if index is out of bounds or the line is empty.
+func (s *Scrollback) RowCells(index int) []Cell {
+	if s == nil || index < 0 || index >= s.count {
 		return nil
 	}
-	return s.lines[index]
+	row := s.ring[s.slotIndex(index)]
+	if row.pageIdx == 0 || row.length == 0 {
+		return nil
+	}
+	p := s.pages[row.pageIdx-1]
+	return p.cells[row.start : row.start+row.length]
 }
 
-// LineFlags returns the flags of the line at index. bmux: added for reflow.
+// rowExtraAt returns the sparse side-table for scrollback line index, or nil.
+func (s *Scrollback) rowExtraAt(index int) rowExtra {
+	if s == nil || len(s.extras) == 0 || index < 0 || index >= s.count {
+		return nil
+	}
+	return s.extras[s.slotIndex(index)]
+}
+
+// CellGrapheme returns the multi-rune grapheme cluster string at (x, y) in
+// scrollback (y = 0 is oldest), or "" if none.
+func (s *Scrollback) CellGrapheme(x, y int) string {
+	ex := s.rowExtraAt(y)
+	if ex == nil {
+		return ""
+	}
+	return ex[x].grapheme
+}
+
+// CellLink returns the OSC 8 hyperlink at (x, y) in scrollback (y = 0 is
+// oldest), or the zero uv.Link if none.
+func (s *Scrollback) CellLink(x, y int) uv.Link {
+	ex := s.rowExtraAt(y)
+	if ex == nil {
+		return uv.Link{}
+	}
+	return ex[x].link
+}
+
+// Line returns a reconstructed uv.Line at the given index (0 = oldest).
+// Returns nil if index is out of bounds.
+func (s *Scrollback) Line(index int) uv.Line {
+	if s == nil || index < 0 || index >= s.count {
+		return nil
+	}
+	cells := s.RowCells(index)
+	if len(cells) == 0 {
+		return uv.Line{}
+	}
+	ex := s.rowExtraAt(index)
+	out := make(uv.Line, len(cells))
+	for x, c := range cells {
+		out[x] = uvFromCompact(c, x, ex, s.styles)
+	}
+	return out
+}
+
+// LineFlags returns the flags of the line at index.
 func (s *Scrollback) LineFlags(index int) LineFlags {
-	if s == nil || index < 0 || index >= len(s.flags) {
+	if s == nil || index < 0 || index >= s.count {
 		return 0
 	}
-	return s.flags[index]
+	return s.ring[s.slotIndex(index)].flags
 }
 
 // Wrapped reports whether the line at index continues onto the next one.
-// bmux: added for reflow.
 func (s *Scrollback) Wrapped(index int) bool {
 	return s.LineFlags(index)&FlagWrapped != 0
 }
 
-// Lines returns all lines in the scrollback buffer.
-// Index 0 is the oldest line.
+// Lines returns all lines in the scrollback buffer (0 = oldest) as uv.Lines.
 func (s *Scrollback) Lines() []uv.Line {
 	if s == nil {
 		return nil
 	}
-	return s.lines
+	out := make([]uv.Line, s.count)
+	for i := range s.count {
+		out[i] = s.Line(i)
+	}
+	return out
 }
 
-// Clear removes all lines from the scrollback buffer.
+// Clear removes all lines from the scrollback buffer and releases all backing
+// cell pages and side-table entries so evicted history is never pinned.
 func (s *Scrollback) Clear() {
 	if s == nil {
 		return
 	}
-	s.lines = s.lines[:0]
-	s.flags = s.flags[:0]
+	clear(s.ring)
+	s.head = 0
+	s.count = 0
+	clear(s.pages)
+	s.pages = nil
+	s.freePages = nil
+	s.tailPage = 0
+	s.extras = nil
+	s.epoch++
 }
 
-// replace swaps in a whole new history, newest last, trimmed to the limit.
-// bmux: used by reflow, which rewraps history along with the screen.
-func (s *Scrollback) replace(lines []uv.Line, flags []LineFlags) {
+// replaceCompact swaps in a whole new compact history, newest last, trimmed
+// to maxLines and packed into fresh pages with zero backing-array pinning.
+func (s *Scrollback) replaceCompact(rows [][]Cell, extras []rowExtra, flags []LineFlags) {
 	if s == nil {
 		return
 	}
-	if excess := len(lines) - s.maxLines; excess > 0 {
-		lines, flags = lines[excess:], flags[excess:]
+	savedTotal := s.totalPushed
+	s.Clear()
+	if excess := len(rows) - s.maxLines; excess > 0 {
+		rows = rows[excess:]
+		if len(extras) > excess {
+			extras = extras[excess:]
+		} else {
+			extras = nil
+		}
+		if len(flags) > excess {
+			flags = flags[excess:]
+		} else {
+			flags = nil
+		}
 	}
-	s.lines, s.flags = lines, flags
+	for i, row := range rows {
+		var ex rowExtra
+		if i < len(extras) {
+			ex = extras[i]
+		}
+		var f LineFlags
+		if i < len(flags) {
+			f = flags[i]
+		}
+		s.pushCompact(row, ex, f)
+	}
+	// Preserve monotonic totalPushed across reflow rewrites while bumping epoch
+	// (already done by Clear).
+	if savedTotal > s.totalPushed {
+		s.totalPushed = savedTotal
+	}
 }
 
-// CellAt returns the cell at the given position in the scrollback buffer.
-// x is the column, y is the line index (0 = oldest).
-// Returns nil if position is out of bounds.
+// CellAt returns the cell at (x, y) in the scrollback buffer (y = 0 is oldest).
+// Returns nil if out of bounds.
 func (s *Scrollback) CellAt(x, y int) *uv.Cell {
-	line := s.Line(y)
-	if line == nil || x < 0 || x >= len(line) {
+	cells := s.RowCells(y)
+	if x < 0 || x >= len(cells) {
 		return nil
 	}
-	return &line[x]
+	c := uvFromCompact(cells[x], x, s.rowExtraAt(y), s.styles)
+	return &c
+}
+
+// remapStyles updates all StyleIDs in live scrollback pages according to remap.
+func (s *Scrollback) remapStyles(remap []uint32) {
+	if s == nil {
+		return
+	}
+	for i := range s.count {
+		cells := s.RowCells(i)
+		for x := range cells {
+			if id := cells[x].StyleID; id != 0 && int(id) < len(remap) {
+				cells[x].StyleID = remap[id]
+			}
+		}
+	}
+}
+
+// markUsedStyles marks all StyleIDs referenced by live scrollback cells.
+func (s *Scrollback) markUsedStyles(used []bool) {
+	if s == nil {
+		return
+	}
+	for i := range s.count {
+		for _, c := range s.RowCells(i) {
+			if id := c.StyleID; id != 0 && int(id) < len(used) {
+				used[id] = true
+			}
+		}
+	}
 }

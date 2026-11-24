@@ -175,8 +175,12 @@ func (s *pane) readOutput() {
 	defer s.closeIO()
 	buf := make([]byte, 32768)
 	var sync syncOutput
+	var lastDeadline time.Time
 	for {
-		_ = s.pty.SetReadDeadline(sync.deadline())
+		if deadline := sync.deadline(); !deadline.Equal(lastDeadline) {
+			_ = s.pty.SetReadDeadline(deadline)
+			lastDeadline = deadline
+		}
 		n, err := s.pty.Read(buf)
 		if n > 0 {
 			s.apply(sync.feed(buf[:n], time.Now()))
@@ -197,16 +201,18 @@ func (s *pane) apply(output []byte) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.trackHistory(func() { _, _ = s.term.Write(output) })
 	if s.pipe != nil {
 		s.pipe.write(output)
 	}
-	// Fence the fast drain before another state-serialized operation
-	// can classify its input as user data.
-	_ = s.bridge.fenceGeneratedInput(s.term.InputPipe())
+	// Mark potential emulator replies so the next user-input admission fences
+	// the drain before changing classification, avoiding a pipe round-trip on
+	// every PTY output chunk.
+	s.bridge.markGeneratedInput()
 	s.revision++
 	s.noteOutputLocked(time.Now())
+	s.mu.Unlock()
+	notifyPaneDirty(s)
 }
 
 func (s *pane) closeIO() {

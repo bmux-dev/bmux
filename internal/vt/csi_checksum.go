@@ -3,7 +3,6 @@ package vt
 import (
 	"fmt"
 	"io"
-	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -31,20 +30,21 @@ func (e *Emulator) requestChecksum(params ansi.Params) {
 	// Origin mode makes coordinates relative to the margins, and limits the
 	// rectangle to them.
 	minY, maxY, minX, maxX := 0, height, 0, width
-	if e.isModeSet(ansi.DECOM) {
+	if e.origin {
 		scroll := e.scr.ScrollRegion()
 		minY, maxY, minX, maxX = scroll.Min.Y, scroll.Max.Y, scroll.Min.X, scroll.Max.X
 	}
 	var sum uint16
 	for y := max(minY+top-1, minY); y < min(minY+bottom, maxY); y++ {
+		row := e.RowCells(y)
 		for x := max(minX+left-1, minX); x < min(minX+right, maxX); x++ {
-			c := e.CellAt(x, y)
-			if c == nil || c.Width == 0 {
+			c := row[x]
+			if c.Width() == 0 {
 				continue // the right half of a wide character
 			}
-			r := ' '
-			if c.Content != "" {
-				r, _ = utf8.DecodeRuneInString(c.Content)
+			r := c.Rune
+			if r == 0 {
+				r = ' '
 			}
 			sum += uint16(r)
 		}

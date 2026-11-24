@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	"github.com/josephferrero/bmux/internal/protocol"
 )
@@ -23,6 +24,8 @@ type inputChunk struct {
 // waits for the independent PTY writer. All accounting is guarded by mu.
 type inputBridge struct {
 	mu                   sync.Mutex
+	pipeWriter           io.Writer // non-nil when reader exposes InputPipe()
+	needsFence           atomic.Bool
 	queue                []inputChunk
 	admittingUserInput   bool
 	remainingReservation int
@@ -40,15 +43,38 @@ type inputBridge struct {
 }
 
 func newInputBridge(reader io.Reader, writer io.Writer) *inputBridge {
-	b := &inputBridge{wake: make(chan struct{}, 1), done: make(chan struct{}), drainDone: make(chan struct{}), writerDone: make(chan struct{})}
+	var pipeWriter io.Writer
+	if p, ok := reader.(interface{ InputPipe() io.Writer }); ok {
+		pipeWriter = p.InputPipe()
+	}
+	b := &inputBridge{pipeWriter: pipeWriter, wake: make(chan struct{}, 1), done: make(chan struct{}), drainDone: make(chan struct{}), writerDone: make(chan struct{})}
 	go b.drain(reader)
 	go b.write(writer)
 	return b
 }
 
+// markGeneratedInput records that emulator output may have written replies into
+// the input pipe. Rather than synchronizing with the drain goroutine on every
+// PTY read, beginUserInput fences once before classifying user input.
+func (b *inputBridge) markGeneratedInput() {
+	if b != nil {
+		b.needsFence.Store(true)
+	}
+}
+
 // beginUserInput reserves the whole encoded intent before touching x/vt.
 // Saturation rejects the entire intent without changing admission/accounting.
 func (b *inputBridge) beginUserInput(size int) error {
+	if b.pipeWriter != nil && b.needsFence.Load() {
+		b.mu.Lock()
+		closed, closeErr := b.closed, b.err
+		b.mu.Unlock()
+		if closed {
+			return fmt.Errorf("pane input closed: %v", closeErr)
+		}
+		b.needsFence.Store(false)
+		_ = b.fenceGeneratedInput(b.pipeWriter)
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -70,6 +96,9 @@ func (b *inputBridge) fenceGeneratedInput(writer io.Writer) error {
 	// single drain has processed every preceding nonempty Read. The pending
 	// zero Read carries no bytes, so changing classification is now safe.
 	_, err := writer.Write(nil)
+	if err == nil && b != nil {
+		b.needsFence.Store(false)
+	}
 	return err
 }
 

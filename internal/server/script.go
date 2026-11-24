@@ -148,6 +148,9 @@ func (s *session) sendInput(t paneTarget, ifSeq uint64, input []protocol.Input) 
 		return protocol.PaneActivity{}, err
 	}
 	a, err := p.send(id, ifSeq, input)
+	if err == nil {
+		s.notify()
+	}
 	if a.Pane != 0 {
 		a.Window, a.Index = window, index
 	}
@@ -208,7 +211,7 @@ func (s *pane) send(id int, ifSeq uint64, input []protocol.Input) (protocol.Pane
 		if in.Paste != "" {
 			reserve += len(in.Paste) + protocol.PasteMarkerBytes
 		} else {
-			reserve += 16
+			reserve += 32 // longest: CSI code;mods;text u with 7-digit runes
 		}
 	}
 	if reserve > protocol.MaxInputBytes {

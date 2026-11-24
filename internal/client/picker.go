@@ -199,14 +199,17 @@ func (u *ui) drawPicker(w, h int) {
 		}
 		heading += fmt.Sprintf(" · %d-%d", first+1, last+1)
 	}
+	drawn := 0
 	if len(matches) == 0 && list.h > 0 {
 		message := "No sessions. Press n to create one."
 		if u.query != "" {
 			message = "No matches. / to edit; Esc to clear."
 		}
-		u.screen.PutStr(list.x, list.y, fit(message, list.w))
+		u.screen.PutStrStyled(list.x, list.y, fit(message, list.w), uiBaseStyle)
+		drawn = 1
 	}
 	for row := start; row < end; row++ {
+		drawn++
 		l := lines[row]
 		if l.index < 0 {
 			u.screen.PutStrStyled(list.x, list.y+row-start, fit("      "+l.header, list.w), uiMutedStyle.Bold(true)) // under the session names
@@ -253,6 +256,9 @@ func (u *ui) drawPicker(w, h int) {
 		line := prefix + name + suffix
 		u.screen.PutStrStyled(list.x, list.y+row-start, fit(line, list.w), style)
 	}
+	if drawn < list.h {
+		u.fillRect(list.x, list.y+drawn, list.w, list.h-drawn, uiBaseStyle)
+	}
 	if preview.w > 0 && preview.h > 0 {
 		u.drawPickerTerminalBorder(preview, w, heading)
 		u.drawSessionPreview(preview)
@@ -295,6 +301,7 @@ func (u *ui) drawPickerTerminalBorder(area pickerArea, w int, position string) {
 func (u *ui) drawSessionPreview(area pickerArea) {
 	if u.preview != nil && len(u.preview.Panes) == 0 {
 		u.screen.PutStrStyled(area.x, area.y, fit("Closed · session has no running panes", area.w), uiMutedStyle)
+		u.fillRect(area.x, area.y+1, area.w, area.h-1, uiBaseStyle)
 		return
 	}
 	if u.preview == nil || !previewFitsPanel(u.preview, area) {
@@ -308,7 +315,8 @@ func (u *ui) drawSessionPreview(area pickerArea) {
 		if u.previewError != "" {
 			text = "Unavailable · " + u.previewError
 		}
-		u.screen.PutStr(area.x, area.y, fit(text, area.w))
+		u.screen.PutStrStyled(area.x, area.y, fit(text, area.w), uiBaseStyle)
+		u.fillRect(area.x, area.y+1, area.w, area.h-1, uiBaseStyle)
 		return
 	}
 	u.drawTerminalView(area)
@@ -353,9 +361,16 @@ func (u *ui) drawPickerPrompt(w, h int) {
 	if h < 7 {
 		y = 1
 	}
+	if y > 1 && h > 2 {
+		u.fillRect(0, 1, w, min(y-1, h-2), uiBaseStyle)
+	}
 	put := func(text string, style tcell.Style) {
 		for _, line := range pickerWrap(text, width) {
 			if y < h-1 {
+				if x > 0 {
+					u.fillRect(0, y, x, 1, uiBaseStyle)
+					u.fillRect(x+width, y, w-(x+width), 1, uiBaseStyle)
+				}
 				u.screen.PutStrStyled(x, y, fit(line, width), style)
 			}
 			y++
@@ -370,6 +385,9 @@ func (u *ui) drawPickerPrompt(w, h int) {
 	}
 	if u.promptError != "" {
 		put("Error: "+u.promptError, uiBaseStyle.Bold(true))
+	}
+	if y < h-1 {
+		u.fillRect(0, y, w, h-1-y, uiBaseStyle)
 	}
 }
 

@@ -10,6 +10,18 @@ import (
 	"github.com/charmbracelet/x/ansi/parser"
 )
 
+const (
+	// maxParserDataSize caps OSC/DCS/APC/PM/SOS payloads to 4 MiB, matching the
+	// previous fixed limit without eagerly allocating 4 MiB per pane.
+	maxParserDataSize = 4 << 20
+	// parserDataShrinkThreshold releases large one-off payload buffers (> 4 KiB)
+	// back to the GC after dispatch so panes stay lightweight.
+	parserDataShrinkThreshold = 4 << 10
+	// styleCompactHighWater triggers live style compaction only under extreme
+	// unique-style churn (e.g. adversarial 24-bit RGB streams).
+	styleCompactHighWater = 65536
+)
+
 // Logger represents a logger interface.
 type Logger interface {
 	Printf(format string, v ...any)
@@ -21,6 +33,9 @@ type Emulator struct {
 
 	// The terminal's indexed 256 colors.
 	colors [256]color.Color
+
+	// Shared interned style table for main screen, alt screen, and scrollback.
+	styles StyleTable
 
 	// Both main and alt screens and a pointer to the currently active screen.
 	scrs [2]Screen
@@ -51,9 +66,10 @@ type Emulator struct {
 	// every character.
 	grapheme []byte
 
-	// The ANSI parser to use.
-	parser *ansi.Parser
-	cb     Callbacks
+	// The ANSI parser to use, with lazy-growing string data buffer.
+	parser        *ansi.Parser
+	parserDataLen int
+	cb            Callbacks
 
 	// The terminal's icon name and title.
 	iconName, title string
@@ -83,8 +99,13 @@ type Emulator struct {
 	// When true, and a character is written, the cursor is moved to the next line.
 	atPhantom bool
 
-	// insert mirrors insert mode (IRM), which every printed character checks.
-	insert bool
+	// Cached hot mode booleans updated by setMode to avoid interface-keyed
+	// map lookups on every printed character or cursor/newline operation.
+	insert          bool // ansi.ModeInsertReplace (IRM)
+	autoWrap        bool // ansi.ModeAutoWrap (DECAWM)
+	origin          bool // ansi.ModeOrigin (DECOM)
+	lineFeedNewLine bool // ansi.ModeLineFeedNewLine (LNM)
+	leftRightMargin bool // ansi.ModeLeftRightMargin (DECLRMM)
 }
 
 var _ Terminal = (*Emulator)(nil)
@@ -92,14 +113,19 @@ var _ Terminal = (*Emulator)(nil)
 // NewEmulator creates a new virtual terminal emulator.
 func NewEmulator(w, h int) *Emulator {
 	t := new(Emulator)
-	t.scrs[0] = *NewScreen(w, h)
-	t.scrs[1] = *NewScreen(w, h)
+	t.scrs[0] = *newScreen(w, h, &t.styles, true)
+	// Alternate screen never retains a scrollback buffer.
+	t.scrs[1] = *newScreen(w, h, &t.styles, false)
 	t.scr = &t.scrs[0]
 	t.scrs[0].cb = &t.cb
 	t.scrs[1].cb = &t.cb
-	t.parser = ansi.NewParser()
+
+	// Initialize parser with a lazy-growing data buffer (0 bytes initially,
+	// growing on demand up to maxParserDataSize = 4 MiB, shrunk after >4 KiB).
+	t.parser = new(ansi.Parser)
 	t.parser.SetParamsSize(parser.MaxParamsSize)
-	t.parser.SetDataSize(1024 * 1024 * 4) // 4MB data buffer
+	t.parser.SetDataSize(0)
+	t.parser.Reset()
 	t.parser.SetHandler(ansi.Handler{
 		Print:     t.handlePrint,
 		Execute:   t.handleControl,
@@ -136,21 +162,15 @@ func (e *Emulator) SetCallbacks(cb Callbacks) {
 	e.scrs[1].cb = &e.cb
 }
 
-// Touched returns the touched lines in the current screen buffer.
-func (e *Emulator) Touched() []*uv.LineData {
-	return e.scr.Touched()
-}
-
 // String returns a string representation of the underlying screen buffer.
 func (e *Emulator) String() string {
-	s := e.scr.buf.String()
-	return uv.TrimSpace(s)
+	return uv.TrimSpace(e.scr.String())
 }
 
 // Render renders a snapshot of the terminal screen as a string with styles and
 // links encoded as ANSI escape codes.
 func (e *Emulator) Render() string {
-	return e.scr.buf.Render()
+	return e.scr.Render()
 }
 
 var _ uv.Screen = (*Emulator)(nil)
@@ -171,6 +191,113 @@ func (e *Emulator) SetCell(x, y int, c *uv.Cell) {
 	e.scr.SetCell(x, y, c)
 }
 
+// Style returns the interned Style for id (0 is the default plain Style).
+func (e *Emulator) Style(id uint32) Style {
+	return e.styles.Get(id)
+}
+
+// StyleTableVersion returns a monotonic counter incremented only if internal
+// style IDs are compacted/renumbered.
+func (e *Emulator) StyleTableVersion() uint64 {
+	return e.styles.Version()
+}
+
+// RowCells returns a zero-alloc read-only slice of compact Cells for row y of
+// the active screen, or nil if out of bounds.
+func (e *Emulator) RowCells(y int) []Cell {
+	return e.scr.RowCells(y)
+}
+
+// CellGrapheme returns the multi-rune grapheme cluster string at (x, y) on the
+// active screen, or "" if the cell is single-rune or out of bounds.
+func (e *Emulator) CellGrapheme(x, y int) string {
+	return e.scr.CellGrapheme(x, y)
+}
+
+// CellLink returns the OSC 8 hyperlink at (x, y) on the active screen, or the
+// zero uv.Link if none.
+func (e *Emulator) CellLink(x, y int) uv.Link {
+	return e.scr.CellLink(x, y)
+}
+
+// ScrollbackRowCells returns a zero-alloc read-only slice of compact Cells for
+// scrollback line y (0 = oldest), or nil if out of bounds or empty.
+func (e *Emulator) ScrollbackRowCells(y int) []Cell {
+	return e.Scrollback().RowCells(y)
+}
+
+// ScrollbackCellGrapheme returns the multi-rune grapheme cluster string at
+// (x, y) in scrollback (y = 0 is oldest), or "".
+func (e *Emulator) ScrollbackCellGrapheme(x, y int) string {
+	return e.Scrollback().CellGrapheme(x, y)
+}
+
+// ScrollbackCellLink returns the OSC 8 hyperlink at (x, y) in scrollback
+// (y = 0 is oldest), or the zero uv.Link.
+func (e *Emulator) ScrollbackCellLink(x, y int) uv.Link {
+	return e.Scrollback().CellLink(x, y)
+}
+
+// RowRev returns the per-row monotonic revision of row y on the active screen.
+func (e *Emulator) RowRev(y int) uint64 {
+	return e.scr.RowRev(y)
+}
+
+// ScrollCount returns the monotonic full-screen scroll-up line counter for the
+// main screen.
+func (e *Emulator) ScrollCount() uint64 {
+	return e.scrs[0].ScrollCount()
+}
+
+// ScrollbackTotal returns the monotonic total number of lines ever pushed into
+// the main screen's scrollback buffer.
+func (e *Emulator) ScrollbackTotal() uint64 {
+	return e.Scrollback().TotalPushed()
+}
+
+// ScrollbackEpoch returns a monotonic counter incremented whenever the main
+// screen's scrollback is cleared or rewritten by reflow.
+func (e *Emulator) ScrollbackEpoch() uint64 {
+	return e.Scrollback().Epoch()
+}
+
+// HasScrollback reports whether the main screen has a scrollback buffer.
+func (e *Emulator) HasScrollback() bool {
+	return e.scrs[0].HasScrollback()
+}
+
+// compactStylesIfNeeded garbage-collects unreferenced StyleIDs if the interned
+// style table grows beyond styleCompactHighWater.
+func (e *Emulator) compactStylesIfNeeded() {
+	n := len(e.styles.styles)
+	if n <= styleCompactHighWater {
+		return
+	}
+	used := make([]bool, n)
+	used[0] = true
+	e.scrs[0].markUsedStyles(used)
+	e.scrs[1].markUsedStyles(used)
+
+	remap := make([]uint32, n)
+	newStyles := make([]Style, 1, 64)
+	newIndex := make(map[Style]uint32, 64)
+	for id := 1; id < n; id++ {
+		if !used[id] {
+			continue
+		}
+		st := e.styles.styles[id]
+		newID := uint32(len(newStyles))
+		newStyles = append(newStyles, st)
+		newIndex[st] = newID
+		remap[id] = newID
+	}
+	e.scrs[0].remapStyles(remap)
+	e.scrs[1].remapStyles(remap)
+	e.styles.styles = newStyles
+	e.styles.index = newIndex
+	e.styles.version++
+}
+
 // WidthMethod returns the width method used by the terminal.
 func (e *Emulator) WidthMethod() uv.WidthMethod {
 	if e.isModeSet(ansi.ModeUnicodeCore) {
@@ -184,15 +311,11 @@ func (e *Emulator) Draw(scr uv.Screen, area uv.Rectangle) {
 	bg := uv.EmptyCell
 	bg.Style.Bg = e.BackgroundColor()
 	screen.FillArea(scr, &bg, area)
-	for y := range e.Touched() {
-		if y < 0 || y >= e.Height() {
-			continue
-		}
+	for y := range e.Height() {
 		for x := 0; x < e.Width(); {
 			w := 1
 			cell := e.CellAt(x, y)
 			if cell != nil {
-				cell = cell.Clone()
 				if cell.Width > 1 {
 					w = cell.Width
 				}
@@ -311,21 +434,93 @@ func (e *Emulator) Close() error {
 	return e.pw.CloseWithError(io.EOF) //nolint:wrapcheck
 }
 
+func isParserStringState(st parser.State) bool {
+	switch st {
+	case parser.OscStringState, parser.DcsStringState, parser.SosStringState, parser.PmStringState, parser.ApcStringState:
+		return true
+	default:
+		return false
+	}
+}
+
 // Write writes data to the terminal output buffer.
 func (e *Emulator) Write(p []byte) (n int, err error) {
 	if e.closed {
 		return 0, io.ErrClosedPipe
 	}
 
-	for i := range p {
-		e.parser.Advance(p[i])
-		// Flush the last cluster once the whole slice is written. Every
-		// sequence handler flushes on its own way in, so a cluster only has to
-		// survive until either the next printable character extends it or the
-		// write ends.
-		if len(e.grapheme) > 0 && i == len(p)-1 {
-			e.flushGrapheme()
+	for i := 0; i < len(p); {
+		st := e.parser.State()
+		if st == parser.GroundState {
+			b := p[i]
+			if b >= ansi.SP && b < ansi.DEL {
+				if e.gsingle == 0 && e.charsets[e.gl] == nil && !e.insert && e.scr.cur.Link.IsZero() {
+					end := i + 1
+					for end < len(p) && p[end] >= ansi.SP && p[end] < ansi.DEL {
+						end++
+					}
+					runEnd := end
+					// Hold back the last ASCII byte if a non-ASCII byte follows
+					// so a combining mark can still join it in e.grapheme.
+					if end < len(p) && p[end] >= ansi.DEL {
+						runEnd = end - 1
+					}
+					if runEnd > i {
+						if len(e.grapheme) > 0 {
+							e.flushGrapheme()
+						}
+						e.writeASCIISpan(p[i:runEnd])
+						i = runEnd
+						continue
+					}
+				}
+			} else if b == ansi.CR {
+				if len(e.grapheme) > 0 {
+					e.flushGrapheme()
+				}
+				e.carriageReturn()
+				i++
+				continue
+			} else if b == ansi.LF {
+				if len(e.grapheme) > 0 {
+					e.flushGrapheme()
+				}
+				e.linefeed()
+				i++
+				continue
+			}
+		} else if e.parserDataLen >= maxParserDataSize && isParserStringState(st) {
+			// Cap string payloads at maxParserDataSize (4 MiB), matching the
+			// legacy fixed-size parser buffer while letting terminators pass.
+			if _, act := parser.Table.Transition(st, p[i]); act == parser.PutAction {
+				i++
+				continue
+			}
 		}
+
+		act := e.parser.Advance(p[i])
+		i++
+
+		switch act {
+		case parser.StartAction:
+			e.parserDataLen = 0
+		case parser.PutAction:
+			e.parserDataLen++
+		default:
+			if e.parserDataLen > 0 && !isParserStringState(e.parser.State()) {
+				if e.parserDataLen > parserDataShrinkThreshold {
+					e.parser.SetDataSize(0)
+				}
+				e.parserDataLen = 0
+			}
+		}
+	}
+
+	// Flush the last cluster once the whole slice is written. Every sequence
+	// handler flushes on its own way in, so a cluster only has to survive
+	// until either the next printable character extends it or the write ends.
+	if len(e.grapheme) > 0 {
+		e.flushGrapheme()
 	}
 	return len(p), nil
 }
@@ -489,10 +684,7 @@ func (e *Emulator) logf(format string, v ...any) {
 }
 
 // Scrollback returns the scrollback buffer for the main screen.
-// Returns nil if the terminal is in alternate screen mode, as the alternate
-// screen typically doesn't use scrollback.
 func (e *Emulator) Scrollback() *Scrollback {
-	// Return main screen's scrollback only
 	return e.scrs[0].Scrollback()
 }
 

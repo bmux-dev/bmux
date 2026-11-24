@@ -47,6 +47,45 @@ type session struct {
 	graphicsSeq           uint64
 	graphicsSupported     bool
 	cellWidth, cellHeight int
+	// dirtyMu is a leaf lock protecting dirtyCh, which is closed and replaced
+	// on notify() to wake attached clients immediately when session state changes.
+	dirtyMu sync.Mutex
+	dirtyCh chan struct{}
+}
+
+// paneOnDirty maps each live pane to its owning session's notify callback,
+// registered in watchPane and removed when the pane exits.
+var paneOnDirty sync.Map
+
+func notifyPaneDirty(p *pane) {
+	if fn, ok := paneOnDirty.Load(p); ok {
+		fn.(func())()
+	}
+}
+
+// dirtySignal returns a channel that closes on the next state change. Callers
+// must obtain it before inspecting state (e.g. snapshot) so no update between
+// snapshot and waiting can be missed.
+func (s *session) dirtySignal() <-chan struct{} {
+	s.dirtyMu.Lock()
+	if s.dirtyCh == nil {
+		s.dirtyCh = make(chan struct{})
+	}
+	ch := s.dirtyCh
+	s.dirtyMu.Unlock()
+	return ch
+}
+
+// notify wakes every attached client waiting on dirtySignal. It never blocks
+// and acquires only the leaf dirtyMu lock, so callers may invoke it from any
+// context.
+func (s *session) notify() {
+	s.dirtyMu.Lock()
+	if s.dirtyCh != nil {
+		close(s.dirtyCh)
+		s.dirtyCh = nil
+	}
+	s.dirtyMu.Unlock()
 }
 
 func newSession(name, dir, shell string, width, height int) (*session, error) {
@@ -69,11 +108,13 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 
 func (s *session) watchPane(id int, p *pane) {
 	s.watchers.Add(1)
+	paneOnDirty.Store(p, s.notify)
 	p.mu.Lock()
 	p.agentHook = func(state string) { s.hook("agent-"+state, id) }
 	p.mu.Unlock()
 	go func() {
 		defer s.watchers.Done()
+		defer paneOnDirty.Delete(p)
 		<-p.done
 		// A background child might still hold the PTY open after its shell exits.
 		// Shell lifetime, not PTY EOF or client attachment, determines pane lifetime.
@@ -88,11 +129,18 @@ func (s *session) watchPane(id int, p *pane) {
 		s.shutdownMu.Lock()
 		delete(s.owned, p)
 		s.shutdownMu.Unlock()
+		var dirty bool
+		defer func() {
+			if dirty {
+				s.notify()
+			}
+		}()
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if s.panes[id] != p {
 			return
 		}
+		dirty = true
 		p.mu.Lock()
 		// Carry the removed pane's contribution into the session revision so
 		// snapshot revisions remain monotonic even when a busy pane disappears.
@@ -192,6 +240,7 @@ func (s *session) stop() {
 func (s *session) stopUntil(deadline time.Time) {
 	s.stopOnce.Do(func() {
 		s.stopping.Store(true)
+		s.notify()
 		// This registry never waits behind session layout/emulator operations.
 		s.shutdownMu.Lock()
 		items := make([]*pane, 0, len(s.owned))
@@ -253,7 +302,11 @@ func (s *session) input(r protocol.Request) error {
 	switch r.Op {
 	case "key", "paste", "mouse":
 		s.mu.Unlock()
-		return p.input(r)
+		err := p.input(r)
+		if err == nil {
+			s.notify()
+		}
+		return err
 	}
 	defer s.mu.Unlock()
 	// Pane operations act in the window showing the pane, which is the
@@ -383,7 +436,11 @@ func (s *session) input(r protocol.Request) error {
 		w.zoomed = !w.zoomed
 		s.selectWindowLocked(wi)
 	default:
-		return p.input(r)
+		err := p.input(r)
+		if err == nil {
+			s.notify()
+		}
+		return err
 	}
 	return s.finishLayoutLocked()
 }
@@ -423,7 +480,9 @@ func (s *session) startPaneLocked(dir string, width, height int) (int, error) {
 func (s *session) finishLayoutLocked() error {
 	s.revision++
 	s.updateViewedLocked()
-	return s.resizePanes()
+	err := s.resizePanes()
+	s.notify()
+	return err
 }
 
 // splitSource resolves the pane a split starts from (id, or the focused pane

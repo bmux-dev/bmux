@@ -27,19 +27,26 @@ type powerlineSegment struct {
 	fg, bg tcell.Color
 }
 
-func (u *ui) drawPowerline(width int, now time.Time) {
-	if width <= 0 {
-		return
-	}
-	u.screen.PutStrStyled(0, 0, fit("", width), barStyle)
-	if u.picker && u.searching {
-		u.screen.PutStrStyled(0, 0, fit(" / "+u.query, width), barStyle.Bold(true))
-		return
-	}
+func powerlineClock(width int, now time.Time) string {
 	clock := " " + now.Format("15:04:05") + " "
 	if width >= 76 {
 		clock += " " + now.Format("2006-01-02") + " "
 	}
+	return clock
+}
+
+func (u *ui) drawPowerline(width int, now time.Time) {
+	if width <= 0 {
+		u.lastClock = ""
+		return
+	}
+	if u.picker && u.searching {
+		u.lastClock = ""
+		u.screen.PutStrStyled(0, 0, fit(" / "+u.query, width), barStyle.Bold(true))
+		return
+	}
+	clock := powerlineClock(width, now)
+	u.lastClock = clock
 	rightWidth := min(width, displayWidth(clock)+1)
 	leftWidth := max(0, width-rightWidth)
 	context := "sessions"
@@ -81,7 +88,14 @@ func (u *ui) drawPowerline(width int, now time.Time) {
 		}
 	}
 	if !u.picker {
-		u.drawWindowTabs(x+1, leftWidth)
+		if x < leftWidth {
+			u.screen.Put(x, 0, " ", barStyle)
+			x++
+		}
+		x = u.drawWindowTabs(x, leftWidth)
+	}
+	if gap := width - rightWidth - x; gap > 0 {
+		u.screen.PutStrStyled(x, 0, fit("", gap), barStyle)
 	}
 	if rightWidth > 0 {
 		start := width - rightWidth

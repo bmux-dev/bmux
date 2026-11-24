@@ -121,3 +121,69 @@ func mustFrame(p *pane) *protocol.TerminalFrame {
 	f, _ := p.frame(0)
 	return f
 }
+
+func TestSyncOutputFastPathZeroCopyAndZeroAllocs(t *testing.T) {
+	now := time.Unix(1000, 0)
+	var o syncOutput
+	input := []byte("ordinary PTY output line without synchronized markers\r\n")
+	got := o.feed(input, now)
+	if string(got) != string(input) {
+		t.Fatalf("got %q, want %q", got, input)
+	}
+	if &got[0] != &input[0] {
+		t.Fatal("fast path copied input instead of returning zero-copy slice")
+	}
+	if allocs := testing.AllocsPerRun(100, func() {
+		out := o.feed(input, now)
+		if len(out) != len(input) {
+			t.Fatal("unexpected length")
+		}
+	}); allocs != 0 {
+		t.Fatalf("fast path allocated %v times per run, want 0", allocs)
+	}
+
+	// Partial syncBegin suffix returns a zero-copy prefix and holds only the suffix.
+	partial := []byte("prefix\x1b[?20")
+	got = o.feed(partial, now)
+	if string(got) != "prefix" || &got[0] != &partial[0] {
+		t.Fatalf("partial fast path got %q (aliased=%v), want zero-copy prefix", got, len(got) > 0 && &got[0] == &partial[0])
+	}
+	if got := string(o.flush()); got != "\x1b[?20" {
+		t.Fatalf("held suffix %q, want %q", got, "\x1b[?20")
+	}
+}
+
+func TestSyncOutputMultiChunkLinearAndCapShrink(t *testing.T) {
+	now := time.Unix(1000, 0)
+	var o syncOutput
+	chunk := []byte(strings.Repeat("A", 4096))
+	if got := string(o.feed([]byte(syncBegin), now)); got != syncBegin {
+		t.Fatalf("begin: %q", got)
+	}
+	// 256 chunks = 1 MiB inside a single synchronized update, with a split end marker.
+	start := time.Now()
+	for range 256 {
+		if got := o.feed(chunk, now); len(got) != 0 {
+			t.Fatalf("unexpected early release of %d bytes", len(got))
+		}
+	}
+	if got := o.feed([]byte("\x1b[?20"), now); len(got) != 0 {
+		t.Fatalf("unexpected release on partial end marker: %d", len(got))
+	}
+	released := o.feed([]byte("26lafter"), now)
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("multi-chunk sync took %v, expected O(N)", elapsed)
+	}
+	wantLen := 256*len(chunk) + len(syncEnd) + len("after")
+	if len(released) != wantLen || o.syncing {
+		t.Fatalf("released %d bytes (want %d), syncing=%v", len(released), wantLen, o.syncing)
+	}
+	// Oversized capacity (>64 KiB) must not stay pinned after returning to normal output.
+	if cap(o.held) > syncRetainCap {
+		t.Fatalf("held capacity stayed pinned at %d (> %d)", cap(o.held), syncRetainCap)
+	}
+	_ = o.feed([]byte("normal"), now)
+	if cap(o.ready) > syncRetainCap {
+		t.Fatalf("ready capacity stayed pinned at %d (> %d)", cap(o.ready), syncRetainCap)
+	}
+}
