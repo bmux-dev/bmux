@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.4 | OpenCode V2 integration and opt-in client/server CPU and allocation profiling ([already built](#already-built)) |
+| **Shipped** | v0.7.5 | 6.9× faster output, 4–6× less memory and snappier typing ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -273,3 +273,12 @@ private Unix sockets (`BMUX_PPROF_DIR`), a standard-library Python capture helpe
 disabled by default; this release adds diagnostics, not rendering optimizations.
 Protocol version 10 is unchanged. To profile a server, start an isolated test
 server with profiling enabled rather than interrupting important running jobs.
+
+v0.7.5 makes bmux faster and lighter without changing how it works. Big
+output keeps pace with tmux (`seq 1 200000` takes 0.06 s, down from 0.40 s),
+the slowest keystroke echoes fall from 37 ms to about 5 ms even when another
+pane is busy, and a session with 10k lines of coloured scrollback uses 26 MiB
+instead of 115 MiB. The server redraws when a pane changes instead of 30
+times a second, so it stays idle when nothing happens, and it sends the client
+only the rows that changed. Protocol version 11 replaces 10: run
+`bmux restart` after upgrading.
