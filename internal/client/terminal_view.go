@@ -25,6 +25,7 @@ func (u *ui) drawTerminalView(area pickerArea) {
 			u.drawTerminalCells(paneArea, p.Terminal, p.ID == u.preview.Focused)
 		}
 		u.drawDividers(u.preview, area)
+		u.fillUncovered(u.preview, area, uiBaseStyle)
 		return
 	}
 	p := u.preview.Panes[0]
@@ -38,7 +39,11 @@ func (u *ui) drawTerminalView(area pickerArea) {
 }
 
 func (u *ui) drawTerminalCells(area pickerArea, f *protocol.TerminalFrame, focused bool) {
-	if f == nil || area.w <= 0 || area.h <= 0 {
+	if area.w <= 0 || area.h <= 0 {
+		return
+	}
+	if f == nil {
+		u.fillRect(area.x, area.y, area.w, area.h, uiBaseStyle)
 		return
 	}
 	rowStart, columnStart := 0, 0
@@ -55,8 +60,11 @@ func (u *ui) drawTerminalCells(area pickerArea, f *protocol.TerminalFrame, focus
 	if !graphics {
 		markers = placeholderMarkers(f)
 	}
+	drawnRows := 0
 	for y := 0; y < area.h && rowStart+y < len(f.Rows); y++ {
+		drawnRows = y + 1
 		row := f.Rows[rowStart+y]
+		col := 0
 		for x := 0; x < area.w && columnStart+x < len(row); x++ {
 			index := columnStart + x
 			c := row[index]
@@ -74,8 +82,20 @@ func (u *ui) drawTerminalCells(area pickerArea, f *protocol.TerminalFrame, focus
 			if isPlaceholder(c) && text == c.Text {
 				text, style = u.placeholderCell(c, markers, index, rowStart+y, style)
 			}
-			u.screen.Put(area.x+x, area.y+y, text, style)
+			_, cellW := u.screen.Put(area.x+x, area.y+y, text, style)
+			if cellW < 1 {
+				cellW = 1
+			}
+			if x+cellW > col {
+				col = x + cellW
+			}
 		}
+		for x := col; x < area.w; x++ {
+			u.screen.Put(area.x+x, area.y+y, " ", uiBaseStyle)
+		}
+	}
+	if drawnRows < area.h {
+		u.fillRect(area.x, area.y+drawnRows, area.w, area.h-drawnRows, uiBaseStyle)
 	}
 	// Only a plain list can lend the real terminal cursor to the view. Search
 	// and prompts retain their own cursor; no synthetic blink phase is painted.

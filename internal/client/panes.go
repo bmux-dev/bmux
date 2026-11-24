@@ -163,7 +163,15 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 	f := p.Terminal
 	// Layout coordinates start right of the sidebar; draw in screen columns.
 	p.X += u.paneOriginX(w)
-	if f == nil || p.Width < 1 || p.Height < 1 {
+	if p.Width < 1 || p.Height < 1 {
+		return
+	}
+	x0 := max(0, p.X)
+	x1 := min(w, p.X+p.Width)
+	y0 := max(paneOriginY, paneOriginY+p.Y)
+	y1 := min(h-1, paneOriginY+p.Y+p.Height)
+	if f == nil {
+		u.fillRect(x0, y0, x1-x0, y1-y0, paneStyle)
 		return
 	}
 	sel := u.selections[p.ID]
@@ -187,6 +195,7 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 		if viewing {
 			matches = searchMatches(row, u.view.query)
 		}
+		col := 0
 		for x, c := range row {
 			if x >= p.Width || p.X+x >= w {
 				break
@@ -222,7 +231,24 @@ func (u *ui) drawPane(p protocol.PaneFrame, w, h int) {
 			} else if isPlaceholder(c) && text == c.Text {
 				text, style = u.placeholderCell(c, markers, x, y, style)
 			}
-			u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
+			_, cellW := u.screen.Put(p.X+x, paneOriginY+p.Y+y, text, style)
+			if cellW < 1 {
+				cellW = 1
+			}
+			if x+cellW > col {
+				col = x + cellW
+			}
+		}
+		for x := col; x < p.Width && p.X+x < w; x++ {
+			if p.X+x >= 0 {
+				u.screen.Put(p.X+x, paneOriginY+p.Y+y, " ", paneStyle)
+			}
+		}
+	}
+	if len(f.Rows) < p.Height {
+		padY := max(paneOriginY, paneOriginY+p.Y+len(f.Rows))
+		if padY < y1 {
+			u.fillRect(x0, padY, x1-x0, y1-padY, paneStyle)
 		}
 	}
 	if p.ID == u.focused && !viewing && f.CursorVisible && !f.Exited && f.CursorX >= 0 && f.CursorY >= 0 && f.CursorX < p.Width && f.CursorY < p.Height && p.X+f.CursorX >= 0 && p.X+f.CursorX < w && paneOriginY+p.Y+f.CursorY >= paneOriginY && paneOriginY+p.Y+f.CursorY < h-1 {

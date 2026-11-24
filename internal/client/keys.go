@@ -7,6 +7,15 @@ import (
 	"unicode"
 )
 
+var specialKeys = map[tcell.Key]rune{
+	tcell.KeyEnter: uv.KeyEnter, tcell.KeyTab: uv.KeyTab,
+	tcell.KeyEscape: uv.KeyEscape, tcell.KeyBackspace: uv.KeyBackspace, tcell.KeyBackspace2: uv.KeyBackspace,
+	tcell.KeyUp: uv.KeyUp, tcell.KeyDown: uv.KeyDown, tcell.KeyLeft: uv.KeyLeft, tcell.KeyRight: uv.KeyRight,
+	tcell.KeyHome: uv.KeyHome, tcell.KeyEnd: uv.KeyEnd, tcell.KeyPgUp: uv.KeyPgUp, tcell.KeyPgDn: uv.KeyPgDown,
+	tcell.KeyInsert: uv.KeyInsert, tcell.KeyDelete: uv.KeyDelete,
+	tcell.KeyBacktab: uv.KeyTab,
+}
+
 func keyRequest(e *tcell.EventKey) protocol.Request {
 	r := protocol.Request{Op: "key"}
 	if e.Modifiers()&tcell.ModAlt != 0 {
@@ -31,15 +40,7 @@ func keyRequest(e *tcell.EventKey) protocol.Request {
 		}
 		return r
 	}
-	keys := map[tcell.Key]rune{
-		tcell.KeyEnter: uv.KeyEnter, tcell.KeyTab: uv.KeyTab,
-		tcell.KeyEscape: uv.KeyEscape, tcell.KeyBackspace: uv.KeyBackspace, tcell.KeyBackspace2: uv.KeyBackspace,
-		tcell.KeyUp: uv.KeyUp, tcell.KeyDown: uv.KeyDown, tcell.KeyLeft: uv.KeyLeft, tcell.KeyRight: uv.KeyRight,
-		tcell.KeyHome: uv.KeyHome, tcell.KeyEnd: uv.KeyEnd, tcell.KeyPgUp: uv.KeyPgUp, tcell.KeyPgDn: uv.KeyPgDown,
-		tcell.KeyInsert: uv.KeyInsert, tcell.KeyDelete: uv.KeyDelete,
-		tcell.KeyBacktab: uv.KeyTab,
-	}
-	if code, ok := keys[e.Key()]; ok {
+	if code, ok := specialKeys[e.Key()]; ok {
 		r.Code = code
 		if e.Key() == tcell.KeyBacktab {
 			r.Mod |= int(uv.ModShift)

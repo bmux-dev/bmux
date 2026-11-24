@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -351,11 +352,32 @@ func (u *ui) refreshSidebar() {
 }
 
 // The picker refreshes the same list synchronously and owns it while open.
-func (u *ui) finishSidebarRefresh(result sidebarResult) {
+// Reports whether the session list visibly changed.
+func (u *ui) finishSidebarRefresh(result sidebarResult) bool {
 	u.sidebarBusy = false
-	if result.err == nil && !u.picker {
-		u.updateSessions(result.sessions)
+	if result.err != nil || u.picker {
+		return false
 	}
+	changed := !sessionsEqual(u.sessions, result.sessions)
+	u.updateSessions(result.sessions)
+	return changed
+}
+
+func sessionsEqual(a, b []protocol.Session) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		x, y := a[i], b[i]
+		if x.Name != y.Name || x.ID != y.ID || x.Dir != y.Dir ||
+			!x.Created.Equal(y.Created) || !x.Used.Equal(y.Used) ||
+			x.Clients != y.Clients || x.Exited != y.Exited ||
+			x.Panes != y.Panes || x.Windows != y.Windows ||
+			x.Restored != y.Restored || !slices.Equal(x.Activity, y.Activity) {
+			return false
+		}
+	}
+	return true
 }
 
 // updateSessions replaces the session list and plays a sound when an agent
@@ -462,11 +484,15 @@ func (u *ui) drawSidebar(w, h int) {
 		border = border.Foreground(accentColor).Bold(true)
 	}
 	for y := paneOriginY; y < h-1; y++ {
-		u.screen.PutStrStyled(0, y, fit("", content), sidebarBaseStyle)
 		u.screen.Put(content, y, "│", border)
 	}
 	if h-1 <= paneOriginY {
 		return
+	}
+	clearRows := func(from, to int) {
+		for y := from; y < to; y++ {
+			u.screen.PutStrStyled(0, y, fit("", content), sidebarBaseStyle)
+		}
 	}
 	heading := sidebarMutedStyle.Bold(true)
 	if u.sidebarFocus {
@@ -476,12 +502,17 @@ func (u *ui) drawSidebar(w, h int) {
 	l := sidebarLayout(sessions, h)
 	selected, sessionStart, agentStart := u.sidebarWindows(sessions, l, rows)
 	u.screen.PutStrStyled(0, paneOriginY, fit(" SESSIONS", content), heading)
+	sessionEnd := l.sessionTop
 	for i := sessionStart; i < sessions && i < sessionStart+l.sessionSlots; i++ {
-		u.drawSessionRow(rows[i], l.sessionTop+i-sessionStart, content, i == selected)
+		rowY := l.sessionTop + i - sessionStart
+		u.drawSessionRow(rows[i], rowY, content, i == selected)
+		sessionEnd = rowY + 1
 	}
 	if l.divider < 0 {
+		clearRows(sessionEnd, h-1)
 		return
 	}
+	clearRows(sessionEnd, l.divider)
 	u.screen.PutStrStyled(0, l.divider, strings.Repeat(u.sidebarGlyph("─"), content), sidebarMutedStyle)
 	agents := rows[sessions:]
 	title := " AGENTS"
@@ -491,11 +522,16 @@ func (u *ui) drawSidebar(w, h int) {
 	u.screen.PutStrStyled(0, l.divider+1, fit(title, content), heading)
 	if len(agents) == 0 {
 		u.screen.PutStrStyled(0, l.agentTop, fit("   none running", content), sidebarMutedStyle)
+		clearRows(l.agentTop+1, h-1)
 		return
 	}
+	agentEnd := l.agentTop
 	for i := agentStart; i < len(agents) && i < agentStart+l.agentSlots; i++ {
-		u.drawAgentRow(agents[i], l.agentTop+2*(i-agentStart), content, sessions+i == selected)
+		rowY := l.agentTop + 2*(i-agentStart)
+		u.drawAgentRow(agents[i], rowY, content, sessions+i == selected)
+		agentEnd = rowY + 2
 	}
+	clearRows(agentEnd, h-1)
 }
 
 func (u *ui) sidebarGlyph(glyph string) string {
