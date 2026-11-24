@@ -181,3 +181,42 @@ func TestBridgeCancellationReleasesUnusedReservation(t *testing.T) {
 		}
 	}
 }
+
+func TestBridgeLazyFenceProtectsUserInputAfterGeneratedReplies(t *testing.T) {
+	term := vt.NewEmulator(80, 24)
+	w := &gatedWriter{gate: make(chan struct{})}
+	b := newInputBridge(term, w)
+	var release sync.Once
+	t.Cleanup(func() {
+		b.close(io.ErrClosedPipe)
+		_ = term.InputPipe().(io.Closer).Close()
+		release.Do(func() { close(w.gate) })
+	})
+	const rounds = 200
+	bounded(t, 3*time.Second, func() {
+		for range rounds {
+			// Emit a DSR reply without fencing on the output hot path.
+			_, _ = term.Write([]byte("\x1b[6n"))
+			b.markGeneratedInput()
+			// Immediately admit small user input: beginUserInput must fence
+			// the pending reply first so it never consumes the user reservation.
+			if err := b.beginUserInput(3); err != nil {
+				t.Error(err)
+				return
+			}
+			_, _ = term.InputPipe().Write([]byte("xyz"))
+			if err := b.finishUserInput(term.InputPipe()); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	})
+	awaitBridgeAccounting(t, b, rounds*3, rounds*len("\x1b[1;1R"))
+	release.Do(func() { close(w.gate) })
+	awaitBridgeAccounting(t, b, 0, 0)
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if got, want := w.data.String(), strings.Repeat("\x1b[1;1Rxyz", rounds); got != want {
+		t.Fatalf("interleaved stream mismatch: len=%d want=%d", len(got), len(want))
+	}
+}

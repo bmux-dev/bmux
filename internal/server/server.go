@@ -110,10 +110,40 @@ func validateName(name string) error {
 	return protocol.ValidateSessionName(name)
 }
 
+const (
+	// frameBurstWindow is how recently a frame must have been sent for the next
+	// dirty notification to be coalesced rather than flushed immediately.
+	frameBurstWindow = 8 * time.Millisecond
+	// frameCoalesceDelay batches rapid continuous PTY output (~250 Hz cap)
+	// without delaying interactive keystroke echoes after idle.
+	frameCoalesceDelay = 3 * time.Millisecond
+)
+
+func (s *Server) notifyAllSessions() {
+	s.mu.Lock()
+	items := make([]*session, 0, len(s.sessions))
+	for _, item := range s.sessions {
+		items = append(items, item)
+	}
+	s.mu.Unlock()
+	for _, item := range items {
+		item.notify()
+	}
+}
+
 func (s *Server) request(r protocol.Request) protocol.Response {
 	result := protocol.Response{Version: protocol.Version}
 	if r.Op == "create" || r.Op == "rename" || r.Op == "kill" {
-		return s.mutate(r)
+		res := s.mutate(r)
+		if r.Op == "rename" && res.Error == "" {
+			s.mu.Lock()
+			renamed := s.sessions[r.NewName]
+			s.mu.Unlock()
+			if renamed != nil {
+				renamed.notify()
+			}
+		}
+		return res
 	}
 	s.mu.Lock()
 	if s.closed {
@@ -196,12 +226,14 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		if err := s.ReloadSettings(); err != nil {
 			result.Error = err.Error()
 		}
+		s.notifyAllSessions()
 	case "update-installed":
 		// bmux update replaced this server's binary; clients show that a
 		// restart switches to it.
 		if err := s.updateInstalled(r.Text); err != nil {
 			result.Error = err.Error()
 		}
+		s.notifyAllSessions()
 	case "environment":
 		// Panes start from this environment; bmux restart passes it on, so
 		// a restart from inside a pane never leaks that pane's variables.
@@ -348,6 +380,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			break
 		}
 		item.showMessage(r.Text)
+		item.notify()
 	case "pipe-pane":
 		// Text is the command, "" to stop; Kind "toggle" is -o.
 		if item == nil {
@@ -459,8 +492,6 @@ func (s *Server) handle(conn net.Conn) {
 			}
 		}
 	}()
-	ticker := time.NewTicker(time.Second / 30)
-	defer ticker.Stop()
 	offsets, histories := make(map[int]int), make(map[int]int)
 	var revision uint64
 	ack := 0
@@ -475,6 +506,61 @@ func (s *Server) handle(conn net.Conn) {
 		}
 	}()
 	var paste protocol.PasteAssembly
+	var lastSend time.Time
+	var coalesceTimer *time.Timer
+	var coalesceC <-chan time.Time
+	stopCoalesce := func() {
+		if coalesceTimer != nil {
+			if !coalesceTimer.Stop() {
+				select {
+				case <-coalesceTimer.C:
+				default:
+				}
+			}
+		}
+		coalesceC = nil
+	}
+	defer stopCoalesce()
+	sendFrame := func() bool {
+		frame, rev := item.snapshot(offsets, histories, revision, force)
+		if frame == nil {
+			return false
+		}
+		revision, force = rev, false
+		frame.Clipboard = item.clipboardSince(&clipboardSeen)
+		if !noticed {
+			frame.Notice, noticed = item.takeNotice(), true
+		}
+		_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+		if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
+			return true
+		}
+		lastSend = time.Now()
+		return len(frame.Panes) == 0
+	}
+	// Subscribe before the initial snapshot so updates during the send cannot
+	// be missed, then push the initial frame immediately.
+	dirty := item.dirtySignal()
+	if sendFrame() {
+		return
+	}
+	scheduleFlush := func() bool {
+		if coalesceC != nil {
+			return false
+		}
+		if lastSend.IsZero() || time.Since(lastSend) >= frameBurstWindow {
+			dirty = item.dirtySignal()
+			return sendFrame()
+		}
+		dirty = nil
+		if coalesceTimer == nil {
+			coalesceTimer = time.NewTimer(frameCoalesceDelay)
+		} else {
+			coalesceTimer.Reset(frameCoalesceDelay)
+		}
+		coalesceC = coalesceTimer.C
+		return false
+	}
 	for {
 		select {
 		case err := <-readErrors:
@@ -533,29 +619,30 @@ func (s *Server) handle(conn net.Conn) {
 					offsets[id] += next.Delta
 				}
 				force = true
+				if scheduleFlush() {
+					return
+				}
 			} else if err := item.input(next); err != nil {
 				_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 				if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Error: err.Error()}) != nil {
 					return
 				}
 			}
-		case <-ticker.C:
-			frame, rev := item.snapshot(offsets, histories, revision, force)
-			if frame == nil {
-				continue
-			}
-			revision, force = rev, false
-			frame.Clipboard = item.clipboardSince(&clipboardSeen)
-			if !noticed {
-				frame.Notice, noticed = item.takeNotice(), true
-			}
-			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-			if enc.Encode(protocol.Response{Version: protocol.Version, Ack: ack, Frame: frame}) != nil {
+		case <-dirty:
+			if scheduleFlush() {
 				return
 			}
-			if len(frame.Panes) == 0 {
+		case <-coalesceC:
+			coalesceC = nil
+			dirty = item.dirtySignal()
+			if sendFrame() {
 				return
 			}
+		case <-item.done:
+			stopCoalesce()
+			force = true
+			_ = sendFrame()
+			return
 		}
 	}
 }

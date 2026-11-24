@@ -69,6 +69,11 @@ func (s *pane) foregroundAgent() (string, error) {
 	if group <= 0 {
 		return "", fmt.Errorf("PTY has no foreground process group")
 	}
+	// An idle shell at its prompt owns the foreground PTY group; skip OS
+	// process inspection completely when no foreground job is running.
+	if s.cmd != nil && s.cmd.Process != nil && group == s.cmd.Process.Pid {
+		return "", nil
+	}
 	return foregroundGroupCommand(group, agentMatch)
 }
 
@@ -145,6 +150,12 @@ func (s *session) sampleAgents() {
 	}
 	s.mu.Unlock()
 	for _, p := range panes {
+		p.mu.Lock()
+		exited := p.info.Exited
+		p.mu.Unlock()
+		if exited {
+			continue
+		}
 		detected, err := p.foregroundAgent()
 		if err != nil {
 			continue // keep the last sample; the shell may be starting or gone
