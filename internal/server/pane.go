@@ -140,6 +140,7 @@ func newPane(sessionID uint64, name, dir, shell string, width, height, paneID in
 		s.info.Exited = true
 		s.revision++
 		s.mu.Unlock()
+		notifyPaneDirty(s)
 		close(s.done)
 	}()
 	return s, nil
@@ -333,7 +334,9 @@ func (s *pane) input(r protocol.Request) error {
 			return err
 		}
 	}
-	s.revision++
+	if r.Op == "resize" {
+		s.revision++
+	}
 	return nil
 }
 

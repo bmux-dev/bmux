@@ -147,9 +147,6 @@ func (s *session) sendInput(t paneTarget, ifSeq uint64, input []protocol.Input) 
 		return protocol.PaneActivity{}, err
 	}
 	a, err := p.send(id, ifSeq, input)
-	if err == nil {
-		s.notify()
-	}
 	if a.Pane != 0 {
 		a.Window, a.Index = window, index
 	}
@@ -251,6 +248,5 @@ func (s *pane) send(id int, ifSeq uint64, input []protocol.Input) (protocol.Pane
 	if err := s.bridge.finishUserInput(s.term.InputPipe()); err != nil {
 		return a, err
 	}
-	s.revision++
 	return a, nil
 }

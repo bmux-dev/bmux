@@ -302,11 +302,7 @@ func (s *session) input(r protocol.Request) error {
 	switch r.Op {
 	case "key", "paste", "mouse":
 		s.mu.Unlock()
-		err := p.input(r)
-		if err == nil {
-			s.notify()
-		}
-		return err
+		return p.input(r)
 	}
 	defer s.mu.Unlock()
 	// Pane operations act in the window showing the pane, which is the
@@ -437,7 +433,7 @@ func (s *session) input(r protocol.Request) error {
 		s.selectWindowLocked(wi)
 	default:
 		err := p.input(r)
-		if err == nil {
+		if err == nil && r.Op == "resize" {
 			s.notify()
 		}
 		return err

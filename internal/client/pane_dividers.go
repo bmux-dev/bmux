@@ -124,6 +124,7 @@ func (u *ui) drawDividers(frame *protocol.Frame, area pickerArea) {
 		addCandidate(rx, by, &candidates)
 		addCandidate(rx, p.Y-1, &candidates)
 		addCandidate(p.X-1, by, &candidates)
+		addCandidate(p.X-1, p.Y-1, &candidates)
 	}
 	// A T-junction or crossing cell belongs to no pane edge, so the border is
 	// interrupted exactly where segments meet. A cell continues a divider when

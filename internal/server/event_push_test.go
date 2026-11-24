@@ -206,3 +206,126 @@ func TestEventPushScrollDisplayMessageRenameAndExit(t *testing.T) {
 	}
 	waitFrameMatching(t, frames, 2*time.Second, func(f *protocol.Frame) bool { return len(f.Panes) == 0 })
 }
+
+func TestEventPushKeystrokeNoSpuriousPreEchoFrame(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := New("/bin/sh")
+	finished := make(chan error, 1)
+	go func() { finished <- srv.Serve(l) }()
+	defer func() {
+		srv.Close()
+		if err := <-finished; err != nil {
+			t.Error(err)
+		}
+	}()
+	if r := srv.request(protocol.Request{Op: "create", Name: "keyecho", Dir: t.TempDir(), Width: 20, Height: 4}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+
+	// Attach directly so we can inspect raw wire frames (Unchanged vs RowDeltas).
+	c, err := net.Dial("tcp", l.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	enc, dec := json.NewEncoder(c), json.NewDecoder(c)
+	if err := enc.Encode(protocol.Request{Version: protocol.Version, Op: "attach", Name: "keyecho", Width: 20, Height: 4}); err != nil {
+		t.Fatal(err)
+	}
+	var ack protocol.Response
+	if err := dec.Decode(&ack); err != nil || ack.Error != "" {
+		t.Fatalf("attach: %+v %v", ack, err)
+	}
+	rawFrames := make(chan *protocol.Frame, 64)
+	go func() {
+		defer close(rawFrames)
+		for {
+			var r protocol.Response
+			if dec.Decode(&r) != nil {
+				return
+			}
+			if r.Frame != nil {
+				rawFrames <- r.Frame
+			}
+		}
+	}()
+
+	// Wait for initial frame, then settle past frameBurstWindow.
+	f0 := waitFrameMatching(t, rawFrames, time.Second, func(f *protocol.Frame) bool { return len(f.Panes) == 1 })
+	retained := f0.Panes[0].Terminal
+
+	// Wait for shell prompt to settle past burst window.
+	time.Sleep(100 * time.Millisecond)
+	for len(rawFrames) > 0 {
+		f := <-rawFrames
+		if len(f.Panes) > 0 {
+			retained = protocol.ApplyTerminalDelta(retained, f.Panes[0].Terminal)
+		}
+	}
+
+	// Send an interactive keystroke; the server must NOT emit a pre-echo
+	// Unchanged frame before the PTY echoes 'x', and the echo must arrive
+	// immediately without hitting the 3 ms burst-coalesce timer.
+	best := time.Hour
+	for range 5 {
+		time.Sleep(frameBurstWindow + 15*time.Millisecond)
+		for len(rawFrames) > 0 {
+			f := <-rawFrames
+			if len(f.Panes) > 0 {
+				retained = protocol.ApplyTerminalDelta(retained, f.Panes[0].Terminal)
+			}
+		}
+		start := time.Now()
+		if err := enc.Encode(protocol.Request{Op: "key", Code: 'x', Text: "x"}); err != nil {
+			t.Fatal(err)
+		}
+		next := waitFrameMatching(t, rawFrames, time.Second, func(f *protocol.Frame) bool { return len(f.Panes) == 1 })
+		elapsed := time.Since(start)
+		if next.Panes[0].Terminal.Unchanged {
+			t.Fatalf("sending key emitted a spurious pre-echo Unchanged frame (delays real echo into coalesce window)")
+		}
+		retained = protocol.ApplyTerminalDelta(retained, next.Panes[0].Terminal)
+		if elapsed < best {
+			best = elapsed
+		}
+	}
+	if best > 2*time.Millisecond {
+		t.Fatalf("best keystroke echo latency = %v, want <= 2ms (must not hit 3ms coalesce delay)", best)
+	}
+}
+
+func TestEventPushBumpRevisionsWakesAttachedClient(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := New("/bin/sh")
+	finished := make(chan error, 1)
+	go func() { finished <- srv.Serve(l) }()
+	defer func() {
+		srv.Close()
+		if err := <-finished; err != nil {
+			t.Error(err)
+		}
+	}()
+	if r := srv.request(protocol.Request{Op: "create", Name: "bump", Dir: t.TempDir(), Width: 20, Height: 4}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+	_, _, frames := attachTestClient(t, l.Addr().String(), "bump", 20, 4)
+	waitFrameMatching(t, frames, time.Second, func(f *protocol.Frame) bool { return len(f.Panes) == 1 })
+
+	time.Sleep(frameBurstWindow + 15*time.Millisecond)
+	for len(frames) > 0 {
+		<-frames
+	}
+
+	// Simulate background WatchReleases / SIGUSR1 bumping configRevision + bumpRevisions().
+	wantCfg := configRevision.Add(1)
+	srv.bumpRevisions()
+	waitFrameMatching(t, frames, time.Second, func(f *protocol.Frame) bool { return f.Config == wantCfg })
+}

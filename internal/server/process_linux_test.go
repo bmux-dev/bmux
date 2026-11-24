@@ -41,9 +41,16 @@ func TestForegroundGroupCommandFastPathSkipsProcScan(t *testing.T) {
 	// Child-tree match: leader PID 4300 is "sh", child PID 4301 in same group is "opencode".
 	writeFakeProc(t, root, 4300, 4300, "S", "sh", []int{4301})
 	writeFakeProc(t, root, 4301, 4300, "S", "opencode", nil)
+	// Non-agent foreground job ("vim") under shell 4000 must return ("", nil) without scanning /proc.
+	writeFakeProc(t, root, 4000, 4000, "S", "bash", []int{4400})
+	writeFakeProc(t, root, 4400, 4400, "S", "vim", nil)
+	// Shell pipeline ("cat | claude") under shell 4001: both are direct children of shell in pgid 4500.
+	writeFakeProc(t, root, 4001, 4001, "S", "bash", []int{4500, 4501})
+	writeFakeProc(t, root, 4500, 4500, "S", "cat", nil)
+	writeFakeProc(t, root, 4501, 4500, "S", "claude", nil)
 
 	// Make root execute-only (0o111) so os.ReadDir(root) fails with EACCES,
-	// proving both fast paths resolve in O(1) without enumerating /proc.
+	// proving all fast paths resolve in O(1) without enumerating /proc.
 	if err := os.Chmod(root, 0o111); err != nil {
 		t.Fatal(err)
 	}
@@ -51,14 +58,24 @@ func TestForegroundGroupCommandFastPathSkipsProcScan(t *testing.T) {
 		t.Skip("running with privileges that bypass 0o111 directory read restriction")
 	}
 
-	got, err := foregroundGroupCommandIn(root, 4200, agentMatch)
+	got, err := foregroundGroupCommandIn(root, 4200, 0, agentMatch)
 	if err != nil || got != "claude" {
 		t.Fatalf("leader fast path: got (%q, %v), want (%q, nil)", got, err, "claude")
 	}
 
-	got, err = foregroundGroupCommandIn(root, 4300, agentMatch)
+	got, err = foregroundGroupCommandIn(root, 4300, 0, agentMatch)
 	if err != nil || got != "opencode" {
 		t.Fatalf("child fast path: got (%q, %v), want (%q, nil)", got, err, "opencode")
+	}
+
+	got, err = foregroundGroupCommandIn(root, 4400, 4000, agentMatch)
+	if err != nil || got != "" {
+		t.Fatalf("non-agent foreground job: got (%q, %v), want (\"\", nil) without /proc scan", got, err)
+	}
+
+	got, err = foregroundGroupCommandIn(root, 4500, 4001, agentMatch)
+	if err != nil || got != "claude" {
+		t.Fatalf("shell pipeline fast path: got (%q, %v), want (%q, nil)", got, err, "claude")
 	}
 }
 
@@ -70,11 +87,11 @@ func TestForegroundGroupCommandFallsBackToProcScanForOrphanGroup(t *testing.T) {
 	writeFakeProc(t, root, 6000, 6000, "Z", "claude", nil)
 	writeFakeProc(t, root, 6001, 6000, "T", "claude", nil)
 
-	got, err := foregroundGroupCommandIn(root, 5000, agentMatch)
+	got, err := foregroundGroupCommandIn(root, 5000, 0, agentMatch)
 	if err != nil || got != "codex" {
 		t.Fatalf("orphan group fallback: got (%q, %v), want (%q, nil)", got, err, "codex")
 	}
-	got, err = foregroundGroupCommandIn(root, 6000, agentMatch)
+	got, err = foregroundGroupCommandIn(root, 6000, 0, agentMatch)
 	if err != nil || got != "" {
 		t.Fatalf("stopped/zombie group: got (%q, %v), want (\"\", nil)", got, err)
 	}

@@ -39,10 +39,14 @@ func processCwd(pid int) (string, error) {
 // directly in O(1) before falling back to full /proc enumeration for pipelines
 // or orphaned groups whose leader has exited.
 func foregroundGroupCommand(group int, match func(string) string) (string, error) {
-	return foregroundGroupCommandIn("/proc", group, match)
+	return foregroundGroupCommandIn("/proc", group, 0, match)
 }
 
-func foregroundGroupCommandIn(root string, group int, match func(string) string) (string, error) {
+func foregroundGroupCommandForShell(group, shellPid int, match func(string) string) (string, error) {
+	return foregroundGroupCommandIn("/proc", group, shellPid, match)
+}
+
+func foregroundGroupCommandIn(root string, group, shellPid int, match func(string) string) (string, error) {
 	if group > 0 {
 		found, live := matchProcEntry(root, group, group, match)
 		if found != "" {
@@ -50,7 +54,15 @@ func foregroundGroupCommandIn(root string, group int, match func(string) string)
 		}
 		if live {
 			visited := map[int]struct{}{group: {}}
-			queue := procChildren(root, group)
+			queue, complete := procChildren(root, group)
+			shellComplete := false
+			if shellPid > 0 {
+				var shellKids []int
+				shellKids, shellComplete = procChildren(root, shellPid)
+				if shellComplete {
+					queue = append(queue, shellKids...)
+				}
+			}
 			for len(queue) > 0 {
 				pid := queue[0]
 				queue = queue[1:]
@@ -63,8 +75,18 @@ func foregroundGroupCommandIn(root string, group int, match func(string) string)
 					return found, nil
 				}
 				if childLive {
-					queue = append(queue, procChildren(root, pid)...)
+					kids, ok := procChildren(root, pid)
+					if !ok {
+						complete = false
+					}
+					queue = append(queue, kids...)
 				}
+			}
+			// When both the shell's children (covering shell pipelines) and
+			// every visited group member's children were readable, no other
+			// processes can belong to this foreground job; skip scanning /proc.
+			if complete && shellComplete {
+				return "", nil
 			}
 			return foregroundGroupCommandScan(root, group, visited, match)
 		}
@@ -136,16 +158,18 @@ func matchProcEntry(root string, pid, group int, match func(string) string) (str
 	return "", true
 }
 
-func procChildren(root string, pid int) []int {
+func procChildren(root string, pid int) ([]int, bool) {
 	taskDir := root + "/" + strconv.Itoa(pid) + "/task"
 	tasks, err := os.ReadDir(taskDir)
-	if err != nil {
-		return nil
+	if err != nil || len(tasks) == 0 {
+		return nil, false
 	}
 	var children []int
+	readable := true
 	for _, t := range tasks {
 		data, err := os.ReadFile(taskDir + "/" + t.Name() + "/children")
 		if err != nil {
+			readable = false
 			continue
 		}
 		for _, f := range strings.Fields(string(data)) {
@@ -154,7 +178,7 @@ func procChildren(root string, pid int) []int {
 			}
 		}
 	}
-	return children
+	return children, readable
 }
 
 func listProcesses() ([]processIdentity, error) {

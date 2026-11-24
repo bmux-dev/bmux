@@ -71,10 +71,14 @@ func (s *pane) foregroundAgent() (string, error) {
 	}
 	// An idle shell at its prompt owns the foreground PTY group; skip OS
 	// process inspection completely when no foreground job is running.
-	if s.cmd != nil && s.cmd.Process != nil && group == s.cmd.Process.Pid {
-		return "", nil
+	shellPid := 0
+	if s.cmd != nil && s.cmd.Process != nil {
+		shellPid = s.cmd.Process.Pid
+		if group == shellPid {
+			return "", nil
+		}
 	}
-	return foregroundGroupCommand(group, agentMatch)
+	return foregroundGroupCommandForShell(group, shellPid, agentMatch)
 }
 
 // Caller holds pane.mu. Records autonomous output for the agent sampler.

@@ -101,11 +101,12 @@ type Emulator struct {
 
 	// Cached hot mode booleans updated by setMode to avoid interface-keyed
 	// map lookups on every printed character or cursor/newline operation.
-	insert          bool // ansi.ModeInsertReplace (IRM)
-	autoWrap        bool // ansi.ModeAutoWrap (DECAWM)
-	origin          bool // ansi.ModeOrigin (DECOM)
-	lineFeedNewLine bool // ansi.ModeLineFeedNewLine (LNM)
-	leftRightMargin bool // ansi.ModeLeftRightMargin (DECLRMM)
+	insert           bool // ansi.ModeInsertReplace (IRM)
+	autoWrap         bool // ansi.ModeAutoWrap (DECAWM)
+	origin           bool // ansi.ModeOrigin (DECOM)
+	lineFeedNewLine  bool // ansi.ModeLineFeedNewLine (LNM)
+	leftRightMargin  bool // ansi.ModeLeftRightMargin (DECLRMM)
+	nextStyleCompact int  // dynamic high-water mark for style table GC
 }
 
 var _ Terminal = (*Emulator)(nil)
@@ -267,10 +268,14 @@ func (e *Emulator) HasScrollback() bool {
 }
 
 // compactStylesIfNeeded garbage-collects unreferenced StyleIDs if the interned
-// style table grows beyond styleCompactHighWater.
+// style table grows beyond the dynamic high-water threshold.
 func (e *Emulator) compactStylesIfNeeded() {
 	n := len(e.styles.styles)
-	if n <= styleCompactHighWater {
+	threshold := e.nextStyleCompact
+	if threshold < styleCompactHighWater {
+		threshold = styleCompactHighWater
+	}
+	if n <= threshold {
 		return
 	}
 	used := make([]bool, n)
@@ -296,6 +301,7 @@ func (e *Emulator) compactStylesIfNeeded() {
 	e.styles.styles = newStyles
 	e.styles.index = newIndex
 	e.styles.version++
+	e.nextStyleCompact = max(styleCompactHighWater, len(newStyles)*2)
 }
 
 // WidthMethod returns the width method used by the terminal.

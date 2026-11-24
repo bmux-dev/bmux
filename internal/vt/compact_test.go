@@ -468,6 +468,52 @@ func TestASCIIFastPathEdgeCases(t *testing.T) {
 	})
 }
 
+func TestStyleTableCompactionBackoffAboveHighWater(t *testing.T) {
+	// Create a screen + scrollback holding > styleCompactHighWater genuinely live
+	// unique RGB styles, then verify subsequent SGR sequences do NOT re-compact
+	// on every SGR (dynamic 2x high-water backoff).
+	term := NewEmulator(100, 10)
+	term.SetScrollbackSize(1000)
+
+	// Populate > styleCompactHighWater unique live styles directly into scrollback
+	// rows so the test runs in milliseconds even under -race.
+	const liveNeeded = styleCompactHighWater + 500
+	row := make([]Cell, 100)
+	var rgb uint32 = 1
+	for int(rgb) <= liveNeeded {
+		for x := range row {
+			if int(rgb) > liveNeeded {
+				row[x] = EmptyCell
+				continue
+			}
+			st := Style{Fg: RGBColor(uint8(rgb>>16), uint8(rgb>>8), uint8(rgb))}
+			id := term.styles.Intern(st)
+			row[x] = Cell{Rune: 'x', StyleID: id, Flags: cellWidth1}
+			rgb++
+		}
+		term.scrs[0].scrollback.pushCompact(row, nil, 0)
+	}
+
+	v0 := term.StyleTableVersion()
+	// First SGR crosses styleCompactHighWater and triggers one compaction.
+	_, _ = term.WriteString("\x1b[38;2;255;0;1mA")
+	v1 := term.StyleTableVersion()
+	if v1 <= v0 {
+		t.Fatalf("expected initial compaction above high-water, version stayed %d", v1)
+	}
+	if term.nextStyleCompact < len(term.styles.styles)*2 {
+		t.Fatalf("nextStyleCompact = %d, want >= %d", term.nextStyleCompact, len(term.styles.styles)*2)
+	}
+
+	// Next SGR sequences must NOT re-compact immediately.
+	for i := range 20 {
+		_, _ = term.WriteString(fmt.Sprintf("\x1b[38;2;255;1;%dmB", i))
+	}
+	if v2 := term.StyleTableVersion(); v2 != v1 {
+		t.Fatalf("style table thrashed compaction on subsequent SGRs: version %d -> %d", v1, v2)
+	}
+}
+
 func BenchmarkASCIIFastPathThroughput(b *testing.B) {
 	term := NewEmulator(120, 40)
 	term.SetScrollbackSize(10000)
