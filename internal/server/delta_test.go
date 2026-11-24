@@ -18,12 +18,12 @@ import (
 func newTestPane(t *testing.T, w, h int) *pane {
 	t.Helper()
 	p := &pane{
-		info:    protocol.Session{Name: "test"},
-		term:    vt.NewEmulator(w, h),
-		visible: true,
-		blink:   true,
-		modes:   make(map[int]bool),
-		done:    make(chan struct{}),
+		info:     protocol.Session{Name: "test"},
+		term:     vt.NewEmulator(w, h),
+		visible:  true,
+		blink:    true,
+		modes:    make(map[int]bool),
+		done:     make(chan struct{}),
 		stopDone: make(chan struct{}),
 		revision: 1,
 		epoch:    1,

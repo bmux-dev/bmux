@@ -36,17 +36,17 @@ type sbRow struct {
 // Scrollback represents a ring-buffered compact scrollback store for lines
 // scrolled off the main screen.
 type Scrollback struct {
-	ring         []sbRow
-	head         int // index of oldest line in ring
-	count        int // number of live lines in ring
-	maxLines     int
-	pages        []*scrollPage
-	freePages    []uint32 // 1-based page indices whose refs == 0
-	tailPage     uint32   // 1-based index of page currently receiving appends (0 = none)
-	extras       map[int]rowExtra
-	styles       *StyleTable
-	totalPushed  uint64
-	epoch        uint64
+	ring        []sbRow
+	head        int // index of oldest line in ring
+	count       int // number of live lines in ring
+	maxLines    int
+	pages       []*scrollPage
+	freePages   []uint32 // 1-based page indices whose refs == 0
+	tailPage    uint32   // 1-based index of page currently receiving appends (0 = none)
+	extras      map[int]rowExtra
+	styles      *StyleTable
+	totalPushed uint64
+	epoch       uint64
 }
 
 // NewScrollback creates a new scrollback buffer with the given maximum number of lines.

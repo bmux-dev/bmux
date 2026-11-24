@@ -231,11 +231,11 @@ type RowDelta struct {
 }
 
 type TerminalFrame struct {
-	Epoch        uint64     `json:"epoch,omitempty"`
-	HistoryStart int        `json:"history_start,omitempty"`
-	Name         string     `json:"name"`
-	Title        string     `json:"title,omitempty"`
-	Rows         [][]Cell   `json:"rows,omitempty"`
+	Epoch        uint64   `json:"epoch,omitempty"`
+	HistoryStart int      `json:"history_start,omitempty"`
+	Name         string   `json:"name"`
+	Title        string   `json:"title,omitempty"`
+	Rows         [][]Cell `json:"rows,omitempty"`
 	// Delta indicates an incremental update applied onto the previous
 	// TerminalFrame for the same pane rather than replacing Rows wholesale.
 	Delta bool `json:"delta,omitempty"`
@@ -244,19 +244,19 @@ type TerminalFrame struct {
 	Unchanged bool `json:"unchanged,omitempty"`
 	// ScrollUp (with Delta) shifts the previous frame's rows upward by 1..H
 	// lines before RowDeltas are written on top.
-	ScrollUp  int        `json:"scroll_up,omitempty"`
-	RowDeltas []RowDelta `json:"row_deltas,omitempty"`
-	Base      int        `json:"base"`
-	Offset        int      `json:"offset"`
-	History       int      `json:"history"`
-	CursorX       int      `json:"cursor_x"`
-	CursorY       int      `json:"cursor_y"`
-	CursorVisible bool     `json:"cursor_visible"`
-	CursorStyle   int      `json:"cursor_style"`
-	CursorBlink   bool     `json:"cursor_blink"`
-	Mouse         bool     `json:"mouse"`
-	Alt           bool     `json:"alt"`
-	Exited        bool     `json:"exited"`
+	ScrollUp      int        `json:"scroll_up,omitempty"`
+	RowDeltas     []RowDelta `json:"row_deltas,omitempty"`
+	Base          int        `json:"base"`
+	Offset        int        `json:"offset"`
+	History       int        `json:"history"`
+	CursorX       int        `json:"cursor_x"`
+	CursorY       int        `json:"cursor_y"`
+	CursorVisible bool       `json:"cursor_visible"`
+	CursorStyle   int        `json:"cursor_style"`
+	CursorBlink   bool       `json:"cursor_blink"`
+	Mouse         bool       `json:"mouse"`
+	Alt           bool       `json:"alt"`
+	Exited        bool       `json:"exited"`
 	// Wrapped[y] reports that row y continues onto row y+1 because the
 	// terminal wrapped it; copies join such rows without a newline. Nil when
 	// no row is wrapped.
