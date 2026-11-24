@@ -47,6 +47,45 @@ type session struct {
 	graphicsSeq           uint64
 	graphicsSupported     bool
 	cellWidth, cellHeight int
+	// dirtyMu is a leaf lock protecting dirtyCh, which is closed and replaced
+	// on notify() to wake attached clients immediately when session state changes.
+	dirtyMu sync.Mutex
+	dirtyCh chan struct{}
+}
+
+// paneOnDirty maps each live pane to its owning session's notify callback,
+// registered in watchPane and removed when the pane exits.
+var paneOnDirty sync.Map
+
+func notifyPaneDirty(p *pane) {
+	if fn, ok := paneOnDirty.Load(p); ok {
+		fn.(func())()
+	}
+}
+
+// dirtySignal returns a channel that closes on the next state change. Callers
+// must obtain it before inspecting state (e.g. snapshot) so no update between
+// snapshot and waiting can be missed.
+func (s *session) dirtySignal() <-chan struct{} {
+	s.dirtyMu.Lock()
+	if s.dirtyCh == nil {
+		s.dirtyCh = make(chan struct{})
+	}
+	ch := s.dirtyCh
+	s.dirtyMu.Unlock()
+	return ch
+}
+
+// notify wakes every attached client waiting on dirtySignal. It never blocks
+// and acquires only the leaf dirtyMu lock, so callers may invoke it from any
+// context.
+func (s *session) notify() {
+	s.dirtyMu.Lock()
+	if s.dirtyCh != nil {
+		close(s.dirtyCh)
+		s.dirtyCh = nil
+	}
+	s.dirtyMu.Unlock()
 }
 
 func newSession(name, dir, shell string, width, height int) (*session, error) {
@@ -69,11 +108,13 @@ func newSession(name, dir, shell string, width, height int) (*session, error) {
 
 func (s *session) watchPane(id int, p *pane) {
 	s.watchers.Add(1)
+	paneOnDirty.Store(p, s.notify)
 	p.mu.Lock()
 	p.agentHook = func(state string) { s.hook("agent-"+state, id) }
 	p.mu.Unlock()
 	go func() {
 		defer s.watchers.Done()
+		defer paneOnDirty.Delete(p)
 		<-p.done
 		// A background child might still hold the PTY open after its shell exits.
 		// Shell lifetime, not PTY EOF or client attachment, determines pane lifetime.
@@ -88,11 +129,18 @@ func (s *session) watchPane(id int, p *pane) {
 		s.shutdownMu.Lock()
 		delete(s.owned, p)
 		s.shutdownMu.Unlock()
+		var dirty bool
+		defer func() {
+			if dirty {
+				s.notify()
+			}
+		}()
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if s.panes[id] != p {
 			return
 		}
+		dirty = true
 		p.mu.Lock()
 		// Carry the removed pane's contribution into the session revision so
 		// snapshot revisions remain monotonic even when a busy pane disappears.
@@ -192,6 +240,7 @@ func (s *session) stop() {
 func (s *session) stopUntil(deadline time.Time) {
 	s.stopOnce.Do(func() {
 		s.stopping.Store(true)
+		s.notify()
 		// This registry never waits behind session layout/emulator operations.
 		s.shutdownMu.Lock()
 		items := make([]*pane, 0, len(s.owned))
@@ -383,7 +432,11 @@ func (s *session) input(r protocol.Request) error {
 		w.zoomed = !w.zoomed
 		s.selectWindowLocked(wi)
 	default:
-		return p.input(r)
+		err := p.input(r)
+		if err == nil && r.Op == "resize" {
+			s.notify()
+		}
+		return err
 	}
 	return s.finishLayoutLocked()
 }
@@ -423,7 +476,9 @@ func (s *session) startPaneLocked(dir string, width, height int) (int, error) {
 func (s *session) finishLayoutLocked() error {
 	s.revision++
 	s.updateViewedLocked()
-	return s.resizePanes()
+	err := s.resizePanes()
+	s.notify()
+	return err
 }
 
 // splitSource resolves the pane a split starts from (id, or the focused pane
@@ -506,8 +561,15 @@ func (s *session) selectPaneDirectionLocked(w *window, direction string, from in
 
 // snapshot coalesces revisions from the active window's PTYs while retaining a
 // separate viewport for every pane in each attached client. Caller owns
-// offsets and lastTotals.
+// offsets and lastTotals. Always emits full (non-delta) TerminalFrames.
 func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force bool) (*protocol.Frame, uint64) {
+	return s.snapshotDelta(offsets, lastTotals, nil, last, force)
+}
+
+// snapshotDelta is like snapshot, but when states is non-nil emits incremental
+// dirty-row / scroll-up deltas and Unchanged markers per pane and keeps states
+// aligned with the exact set of panes sent in this frame.
+func (s *session) snapshotDelta(offsets, lastTotals map[int]int, states map[int]*paneDeltaState, last uint64, force bool) (*protocol.Frame, uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	revision := s.revisionLocked()
@@ -526,9 +588,29 @@ func (s *session) snapshot(offsets, lastTotals map[int]int, last uint64, force b
 			delete(lastTotals, id)
 		}
 	}
-	for _, pos := range s.placements() {
+	placements := s.placements()
+	if states != nil {
+		active := make(map[int]bool, len(placements))
+		for _, pos := range placements {
+			active[pos.id] = true
+		}
+		for id := range states {
+			if !active[id] {
+				delete(states, id)
+			}
+		}
+	}
+	for _, pos := range placements {
 		p := s.panes[pos.id]
-		terminal, _ := p.anchoredFrame(offsets[pos.id], lastTotals[pos.id])
+		var st *paneDeltaState
+		if states != nil {
+			st = states[pos.id]
+			if st == nil {
+				st = &paneDeltaState{}
+				states[pos.id] = st
+			}
+		}
+		terminal, _ := p.anchoredDeltaFrame(offsets[pos.id], lastTotals[pos.id], st)
 		offsets[pos.id], lastTotals[pos.id] = terminal.Offset, terminal.Base+terminal.Offset
 		f.Panes = append(f.Panes, protocol.PaneFrame{ID: pos.id, X: pos.x, Y: pos.y, Width: pos.w, Height: pos.h, Terminal: terminal})
 	}

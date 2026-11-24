@@ -22,6 +22,10 @@ func darwinIdentity(p unix.KinfoProc) (processIdentity, error) {
 // of the foreground group. Candidates are the short comm name, the full
 // executable path, and for script interpreters only the script path (argv[1]).
 // Nothing else from the argument or environment area is read or retained.
+func foregroundGroupCommandForShell(group, _ int, match func(string) string) (string, error) {
+	return foregroundGroupCommand(group, match)
+}
+
 func foregroundGroupCommand(group int, match func(string) string) (string, error) {
 	processes, err := unix.SysctlKinfoProcSlice("kern.proc.pgrp", group)
 	if err != nil {

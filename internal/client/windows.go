@@ -110,7 +110,8 @@ type windowTab struct{ start, end, number int }
 
 // drawWindowTabs lists the windows on the top bar from column x up to limit:
 // the active one in the accent, windows with a pane waiting on you marked.
-func (u *ui) drawWindowTabs(x, limit int) {
+// Returns the next free column on row 0.
+func (u *ui) drawWindowTabs(x, limit int) int {
 	u.windowTabs = u.windowTabs[:0]
 	waiting := u.waitingPanes()
 	for i, w := range u.windows() {
@@ -126,8 +127,9 @@ func (u *ui) drawWindowTabs(x, limit int) {
 		if x+width > limit {
 			if x < limit {
 				u.screen.PutStrStyled(x, 0, fit(" …", limit-x), barStyle)
+				return limit
 			}
-			return
+			return x
 		}
 		style := barStyle
 		switch {
@@ -140,6 +142,7 @@ func (u *ui) drawWindowTabs(x, limit int) {
 		u.windowTabs = append(u.windowTabs, windowTab{x, x + width, i + 1})
 		x += width
 	}
+	return x
 }
 
 // waitingPanes are the attached session's panes that need you, from the

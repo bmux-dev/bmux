@@ -162,3 +162,20 @@ func TestTargetsResolveToPanesAndWindows(t *testing.T) {
 		t.Fatal("send-input to a window was accepted")
 	}
 }
+
+func TestSendInputEmojiUnderKittyKeyboardMode(t *testing.T) {
+	srv, s := viewportSession(t)
+	// Enable Kitty keyboard protocol with report-all-keys + associated text so
+	// 6-digit Unicode runes encode as CSI code;mods;text u (>16 bytes).
+	s.panes[1].apply([]byte("\x1b[>31u"))
+	r := srv.request(protocol.Request{
+		Op: "send-input", Name: "view", PaneID: 1,
+		Input: []protocol.Input{
+			{Code: '😀', Mod: int(uv.ModShift | uv.ModAlt)},
+			{Code: '🚀', Mod: int(uv.ModCtrl | uv.ModShift)},
+		},
+	})
+	if r.Error != "" {
+		t.Fatalf("send-input emoji under Kitty keyboard mode failed: %s", r.Error)
+	}
+}

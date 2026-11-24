@@ -183,6 +183,7 @@ func TestDetachReattachAndProtocolVersion(t *testing.T) {
 
 func awaitResponse(t *testing.T, dec *json.Decoder, text string) {
 	t.Helper()
+	panes := make(map[int]*protocol.TerminalFrame)
 	for {
 		var r protocol.Response
 		if err := dec.Decode(&r); err != nil {
@@ -192,7 +193,10 @@ func awaitResponse(t *testing.T, dec *json.Decoder, text string) {
 			t.Fatal(r.Error)
 		}
 		if r.Frame != nil {
-			for _, p := range r.Frame.Panes {
+			for i := range r.Frame.Panes {
+				p := &r.Frame.Panes[i]
+				p.Terminal = protocol.ApplyTerminalDelta(panes[p.ID], p.Terminal)
+				panes[p.ID] = p.Terminal
 				if strings.Contains(frameText(p.Terminal), text) {
 					return
 				}

@@ -48,10 +48,15 @@ func noticeBox(position string, x0, w, top, bottom, width, height int) (x, y int
 const noticeSample = "Notices appear here"
 
 func (u *ui) drawNotice(w, h int) {
+	u.drawNoticeAt(w, h, time.Now())
+}
+
+func (u *ui) drawNoticeAt(w, h int, now time.Time) {
+	u.noticeVisible = false
 	text, position := u.message, u.settings.UI.NoticePosition
 	if preview, ok := u.noticePreview(); ok {
 		text, position = noticeSample, preview // stays for as long as the choices are open
-	} else if !time.Now().Before(u.messageUntil) {
+	} else if !now.Before(u.messageUntil) {
 		return
 	}
 	if strings.TrimSpace(text) == "" {
@@ -76,6 +81,7 @@ func (u *ui) drawNotice(w, h int) {
 	if !ok {
 		return
 	}
+	u.noticeVisible = true
 	for row := range height {
 		u.screen.PutStrStyled(x, y+row, fit("", width), uiBaseStyle)
 	}

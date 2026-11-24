@@ -2,7 +2,6 @@ package vt
 
 import (
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // nextTab moves the cursor to the next tab stop n times. This respects the
@@ -35,7 +34,7 @@ func (e *Emulator) prevTab(n int) {
 	x, _ := e.scr.CursorPosition()
 	leftmargin := 0
 	scroll := e.scr.ScrollRegion()
-	if e.isModeSet(ansi.DECOM) {
+	if e.origin {
 		leftmargin = scroll.Min.X
 	}
 
@@ -72,9 +71,7 @@ func (e *Emulator) setCursor(x, y int) {
 // setCursorPosition sets the cursor position. This respects [ansi.DECOM],
 // Origin Mode. This performs the same function as [ansi.CUP].
 func (e *Emulator) setCursorPosition(x, y int) {
-	mode, ok := e.modes[ansi.DECOM]
-	margins := ok && mode.IsSet()
-	e.scr.setCursor(x, y, margins)
+	e.scr.setCursor(x, y, e.origin)
 	e.atPhantom = false
 }
 
@@ -84,10 +81,8 @@ func (e *Emulator) setCursorPosition(x, y int) {
 // Otherwise, the cursor is set to the leftmost column of the screen.
 // This performs the same function as [ansi.CR].
 func (e *Emulator) carriageReturn() {
-	mode, ok := e.modes[ansi.DECOM]
-	margins := ok && mode.IsSet()
 	x, y := e.scr.CursorPosition()
-	if margins {
+	if e.origin {
 		e.scr.setCursor(0, y, true)
 	} else if region := e.scr.ScrollRegion(); uv.Pos(x, y).In(region) {
 		e.scr.setCursor(region.Min.X, y, false)
@@ -102,7 +97,7 @@ func (e *Emulator) carriageReturn() {
 // moved there.
 func (e *Emulator) reportedCursorPosition() (x, y int) {
 	x, y = e.scr.CursorPosition()
-	if e.isModeSet(ansi.DECOM) {
+	if e.origin {
 		scroll := e.scr.ScrollRegion()
 		x, y = x-scroll.Min.X, y-scroll.Min.Y
 	}

@@ -2,9 +2,7 @@ package server
 
 import (
 	"fmt"
-	"image/color"
 	"slices"
-	"strings"
 
 	"github.com/josephferrero/bmux/internal/graphics"
 	"github.com/josephferrero/bmux/internal/protocol"
@@ -76,25 +74,46 @@ func (s *pane) frameImages() *frameImages {
 	return &frameImages{pane: s.graphics, byApp: byApp, shown: make(map[uint32]graphics.Info)}
 }
 
-// remap rewrites a converted placeholder cell. A cell whose image is gone, or
-// not placed, draws blank. Only cells starting with the placeholder rune are
-// touched: anything else keeps its colors, whatever they say.
-func (f *frameImages) remap(cell protocol.Cell, fg color.Color) protocol.Cell {
-	if !strings.HasPrefix(cell.Text, vt.Placeholder) {
-		return cell
-	}
+// remapCompact rewrites a converted placeholder cell directly from its compact
+// vt.Color foreground, avoiding strings.HasPrefix and fmt.Sprintf allocations.
+// A cell whose image is gone, or not placed, draws blank.
+func (f *frameImages) remapCompact(cell protocol.Cell, fg vt.Color, hexRGB func(r, g, b uint8) string) protocol.Cell {
 	var info graphics.Info
 	ok := false
 	if f != nil {
-		info, ok = f.byApp[vt.PlaceholderID(fg)]
+		info, ok = f.byApp[fg.PlaceholderID()]
 	}
 	if !ok {
 		cell.Text, cell.Width, cell.FG, cell.Underline = " ", 1, "", false
 		return cell
 	}
 	f.shown[info.ID] = info
-	cell.FG = fmt.Sprintf("#%06x", info.ID)
+	id := info.ID
+	cell.FG = hexRGB(uint8(id>>16), uint8(id>>8), uint8(id))
 	return cell
+}
+
+func placedEqual(a, b map[uint32]graphics.Info) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, va := range a {
+		if vb, ok := b[k]; !ok || va != vb {
+			return false
+		}
+	}
+	return true
+}
+
+func clonePlaced(m map[uint32]graphics.Info) map[uint32]graphics.Info {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make(map[uint32]graphics.Info, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 // finish lists the shown images in the frame, oldest id first, and marks them

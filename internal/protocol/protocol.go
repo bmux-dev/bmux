@@ -6,9 +6,8 @@ import (
 	"time"
 )
 
-// Version 10: frames carry the images placeholder cells show, and image-data
-// fetches their pixels.
-const Version = 10
+// Version 11: frames support incremental dirty-row deltas and scroll-up hints.
+const Version = 11
 
 // Shared PTY geometry bounds; preview panels do not resize these terminals.
 const MaxTerminalWidth = 500
@@ -195,9 +194,20 @@ type PaneActivity struct {
 	Index  int `json:"index,omitempty"`
 }
 
+var paletteColorStrings = func() [256]string {
+	var t [256]string
+	for i := range t {
+		t[i] = strconv.Itoa(i)
+	}
+	return t
+}()
+
 // Cell colors are "" for the terminal default, "#rrggbb" for an exact color, or
 // a decimal palette index ("0"-"255") rendered with the attached terminal's theme.
 func PaletteColor(index int) string {
+	if uint(index) < uint(len(paletteColorStrings)) {
+		return paletteColorStrings[index]
+	}
 	return strconv.Itoa(index)
 }
 
@@ -213,23 +223,40 @@ type Cell struct {
 	Link int `json:"l,omitempty"`
 }
 
+// RowDelta replaces one viewport row in an incremental delta TerminalFrame.
+type RowDelta struct {
+	Y       int    `json:"y"`
+	Cells   []Cell `json:"cells"`
+	Wrapped bool   `json:"wrapped,omitempty"`
+}
+
 type TerminalFrame struct {
-	Epoch         uint64   `json:"epoch,omitempty"`
-	HistoryStart  int      `json:"history_start,omitempty"`
-	Name          string   `json:"name"`
-	Title         string   `json:"title,omitempty"`
-	Rows          [][]Cell `json:"rows"`
-	Base          int      `json:"base"`
-	Offset        int      `json:"offset"`
-	History       int      `json:"history"`
-	CursorX       int      `json:"cursor_x"`
-	CursorY       int      `json:"cursor_y"`
-	CursorVisible bool     `json:"cursor_visible"`
-	CursorStyle   int      `json:"cursor_style"`
-	CursorBlink   bool     `json:"cursor_blink"`
-	Mouse         bool     `json:"mouse"`
-	Alt           bool     `json:"alt"`
-	Exited        bool     `json:"exited"`
+	Epoch        uint64   `json:"epoch,omitempty"`
+	HistoryStart int      `json:"history_start,omitempty"`
+	Name         string   `json:"name"`
+	Title        string   `json:"title,omitempty"`
+	Rows         [][]Cell `json:"rows,omitempty"`
+	// Delta indicates an incremental update applied onto the previous
+	// TerminalFrame for the same pane rather than replacing Rows wholesale.
+	Delta bool `json:"delta,omitempty"`
+	// Unchanged (with Delta) means nothing in this pane changed since the last
+	// frame sent on this attachment; Rows and RowDeltas are omitted.
+	Unchanged bool `json:"unchanged,omitempty"`
+	// ScrollUp (with Delta) shifts the previous frame's rows upward by 1..H
+	// lines before RowDeltas are written on top.
+	ScrollUp      int        `json:"scroll_up,omitempty"`
+	RowDeltas     []RowDelta `json:"row_deltas,omitempty"`
+	Base          int        `json:"base"`
+	Offset        int        `json:"offset"`
+	History       int        `json:"history"`
+	CursorX       int        `json:"cursor_x"`
+	CursorY       int        `json:"cursor_y"`
+	CursorVisible bool       `json:"cursor_visible"`
+	CursorStyle   int        `json:"cursor_style"`
+	CursorBlink   bool       `json:"cursor_blink"`
+	Mouse         bool       `json:"mouse"`
+	Alt           bool       `json:"alt"`
+	Exited        bool       `json:"exited"`
 	// Wrapped[y] reports that row y continues onto row y+1 because the
 	// terminal wrapped it; copies join such rows without a newline. Nil when
 	// no row is wrapped.
