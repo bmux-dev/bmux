@@ -56,7 +56,7 @@ bmux
 
 The script checks the download against the release's checksums and never uses
 `sudo`; see [installing](https://bmux-dev.github.io/bmux/start/installation/) for its options. With
-**Go 1.26+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
+**Go 1.27.3+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
 too (put `$(go env GOPATH)/bin` on your `PATH`).
 
 `bmux` creates a fresh session in the current directory, named after that

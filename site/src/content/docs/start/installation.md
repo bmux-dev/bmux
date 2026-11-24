@@ -27,7 +27,7 @@ you if that directory isn't on your `PATH`, or if another `bmux` comes first.
 Run it again to upgrade, or use [`bmux update`](/bmux/start/installation/#updates); if a server is
 running, `bmux restart` switches it to the new version.
 
-**With Go 1.26+** instead:
+**With Go 1.27.3+** instead:
 
 ```sh
 go install github.com/josephferrero/bmux/cmd/bmux@latest
