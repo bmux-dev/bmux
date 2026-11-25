@@ -16,14 +16,10 @@ and Linux.
 
 <p align="center">
   <a href="https://bmux-dev.github.io/bmux/#demo">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="site/src/assets/screenshots/workspace-dark.png" />
-      <source media="(prefers-color-scheme: light)" srcset="site/src/assets/screenshots/workspace-light.png" />
-      <img alt="bmux workspace with coding agent panes, git worktree grouping, and the live agent sidebar" src="site/src/assets/screenshots/workspace-dark.png" width="100%" />
-    </picture>
+    <img alt="bmux demo: opening a git worktree project, approving a blocked coding agent, live sidebar status updates, and session picker previews" src="site/public/demo/demo.webp" width="100%" />
   </a>
   <br />
-  <sub>Session &amp; agent sidebar (<code>Ctrl-h</code>) · Git worktree grouping · Live pane previews · <a href="https://bmux-dev.github.io/bmux/#demo">Watch the 15s interactive demo →</a></sub>
+  <sub>Project &amp; git worktree picker (<code>Ctrl-a n</code>) · Live coding-agent sidebar (<code>Ctrl-h</code>) · Session previews (<code>Ctrl-a s</code>) · <a href="https://bmux-dev.github.io/bmux/#demo">Full 30fps demo →</a></sub>
 </p>
 
 ## Install & quick start
