@@ -54,12 +54,16 @@ gives one line, without a newline where it wrapped.
 ## Links
 
 **Ctrl-click** opens a link under the pointer, on the machine running the
-bmux client, so it works over SSH too. bmux recognises two kinds: hyperlinks a
+bmux client, when a browser can reach you (including when `bmux` runs locally
+and you `ssh` inside a pane). When the bmux client itself runs over SSH, or on
+Linux/BSD with no `DISPLAY` or `WAYLAND_DISPLAY`, Ctrl-click copies the whole
+unwrapped link to your clipboard (via OSC 52 over SSH) and shows a notice
+explaining there is no browser here. bmux recognises two kinds: hyperlinks a
 program marked with OSC 8 (`ls --hyperlink`, `rg --hyperlink-format`), and
 `http://`, `https://` and `mailto:` addresses printed as plain text,
 including one the terminal wrapped across rows. Trailing punctuation such as
-the period ending a sentence is left out. Ctrl-click on a link opens it
-instead of selecting, and the program never sees the click; anywhere else it
+the period ending a sentence is left out. Ctrl-click on a link handles the
+click instead of selecting, and the program never sees it; anywhere else it
 behaves as before.
 
 Only `http`, `https` and `mailto` links are opened or passed on, because the

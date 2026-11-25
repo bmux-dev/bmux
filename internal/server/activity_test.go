@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -283,14 +282,44 @@ func TestAttachedClientFocusControlsViewing(t *testing.T) {
 	if err := dec.Decode(&r); err != nil || r.Error != "" {
 		t.Fatalf("attach: %+v %v", r, err)
 	}
-	go func() { _, _ = io.Copy(io.Discard, c) }()
+	acked := make(chan int, 16)
+	go func() {
+		var resp protocol.Response
+		for dec.Decode(&resp) == nil {
+			if resp.Ack > 0 {
+				acked <- resp.Ack
+			}
+		}
+	}()
 	viewers(0) // attached but not focused yet
 	for _, focused := range []bool{true, true, false, true} {
 		if err := enc.Encode(protocol.Request{Op: "focus", Focused: focused}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	viewers(1)
+	// Requests on an attach connection are handled strictly in FIFO order, so
+	// waiting for a subsequent ack guarantees all four focus updates landed.
+	if err := enc.Encode(protocol.Request{Op: "resize", Width: 50, Height: 8, Seq: 1}); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(5 * time.Second)
+waitAck:
+	for {
+		select {
+		case a := <-acked:
+			if a >= 1 {
+				break waitAck
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for focus barrier ack")
+		}
+	}
+	s.mu.Lock()
+	gotViewers := s.viewers
+	s.mu.Unlock()
+	if gotViewers != 1 {
+		t.Fatalf("viewers = %d, want 1", gotViewers)
+	}
 	s.panes[1].apply([]byte("\a"))
 	if _, ok := activity(t, s)[1]; ok {
 		t.Fatal("bell in a pane on screen asked for attention")

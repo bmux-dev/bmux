@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/bmux-dev/bmux/internal/protocol"
@@ -153,5 +154,69 @@ func TestOSC8StyleReachesTheOuterTerminal(t *testing.T) {
 	}
 	if _, style, _ := u.screen.Get(ox+1, paneOriginY); style != plain {
 		t.Fatal("unsafe link reached the outer terminal")
+	}
+}
+
+func TestCanOpenLink(t *testing.T) {
+	envWith := func(kvs ...string) func(string) string {
+		m := make(map[string]string, len(kvs)/2)
+		for i := 0; i+1 < len(kvs); i += 2 {
+			m[kvs[i]] = kvs[i+1]
+		}
+		return func(k string) string { return m[k] }
+	}
+	for _, tc := range []struct {
+		name string
+		goos string
+		env  []string
+		want bool
+	}{
+		{"macos local", "darwin", nil, true},
+		{"macos over SSH_CONNECTION", "darwin", []string{"SSH_CONNECTION", "10.0.0.1 22 10.0.0.2 22"}, false},
+		{"macos over SSH_TTY", "darwin", []string{"SSH_TTY", "/dev/pts/0"}, false},
+		{"linux with DISPLAY", "linux", []string{"DISPLAY", ":0"}, true},
+		{"linux with WAYLAND_DISPLAY", "linux", []string{"WAYLAND_DISPLAY", "wayland-0"}, true},
+		{"linux headless", "linux", nil, false},
+		{"linux with DISPLAY over SSH", "linux", []string{"DISPLAY", ":0", "SSH_CONNECTION", "1.2.3.4 22 1.2.3.5 22"}, false},
+		{"freebsd with DISPLAY", "freebsd", []string{"DISPLAY", ":0"}, true},
+		{"windows unsupported", "windows", nil, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := canOpenLink(tc.goos, envWith(tc.env...)); got != tc.want {
+				t.Fatalf("canOpenLink(%q, %v) = %v, want %v", tc.goos, tc.env, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCtrlClickCopiesLinkWithoutBrowser(t *testing.T) {
+	rows := [][]protocol.Cell{cells("see https:"), cells("//example.com/oauth?code=abc")}
+	u, opened := linkUI(t, rows, nil, false)
+	u.frame.Wrapped = []bool{true, false}
+	u.canOpen = func() bool { return false }
+	u.mouse(tcell.NewEventMouse(6, paneOriginY, tcell.Button1, tcell.ModCtrl))
+	u.mouse(tcell.NewEventMouse(6, paneOriginY, tcell.ButtonNone, tcell.ModNone))
+	if len(*opened) != 0 {
+		t.Fatalf("opened browser when no local browser exists: %v", *opened)
+	}
+	sim := u.screen.(tcell.SimulationScreen)
+	if got := string(sim.GetClipboardData()); got != "https://example.com/oauth?code=abc" {
+		t.Fatalf("copied %q, want unwrapped URL", got)
+	}
+	if !strings.Contains(u.message, "Link copied") || !strings.Contains(u.message, "no browser") {
+		t.Fatalf("unexpected notice: %q", u.message)
+	}
+
+	// Default production check detects SSH_CONNECTION automatically when opener/canOpen are nil.
+	t.Setenv("SSH_CONNECTION", "10.0.0.1 22 10.0.0.2 22")
+	u2, _ := linkUI(t, [][]protocol.Cell{cells("https://x.io/ssh")}, nil, false)
+	u2.opener = nil
+	u2.mouse(tcell.NewEventMouse(2, paneOriginY, tcell.Button1, tcell.ModCtrl))
+	sim2 := u2.screen.(tcell.SimulationScreen)
+	if got := string(sim2.GetClipboardData()); got != "https://x.io/ssh" {
+		t.Fatalf("SSH Ctrl-click copied %q, want https://x.io/ssh", got)
+	}
+	if !strings.Contains(u2.message, "Link copied") {
+		t.Fatalf("unexpected SSH notice: %q", u2.message)
 	}
 }
