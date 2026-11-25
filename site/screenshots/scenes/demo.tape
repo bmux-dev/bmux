@@ -33,7 +33,7 @@ Sleep 2500ms
 Escape
 Sleep 500ms
 Ctrl+A
-Type "f"
+Type "n"
 Sleep 1s
 Type "api"
 Sleep 2s

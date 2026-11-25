@@ -40,7 +40,7 @@ theme = "dark"
 prefix = "C-a"
 
 [ui]
-accent = "amber"
+accent = "theme"
 
 [sidebar]
 width = 24
@@ -61,7 +61,7 @@ width = 24
 | `ui.graphics` | `"auto"` | Show the images programs draw in panes. `"auto"` shows them when the terminal answers a Kitty graphics query at startup, `"on"` assumes it does, `"off"` draws blanks with an `[image W×H]` marker. Read when a client starts. See [images](/bmux/reference/troubleshooting/#images-in-panes). |
 | `ui.icons` | `"auto"` | Icons on the settings page tabs. `"nerd"` draws Nerd Font glyphs and `"plain"` uses Unicode symbols that need no special font. A terminal can't report its font, so `"auto"` uses Nerd Font icons unless `ui.powerline-ascii` is on, the same assumption the powerline separators make. Also on the settings page. |
 | `ui.notice-position` | `"top-right"` | Where notices (copy results, errors, hints) appear, in a small box with an accent-colored border over the panes: `"top-left"`, `"top-center"`, `"top-right"`, `"bottom-left"`, `"bottom-center"` or `"bottom-right"`. Also on the settings page. |
-| `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | herdr's palette | Sidebar state colors as `"#RRGGBB"` |
+| `ui.agent-colors.working` / `waiting` / `blocked` / `idle` | theme's palette (herdr's for `dark`/`light`) | Sidebar state colors as `"#RRGGBB"` |
 | `sidebar.show` | `true` | Show the sidebar when a client starts; Ctrl-a b still toggles it |
 | `sidebar.width` | `24` | Columns including its border, 12 to 60 |
 | `sidebar.min-screen-width` | `80` | Hide the sidebar on narrower terminals |

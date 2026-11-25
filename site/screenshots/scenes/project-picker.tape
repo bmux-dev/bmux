@@ -2,7 +2,7 @@ Type "bmux attach docs"
 Enter
 Sleep 2s
 Ctrl+A
-Type "f"
+Type "n"
 Sleep 1500ms
 Show
 Sleep 300ms

@@ -32,7 +32,10 @@ sidebar:
 | `bmux rename-window [TARGET] NAME` | Rename the target's window; an empty name shows its focused pane's title |
 | `bmux list-panes [TARGET] [-a] [-F FORMAT \| --json]` | List the panes of the target's window (`SESSION:WINDOW.` or a pane), its whole session (`SESSION`), or every session (`-a`); without a target, the calling pane's window. `-F` prints each pane as a [format](#format-variables) |
 | `bmux list-windows [TARGET] [-a] [-F FORMAT \| --json]` | List the windows of the target's session, or every session's (`-a`); a window's variables come from its focused pane |
-| `bmux display-message [TARGET] [-p] FORMAT` | Expand `FORMAT` for a pane (the calling pane by default): `-p` prints it; otherwise it shows in the status line of every client attached to that session |
+| `bmux display-message [TARGET] [-p] FORMAT` | Expand `FORMAT` for a pane (the calling pane by default): `-p` prints it; otherwise it shows in the notice box of every client attached to that session |
+| `bmux reload` | Tell the running server to reload `config.toml` and notify every attached client to reload theirs |
+| `bmux theme [NAME \| --list]` | Switch the theme in `config.toml` and reload clients, or print every built-in theme with `--list` |
+| `bmux default-config` | Print every `config.toml` setting, commented out, with its default |
 | `bmux run-shell [-t TARGET] [-b] COMMAND` | Run a shell command for a pane (the calling pane by default): its `#{...}` variables, directory and `BMUX_*` environment; exits with the command's status. `-b` doesn't wait |
 | `bmux if-shell [-t TARGET] CONDITION COMMAND [ELSE]` | Run `CONDITION` the same way, then `COMMAND` if it succeeded or `ELSE` if it failed |
 | `bmux pipe-pane [-t TARGET] [-o] [COMMAND]` | Copy everything the pane prints, escape sequences included, into `COMMAND`'s stdin, like tmux's `pipe-pane`: `bmux pipe-pane 'cat >> ~/#{session_name}-#{pane_id}.log'`. `COMMAND` runs like `run-shell`'s; a new one replaces the old. No `COMMAND` stops piping; `-o` stops a piped pane and starts an unpiped one, so one key can toggle logging. Piping stops when the command exits or the pane closes. A command that can't keep up loses output; the pane never waits for it |

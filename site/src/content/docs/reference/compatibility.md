@@ -21,7 +21,7 @@ real output from every release since v0.1.0, kept in `testdata/releases/`:
   you run `bmux restart`, which saves your sessions, starts the new server and
   restores them. Programs running in panes end. The release notes say when
   that's needed.
-- **Removed settings and key actions** keep loading: the status line (or
+- **Removed settings and key actions** keep loading: the notice box (or
   `bmux reload`) names them once, and everything else in the file applies.
   They're listed below with what replaced them.
 - **Output meant for people** (status line messages, help text, `bmux list`
