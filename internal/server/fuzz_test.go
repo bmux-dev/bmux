@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Requests that only arrange and read panes. Ops that type into a shell

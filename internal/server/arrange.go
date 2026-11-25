@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // arrangeLocked runs the operations that move panes around: within window w

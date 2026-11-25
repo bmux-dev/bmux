@@ -1,8 +1,8 @@
 package client
 
 import (
+	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
 )
 
 // palettes holds the chrome colors of every config.ThemeNames entry, from

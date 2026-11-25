@@ -1,8 +1,8 @@
 package client
 
 import (
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // beginClosePane closes the focused pane (Ctrl-a x). A pane where only its

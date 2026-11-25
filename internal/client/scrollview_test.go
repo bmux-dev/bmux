@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // viewUI is an attached UI whose focused pane shows rows 100-104 of a history

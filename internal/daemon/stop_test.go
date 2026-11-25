@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // fakeServer answers every request on dir's socket with reply, as a running

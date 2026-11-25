@@ -12,10 +12,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // Scripting commands: list agent panes, read one, type into one, and wait

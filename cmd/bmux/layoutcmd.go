@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Layout commands change a session's panes and windows from a script, the

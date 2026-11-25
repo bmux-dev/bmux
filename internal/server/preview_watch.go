@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func (s *Server) watchPreview(conn net.Conn, r protocol.Request, reader *protocol.RequestReader, enc *json.Encoder) {

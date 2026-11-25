@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 const previewRefreshInterval = 100 * time.Millisecond

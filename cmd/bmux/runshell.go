@@ -9,9 +9,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/format"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/format"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // run-shell and if-shell run shell commands for a pane, like tmux's: its

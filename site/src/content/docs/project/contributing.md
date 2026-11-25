@@ -196,7 +196,7 @@ cd - && rm -rf "$dir"
 
 Write the notes in a file, following the earlier releases: a one-line summary;
 the install commands (the `curl … install.sh | sh` line and
-`go install github.com/josephferrero/bmux/cmd/bmux@vX.Y.Z`); then **New**,
+`go install github.com/bmux-dev/bmux/cmd/bmux@vX.Y.Z`); then **New**,
 **Changed** and **Fixed** lists as they apply; and an **Upgrading** line that
 says whether the protocol changed and, if it did, to run `bmux restart`
 (programs running in panes end; sessions, windows, layouts, directories and

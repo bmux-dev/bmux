@@ -1,6 +1,6 @@
 package client
 
-import "github.com/josephferrero/bmux/internal/protocol"
+import "github.com/bmux-dev/bmux/internal/protocol"
 
 // sessionLine is one line of the sidebar or picker session list: a project
 // header or a session.

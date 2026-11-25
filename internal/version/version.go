@@ -4,7 +4,7 @@ package version
 import "runtime/debug"
 
 // stamped is set by release builds:
-// -ldflags "-X github.com/josephferrero/bmux/internal/version.stamped=0.6.0".
+// -ldflags "-X github.com/bmux-dev/bmux/internal/version.stamped=0.6.0".
 var stamped string
 
 // Dev is the version of a build from a checkout, which isn't a release.

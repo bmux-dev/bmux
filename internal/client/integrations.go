@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bmux-dev/bmux/internal/integration"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/integration"
 )
 
 // integrationRow is one agent in the integrations panel.

@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func Request(socket string, r protocol.Request) (protocol.Response, error) {

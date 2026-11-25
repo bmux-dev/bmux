@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // diffTrackingScreen wraps SimulationScreen and mirrors writes into a real

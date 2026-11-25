@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 )
 
 // shellless is a pane with an emulator and no shell, for history tests.

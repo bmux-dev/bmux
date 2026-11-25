@@ -1,8 +1,8 @@
 package client
 
 import (
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // paneDivider records only reserved layout cells, not terminal content. Arrows

@@ -2,7 +2,7 @@
 
 **The batteries-included terminal multiplexer.**
 
-[![CI](https://github.com/josephferrero/bmux/actions/workflows/ci.yml/badge.svg)](https://github.com/josephferrero/bmux/actions/workflows/ci.yml)
+[![CI](https://github.com/bmux-dev/bmux/actions/workflows/ci.yml/badge.svg)](https://github.com/bmux-dev/bmux/actions/workflows/ci.yml)
 
 bmux brings common tmux-plugin workflows into one program. Browse sessions with
 live previews, watch your coding agents from a sidebar, copy text with the
@@ -45,7 +45,11 @@ modeless mouse selection.
 ## Quick start
 
 Requires macOS or Linux and an interactive terminal. Install the latest release
-into `~/.local/bin`:
+with Homebrew, or into `~/.local/bin` with the install script:
+
+```sh
+brew install --cask bmux-dev/tap/bmux
+```
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
@@ -54,7 +58,7 @@ bmux
 
 The script checks the download against the release's checksums and never uses
 `sudo`; see [installing](https://bmux-dev.github.io/bmux/start/installation/) for its options. With
-**Go 1.27.3+**, `go install github.com/josephferrero/bmux/cmd/bmux@latest` works
+**Go 1.27.3+**, `go install github.com/bmux-dev/bmux/cmd/bmux@latest` works
 too (put `$(go env GOPATH)/bin` on your `PATH`).
 
 `bmux` creates a fresh session in the current directory, named after that
@@ -225,8 +229,10 @@ bmux restart
 
 `bmux update` replaces the binary only; `bmux restart` switches the server to
 it, so you choose when programs running in panes end. Until then the hint
-shows **↻**. bmux looks for releases once a day; `[update] check = false` in
-the config file turns that off.
+shows **↻**. Release builds query GitHub's public releases API
+(`api.github.com/repos/bmux-dev/bmux/releases`) once a day with zero telemetry
+or identifying payload; `[update] check = false` in the config file or
+`BMUX_NO_UPDATE_CHECK=1` turns that off.
 
 `bmux restart` saves, stops the old server, starts the new one and restores your sessions.
 Attached clients reconnect on their own. It works from inside a pane too. See

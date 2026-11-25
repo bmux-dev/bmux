@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"golang.org/x/term"
 )
 

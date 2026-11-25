@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 	"github.com/rivo/uniseg"
 )
 

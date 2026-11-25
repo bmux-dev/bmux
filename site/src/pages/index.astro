@@ -76,6 +76,7 @@ const description =
 					<div class="ed-install-head">
 						<div class="ed-install-tabs" role="tablist">
 							<button type="button" class="ed-tab is-active" data-install-tab="sh">install.sh</button>
+							<button type="button" class="ed-tab" data-install-tab="brew">brew</button>
 							<button type="button" class="ed-tab" data-install-tab="go">go install</button>
 						</div>
 						<button type="button" class="ed-copy-btn" data-copy-btn>Copy</button>
@@ -611,7 +612,8 @@ const description =
 <script>
 	const INSTALL_CMDS: Record<string, string> = {
 		sh: 'curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh',
-		go: 'go install github.com/josephferrero/bmux/cmd/bmux@latest'
+		brew: 'brew install --cask bmux-dev/tap/bmux',
+		go: 'go install github.com/bmux-dev/bmux/cmd/bmux@latest'
 	};
 	document.querySelectorAll('[data-install-widget]').forEach((widget) => {
 		const tabs = widget.querySelectorAll<HTMLButtonElement>('[data-install-tab]');

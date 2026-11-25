@@ -15,7 +15,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/josephferrero/bmux/internal/version.stamped={{ .Version }}
+      - -s -w -X github.com/bmux-dev/bmux/internal/version.stamped={{ .Version }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -39,3 +39,21 @@ release:
 
 changelog:
   disable: true
+
+homebrew_casks:
+  - name: bmux
+    repository:
+      owner: bmux-dev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://bmux-dev.github.io/bmux/"
+    description: "The batteries-included terminal multiplexer built for coding agents"
+    license: "MIT"
+    binaries:
+      - bmux
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/bmux"]
+          end

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 )
 
 // Search runs over the pane's whole retained history, one printed line at a

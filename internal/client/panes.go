@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // reconstructFrame resolves any incremental delta TerminalFrames in f against

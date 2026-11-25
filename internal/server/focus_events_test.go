@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Apps see focus (?1004) as "this pane is focused and an attached client's
