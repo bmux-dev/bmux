@@ -56,7 +56,7 @@ const description =
 			<header class="ed-hero">
 				<div class="ed-eyebrow">
 					<span class="ed-eyebrow-dot"></span>
-					<span>v0.7.5 · 6.9× faster output · 4–6× less memory</span>
+					<span>v0.7.5 · Single Go binary · macOS &amp; Linux · MIT</span>
 				</div>
 				<h1>The batteries-included multiplexer,<br />built for coding agents.</h1>
 				<p class="ed-hero-sub">
@@ -88,21 +88,21 @@ const description =
 				<Demo />
 			</header>
 
-			<section class="ed-stats" id="benchmarks" aria-label="v0.7.5 benchmarks">
+			<section class="ed-stats" id="benchmarks" aria-label="bmux vs tmux 3.8 benchmarks">
 				<div class="ed-stat">
-					<div class="ed-stat-val">6.9<span>×</span></div>
-					<div class="ed-stat-label">Faster burst output</div>
-					<div class="ed-stat-sub">seq 1 200000 in 0.06 s</div>
+					<div class="ed-stat-val">0.06 <span>s</span></div>
+					<div class="ed-stat-label">Burst output (seq 1 200000)</div>
+					<div class="ed-stat-sub">tmux 3.8: 0.05 s</div>
 				</div>
 				<div class="ed-stat">
-					<div class="ed-stat-val"><span>~</span>5 ms</div>
-					<div class="ed-stat-label">Keystroke echo under load</div>
-					<div class="ed-stat-sub">down from 37 ms</div>
+					<div class="ed-stat-val">1.5 <span>ms</span></div>
+					<div class="ed-stat-label">Median keystroke echo</div>
+					<div class="ed-stat-sub">p99 2.0 ms · tmux: 0.5 ms</div>
 				</div>
 				<div class="ed-stat">
-					<div class="ed-stat-val">26 <span>MiB</span></div>
-					<div class="ed-stat-label">10k colored scrollback</div>
-					<div class="ed-stat-sub">down from 115 MiB</div>
+					<div class="ed-stat-val">21 <span>MiB</span></div>
+					<div class="ed-stat-label">Server RAM, 4 sessions</div>
+					<div class="ed-stat-sub">30 MiB w/ 10k colored · tmux: 9 MiB</div>
 				</div>
 				<div class="ed-stat">
 					<div class="ed-stat-val">0 <span>Hz</span></div>
@@ -110,6 +110,10 @@ const description =
 					<div class="ed-stat-sub">event-driven delta push</div>
 				</div>
 			</section>
+			<p class="ed-stats-note">
+				Measured against tmux 3.8 on Linux x86_64 with{' '}
+				<a class="ed-inline-link" href="https://github.com/bmux-dev/bmux/blob/main/scripts/compare-tmux.py">scripts/compare-tmux.py</a>.
+			</p>
 
 			<section class="ed-section" id="compare">
 				<div class="ed-sec-head">
@@ -411,6 +415,13 @@ const description =
 	.ed-stat-val span { color: #22d3ee; }
 	.ed-stat-label { margin-top: 5px; font-size: 14px; font-weight: 500; color: #a1a1aa; }
 	.ed-stat-sub { margin-top: 2px; font-family: var(--mono); font-size: 12px; color: #71717a; }
+	.ed-stats-note {
+		margin: 10px 0 0;
+		font-family: var(--mono);
+		font-size: 12px;
+		color: #71717a;
+		text-align: right;
+	}
 
 	.ed-section { padding: 64px 0 0; }
 	.ed-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
