@@ -18,7 +18,7 @@ if (!dark || !light) {
 }
 ---
 <figure class="bmux-shot">
-	<Image src={dark.default} alt={alt} class="bmux-shot-dark" />
-	<Image src={light.default} alt={alt} class="bmux-shot-light" />
+	<Image src={dark.default} alt={alt} class="bmux-shot-dark" loading="eager" decoding="sync" />
+	<Image src={light.default} alt={alt} class="bmux-shot-light" loading="eager" decoding="sync" />
 	{caption && <figcaption>{caption}</figcaption>}
 </figure>

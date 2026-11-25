@@ -17,6 +17,9 @@ export default defineConfig({
 				replacesTitle: true,
 			},
 			head: [
+				{ tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' } },
+				{ tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' } },
+				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap' } },
 				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://bmux-dev.github.io/bmux/social-card.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
 				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
@@ -30,7 +33,11 @@ export default defineConfig({
 			editLink: { baseUrl: 'https://github.com/bmux-dev/bmux/edit/main/site/' },
 			customCss: ['./src/styles/custom.css'],
 			plugins: [starlightThemeNova({
-					nav: [{ label: 'Docs', href: '/bmux/guides/sessions/' }],
+					nav: [
+						{ label: 'Docs', href: '/bmux/guides/sessions/' },
+						{ label: 'Coming from tmux', href: '/bmux/start/coming-from-tmux/' },
+						{ label: 'Agents', href: '/bmux/agents/sidebar/' },
+					],
 				}), starlightLinksValidator()],
 			sidebar: [
 				{ label: 'Start here', items: [{ autogenerate: { directory: 'start' } }] },
