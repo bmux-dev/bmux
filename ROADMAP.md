@@ -7,7 +7,7 @@ with everything built in and no plugin manager.
 
 | | Version | Theme |
 | --- | --- | --- |
-| **Shipped** | v0.7.5 | 6.9× faster output, 4–6× less memory and snappier typing ([already built](#already-built)) |
+| **Shipped** | v0.7.6 | Antigravity (`agy`) support, Homebrew tap, `bmux-dev/bmux` module path, redesigned docs ([already built](#already-built)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: compatibility, quality, distribution |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Popups, hints, multi-client, notifications |
@@ -282,3 +282,13 @@ instead of 115 MiB. The server redraws when a pane changes instead of 30
 times a second, so it stays idle when nothing happens, and it sends the client
 only the rows that changed. Protocol version 11 replaces 10: run
 `bmux restart` after upgrading.
+
+v0.7.6 adds first-class Google Antigravity CLI (`agy`) support (foreground
+detection, `agy --continue` restore, and managed hooks plus skill via
+`bmux integration install agy`), migrates the Go module path to
+`github.com/bmux-dev/bmux`, publishes a Homebrew cask tap
+(`brew install --cask bmux-dev/tap/bmux`), launches the redesigned
+documentation site with 2× Retina screenshots and workflow demo, and fixes
+pasting into the focused field of the new-session Create tab. Protocol
+version 11 is unchanged: run `bmux restart` when convenient to bring the
+server onto v0.7.6 for `agy` detection and resume.

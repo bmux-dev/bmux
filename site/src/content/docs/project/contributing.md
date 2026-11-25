@@ -119,7 +119,7 @@ You need push access and the [GitHub CLI](https://cli.github.com/) (`gh`),
 logged in. Set the version once; the commands below use it:
 
 ```sh
-V=v0.7.5
+V=v0.7.6
 ```
 
 ### 1. Pick the version
