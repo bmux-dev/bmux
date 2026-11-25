@@ -35,8 +35,9 @@ before the dialog and `{ active: false }` after it, in a `finally`. Each
 `active: true` needs its own `active: false`, and the end of the turn clears
 any left over.
 
-Every file bmux writes starts with a `bmux-integration: NAME vN` line, which
-is how `status` spots an outdated version; reinstalling updates it. Edited JSON
+Every file bmux writes contains a `bmux-integration: NAME vN` marker line (in
+the script, extension, plugin, and skill files it writes), which is how
+`status` spots an outdated version; reinstalling updates it. Edited JSON
 files keep every other setting, hook and key order; uninstalling removes only
 bmux's entries and files. Hooks run `bmux integration hook NAME` and
 extensions run `bmux agent`, so `bmux` must be on the agent's `PATH`; outside

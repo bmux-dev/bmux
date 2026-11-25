@@ -63,16 +63,12 @@ worktree, such as `stl-STL-123`.
 
 ## Create, rename, and delete
 
-**Create:** press n, confirm a name with Enter, then confirm the starting
-directory. The name starts with the filter text or the directory name from
-which this client was launched. The directory starts with that client's launch
-directory. Relative paths use that directory; `~` and `~/...` are accepted.
+**Create:** press n (or Ctrl-n) to open the [new-session popup](/bmux/guides/project-picker/), where you can pick a repository or switch to the **Create** tab.
 
 **Rename:** press r, edit the selected session's name, and press Enter.
 
-In either prompt, **Ctrl-u** clears the prefilled text, **Backspace/Ctrl-h**
-deletes a character, and **Esc** cancels. Paste works in these fields and in
-the search filter. Invalid entries show an error so you can correct them.
+In the rename prompt and `/` filter, **Ctrl-u** clears the text, **Backspace/Ctrl-h**
+deletes a character, and **Esc** cancels. Paste works in these fields. Invalid entries show an error so you can correct them.
 
 **Delete:** press d to see the session name, pane count, and attached clients.
 Only unmodified lowercase **y** confirms termination. **n**, **Esc**, **Enter**,

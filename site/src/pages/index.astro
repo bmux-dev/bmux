@@ -1,0 +1,649 @@
+---
+import { Image } from 'astro:assets';
+import Demo from '../components/Demo.astro';
+import workspaceDark from '../assets/screenshots/workspace-dark.png';
+import projectPickerDark from '../assets/screenshots/project-picker-dark.png';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const title = 'bmux — The batteries-included multiplexer, built for coding agents';
+const description =
+	'Persistent sessions, a live session picker, an agent status sidebar, and modeless mouse selection — everything you add to tmux with plugins, in one fast Go binary.';
+---
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content="https://bmux-dev.github.io/bmux/social-card.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="bmux: A terminal workspace. Already equipped." />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content="https://bmux-dev.github.io/bmux/social-card.png" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+		/>
+	</head>
+	<body>
+		<div class="ed-nav-wrap">
+			<nav class="ed-nav" aria-label="Primary navigation">
+				<a class="ed-brand" href={`${base}/`}>
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+						<rect x="2.5" y="3.5" width="19" height="17" rx="2.5" stroke="#22d3ee" stroke-width="1.8" />
+						<line x1="9" y1="3.5" x2="9" y2="20.5" stroke="#22d3ee" stroke-width="1.8" />
+						<line x1="9" y1="12" x2="21.5" y2="12" stroke="rgba(255,255,255,0.45)" stroke-width="1.6" />
+					</svg>
+					<span>bmux</span>
+				</a>
+				<div class="ed-links">
+					<a href={`${base}/guides/sessions/`}>Docs</a>
+					<a href={`${base}/start/coming-from-tmux/`}>Coming from tmux</a>
+					<a href={`${base}/agents/sidebar/`}>Agents</a>
+					<a href={`${base}/project/roadmap/`}>Roadmap</a>
+					<a href="https://github.com/bmux-dev/bmux">GitHub</a>
+					<a class="ed-ver" href={`${base}/project/roadmap/`}>v0.7.5</a>
+				</div>
+			</nav>
+		</div>
+
+		<main class="ed-wrap" id="top">
+			<header class="ed-hero">
+				<div class="ed-eyebrow">
+					<span class="ed-eyebrow-dot"></span>
+					<span>v0.7.5 · Single Go binary · macOS &amp; Linux · MIT</span>
+				</div>
+				<h1>The batteries-included multiplexer,<br />built for coding agents.</h1>
+				<p class="ed-hero-sub">
+					Persistent sessions, git worktree grouping, a live agent sidebar, and modeless mouse copy
+					over SSH — everything you add to tmux with plugins, compiled into one fast Go binary.
+				</p>
+
+				<div class="ed-cta-row">
+					<a class="ed-btn-primary" href={`${base}/guides/sessions/`}>Read docs</a>
+					<a class="ed-btn-ghost" href={`${base}/start/coming-from-tmux/`}>Coming from tmux</a>
+				</div>
+
+				<div class="ed-install" data-install-widget>
+					<div class="ed-install-head">
+						<div class="ed-install-tabs" role="tablist">
+							<button type="button" class="ed-tab is-active" data-install-tab="sh">install.sh</button>
+							<button type="button" class="ed-tab" data-install-tab="go">go install</button>
+						</div>
+						<button type="button" class="ed-copy-btn" data-copy-btn>Copy</button>
+					</div>
+					<div class="ed-install-code">
+						<span class="prompt">$</span><span data-install-cmd>curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh</span>
+					</div>
+				</div>
+				<p class="ed-install-note">
+					macOS &amp; Linux · Local-first · No telemetry · SHA-256 verified · MIT · <a href={`${base}/start/installation/`}>Full install steps</a>
+				</p>
+
+				<Demo />
+			</header>
+
+			<section class="ed-section" id="workflow" aria-label="Core workflows">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">Core workflows</div>
+						<h2>Built around agents and projects</h2>
+					</div>
+					<p>
+						Monitor every coding agent in a persistent sidebar and jump straight into any repository or git worktree without leaving the keyboard.
+					</p>
+				</div>
+
+				<div class="ed-workflow-grid">
+					<article class="ed-wf-card">
+						<div class="ed-wf-media">
+							<Image src={workspaceDark} alt="bmux One Dark workspace showing Claude working in the left pane, Codex waiting for approval in the right pane, and all five agents across git worktrees tracked in the left sidebar" />
+						</div>
+						<div class="ed-wf-body">
+							<div class="ed-wf-kicker">Agent sidebar · Ctrl-h</div>
+							<h3>Agent workflow across worktrees</h3>
+							<p>
+								Track <code>working</code>, <code>blocked</code>, and <code>idle</code> coding agents across every repository and git worktree in one sidebar. Jump straight to a waiting approval prompt with <code>Ctrl-h</code> + <code>Enter</code>, kept accurate by hooks or <code>bmux agent</code>.
+							</p>
+							<a class="ed-inline-link" href={`${base}/agents/sidebar/`}>Agent sidebar guide →</a>
+						</div>
+					</article>
+
+					<article class="ed-wf-card">
+						<div class="ed-wf-media">
+							<Image src={projectPickerDark} alt="bmux One Dark project opener popup listing active sessions, repositories under projects roots, and nested git worktrees with branch names" />
+						</div>
+						<div class="ed-wf-body">
+							<div class="ed-wf-kicker">Project opener · Ctrl-a n</div>
+							<h3>Open any project in two keystrokes</h3>
+							<p>
+								Fuzzy-find active sessions, git repositories, and nested worktrees with <code>Ctrl-a n</code> or <code>bmux project</code>. Opening a folder attaches to its running session or launches a fresh workspace from its trusted <code>.bmux.toml</code>.
+							</p>
+							<a class="ed-inline-link" href={`${base}/guides/project-picker/`}>Project opener guide →</a>
+						</div>
+					</article>
+				</div>
+			</section>
+
+			<section class="ed-section" id="benchmarks" aria-label="bmux performance highlights">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">Performance</div>
+						<h2>Fast and light</h2>
+					</div>
+					<p>
+						Measured against tmux 3.8 on Linux x86_64 with{' '}
+						<a class="ed-inline-link" href="https://github.com/bmux-dev/bmux/blob/main/scripts/compare-tmux.py">scripts/compare-tmux.py</a>.
+					</p>
+				</div>
+
+				<div class="ed-stats">
+					<div class="ed-stat">
+						<div class="ed-stat-val">Instant typing</div>
+						<div class="ed-stat-label">Keystroke latency</div>
+						<div class="ed-stat-sub"><span>1.5 ms</span> median (2 ms p99)</div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">tmux-speed logs</div>
+						<div class="ed-stat-label">Heavy build output</div>
+						<div class="ed-stat-sub">200k lines in <span>0.06 s</span></div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">Lightweight</div>
+						<div class="ed-stat-label">Memory footprint</div>
+						<div class="ed-stat-sub"><span>~21 MiB</span> for 4 sessions</div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">Battery friendly</div>
+						<div class="ed-stat-label">Idle CPU usage</div>
+						<div class="ed-stat-sub"><span>0 Hz</span> redraws when idle</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="ed-section" id="compare">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">No plugin manager</div>
+						<h2>Replaces your tmux plugin stack</h2>
+					</div>
+					<p>
+						Keep <code>prefix = "C-b"</code> if you want muscle memory—without maintaining TPM or brittle shell snippets.{' '}
+						<a class="ed-inline-link" href={`${base}/start/coming-from-tmux/`}>Full comparison →</a>
+					</p>
+				</div>
+
+				<div class="ed-ledger">
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">tmux-sessionx / tmux-fzf</div>
+						<div class="ed-ledger-new"><strong>List-first session picker</strong> — fuzzy filter with a live preview of the running pane.</div>
+					</div>
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">tmux-resurrect + continuum</div>
+						<div class="ed-ledger-new"><strong>Honest automatic persistence</strong> — saves layouts, splits, cwds, and agent resume IDs every 5s.</div>
+					</div>
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">tmux-yank + better-mouse-mode</div>
+						<div class="ed-ledger-new"><strong>Modeless mouse copy &amp; scroll</strong> — copies on release via pbcopy, wl-copy, xclip, or OSC 52.</div>
+					</div>
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">sesh + tmuxinator</div>
+						<div class="ed-ledger-new"><strong>Project picker &amp; .bmux.toml</strong> — jump to repos or declare trusted windows and startup commands.</div>
+					</div>
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">vim-tmux-navigator</div>
+						<div class="ed-ledger-new"><strong>Editor-aware Ctrl-h/j/k/l</strong> — crosses Neovim splits, bmux panes, and the agent sidebar cleanly.</div>
+					</div>
+					<div class="ed-ledger-row">
+						<div class="ed-ledger-old">herdr (separate app)</div>
+						<div class="ed-ledger-new"><strong>Built-in agent sidebar &amp; CLI</strong> — <code>bmux agents</code>, <code>capture</code>, <code>send --if-seq</code>, and <code>wait-agent</code>.</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="ed-section ed-faq" id="faq">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">Questions</div>
+						<h2>Common details before you switch</h2>
+					</div>
+				</div>
+
+				<div class="ed-faq-grid">
+					<details open>
+						<summary>Do I have to use copy mode to copy text?</summary>
+						<p>
+							No. Drag, double-click, or triple-click to copy on release—including soft-wrapped lines joined automatically and OSC 52 over SSH.
+							Keyboard vi selection (<code>Ctrl-a v</code>) and search (<code>Ctrl-a /</code>) are there when you want them.{' '}
+							<a class="ed-inline-link" href={`${base}/guides/clipboard/`}>Clipboard and paste</a>
+						</p>
+					</details>
+					<details open>
+						<summary>Does it restore my sessions after a reboot?</summary>
+						<p>
+							It restores your session names, windows, split layouts, each pane's working directory, and coding agents reopening their last conversation.
+							Other running programs get a fresh login shell.{' '}
+							<a class="ed-inline-link" href={`${base}/guides/restarts/`}>Restarts and reboots</a>
+						</p>
+					</details>
+					<details>
+						<summary>I use tmux. Do I have to relearn everything?</summary>
+						<p>
+							Defaults use <code>Ctrl-a</code> with <code>|</code> and <code>-</code> splits. Set <code>prefix = "C-b"</code> in <code>~/.config/bmux/config.toml</code> for tmux's prefix; every key is rebindable.{' '}
+							<a class="ed-inline-link" href={`${base}/start/coming-from-tmux/`}>Coming from tmux</a>
+						</p>
+					</details>
+					<details>
+						<summary>Which coding agents does it integrate with?</summary>
+						<p>
+							First-class integrations cover Claude Code, Codex, omp, opencode, and pi, and any script or tool can report status directly through <code>bmux agent</code>.{' '}
+							<a class="ed-inline-link" href={`${base}/agents/integrations/`}>Agent integrations</a>
+						</p>
+					</details>
+					<details>
+						<summary>How do updates and upgrades work?</summary>
+						<p>
+							A subtle <code>↑</code> appears in the status bar when a release ships. Run <code>bmux update</code> (checksum-verified) followed by <code>bmux restart</code> to keep sessions and reconnect clients.{' '}
+							<a class="ed-inline-link" href={`${base}/start/installation/#updates`}>Updates</a>
+						</p>
+					</details>
+					<details>
+						<summary>Do I need a plugin manager, and is it open source?</summary>
+						<p>
+							No plugin manager needed—scripting covers custom glue. bmux is MIT-licensed on{' '}
+							<a class="ed-inline-link" href="https://github.com/bmux-dev/bmux">GitHub</a>; see the{' '}
+							<a class="ed-inline-link" href={`${base}/project/roadmap/`}>roadmap</a> for what's next.
+						</p>
+					</details>
+				</div>
+			</section>
+
+			<footer class="ed-footer">
+				<span>bmux · MIT License · macOS &amp; Linux</span>
+				<div class="ed-footer-links">
+					<a href={`${base}/guides/sessions/`}>Docs</a>
+					<a href={`${base}/start/coming-from-tmux/`}>Coming from tmux</a>
+					<a href={`${base}/project/roadmap/`}>Roadmap</a>
+					<a href="https://github.com/bmux-dev/bmux">GitHub</a>
+				</div>
+			</footer>
+		</main>
+	</body>
+</html>
+
+<style is:global>
+	*, *::before, *::after { box-sizing: border-box; }
+	html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+	body {
+		margin: 0;
+		background: #09090b;
+		color: #fafafa;
+		font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+		line-height: 1.55;
+		--mono: 'JetBrains Mono', 'DejaVu Sans Mono', ui-monospace, monospace;
+	}
+	button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+	a { color: inherit; }
+	code { font-family: var(--mono); }
+
+	.ed-wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+
+	.ed-nav-wrap {
+		position: sticky;
+		top: 0;
+		z-index: 40;
+		background: rgba(9, 9, 11, 0.82);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+	}
+	.ed-nav {
+		max-width: 1120px;
+		margin: 0 auto;
+		padding: 0 28px;
+		height: 60px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+	}
+	.ed-brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		text-decoration: none;
+		font-family: var(--mono);
+		font-weight: 600;
+		font-size: 16px;
+		letter-spacing: -0.02em;
+	}
+	.ed-links { display: flex; align-items: center; gap: 22px; font-size: 14px; color: #a1a1aa; }
+	.ed-links a { text-decoration: none; transition: color 0.15s; white-space: nowrap; }
+	.ed-links a:hover { color: #fafafa; }
+	.ed-ver {
+		font-family: var(--mono);
+		font-size: 12px;
+		color: #22d3ee !important;
+		padding: 3px 9px;
+		border: 1px solid rgba(34, 211, 238, 0.25);
+		border-radius: 999px;
+		background: rgba(34, 211, 238, 0.06);
+	}
+
+	.ed-hero { padding: 40px 0 32px; text-align: center; }
+	.ed-eyebrow {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 5px 12px;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		background: #111114;
+		font-family: var(--mono);
+		font-size: 12px;
+		color: #a1a1aa;
+		margin-bottom: 18px;
+	}
+	.ed-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: #22d3ee; }
+	.ed-hero h1 {
+		margin: 0 auto;
+		max-width: 980px;
+		font-size: clamp(2rem, 3.8vw, 3.15rem);
+		font-weight: 700;
+		line-height: 1.07;
+		letter-spacing: -0.04em;
+	}
+	.ed-hero-sub {
+		margin: 18px auto 0;
+		max-width: 610px;
+		font-size: 17px;
+		line-height: 1.6;
+		color: #a1a1aa;
+	}
+	.ed-cta-row {
+		margin-top: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+	.ed-btn-primary {
+		display: inline-flex;
+		align-items: center;
+		padding: 10px 20px;
+		border-radius: 8px;
+		background: #fafafa;
+		color: #09090b;
+		font-size: 14px;
+		font-weight: 600;
+		text-decoration: none;
+		transition: opacity 0.15s;
+	}
+	.ed-btn-primary:hover { opacity: 0.88; }
+	.ed-btn-ghost {
+		display: inline-flex;
+		align-items: center;
+		padding: 10px 20px;
+		border-radius: 8px;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		background: transparent;
+		color: #fafafa;
+		font-size: 14px;
+		font-weight: 500;
+		text-decoration: none;
+		transition: background 0.15s, border-color 0.15s;
+	}
+	.ed-btn-ghost:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.28); }
+
+	.ed-install {
+		margin: 24px auto 0;
+		max-width: 680px;
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		border-radius: 10px;
+		background: #111114;
+		text-align: left;
+		overflow: hidden;
+	}
+	.ed-install-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 7px 12px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+		background: rgba(255, 255, 255, 0.02);
+	}
+	.ed-install-tabs { display: flex; gap: 4px; }
+	.ed-tab {
+		font-family: var(--mono);
+		font-size: 12px;
+		padding: 4px 10px;
+		border-radius: 6px;
+		color: #71717a;
+		transition: color 0.15s, background 0.15s;
+	}
+	.ed-tab:hover { color: #a1a1aa; }
+	.ed-tab.is-active { color: #fafafa; background: rgba(255, 255, 255, 0.08); }
+	.ed-copy-btn {
+		font-family: var(--mono);
+		font-size: 12px;
+		padding: 4px 10px;
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		color: #a1a1aa;
+		transition: color 0.15s, border-color 0.15s;
+	}
+	.ed-copy-btn:hover { color: #fafafa; border-color: rgba(255, 255, 255, 0.18); }
+	.ed-copy-btn.is-copied { color: #22d3ee; border-color: rgba(34, 211, 238, 0.45); }
+	.ed-install-code {
+		padding: 12px 16px;
+		font-family: var(--mono);
+		font-size: 13px;
+		color: #e4e4e7;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+	.ed-install-code .prompt { color: #22d3ee; margin-right: 10px; user-select: none; }
+	.ed-install-note { margin-top: 10px; font-size: 13px; color: #71717a; }
+	.ed-install-note a, .ed-inline-link { color: #22d3ee; text-decoration: none; }
+	.ed-install-note a:hover, .ed-inline-link:hover { text-decoration: underline; }
+
+	.ed-stats {
+		margin-top: 0;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		border-top: 1px solid rgba(255, 255, 255, 0.09);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+	}
+	.ed-stat { padding: 24px 20px; border-right: 1px solid rgba(255, 255, 255, 0.09); }
+	.ed-stat:last-child { border-right: 0; }
+	.ed-stat-val {
+		font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		color: #fafafa;
+	}
+	.ed-stat-label { margin-top: 4px; font-size: 14px; font-weight: 500; color: #a1a1aa; }
+	.ed-stat-sub { margin-top: 6px; font-family: var(--mono); font-size: 12px; color: #71717a; }
+	.ed-stat-sub span { color: #22d3ee; }
+
+	.ed-section { padding: 64px 0 0; }
+	.ed-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+	.ed-sec-kicker {
+		font-family: var(--mono);
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #22d3ee;
+		margin-bottom: 8px;
+	}
+	.ed-sec-head h2 { margin: 0; font-size: clamp(1.5rem, 2.8vw, 2.1rem); letter-spacing: -0.03em; }
+	.ed-sec-head p { margin: 0; max-width: 440px; color: #a1a1aa; font-size: 15px; }
+
+	.ed-workflow-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 20px;
+	}
+	.ed-wf-card {
+		background: #111115;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 12px;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+	.ed-wf-media {
+		background: #282c34;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+	}
+	.ed-wf-media img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+	.ed-wf-body {
+		padding: 20px 22px 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		flex: 1;
+	}
+	.ed-wf-kicker {
+		font-family: var(--mono);
+		font-size: 12px;
+		color: #22d3ee;
+		letter-spacing: 0.04em;
+	}
+	.ed-wf-body h3 {
+		margin: 0;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		color: #fafafa;
+	}
+	.ed-wf-body p {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: #a1a1aa;
+		flex: 1;
+	}
+	.ed-wf-body code {
+		font-size: 12.5px;
+		color: #e4e4e7;
+	}
+	.ed-wf-body .ed-inline-link {
+		font-size: 13.5px;
+		font-weight: 500;
+		margin-top: 2px;
+	}
+
+	.ed-ledger { border-top: 1px solid rgba(255, 255, 255, 0.09); }
+	.ed-ledger-row {
+		display: grid;
+		grid-template-columns: 280px 1fr;
+		gap: 24px;
+		padding: 16px 0;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+		align-items: baseline;
+	}
+	.ed-ledger-old { font-family: var(--mono); font-size: 13px; color: #71717a; }
+	.ed-ledger-new { font-size: 15px; color: #a1a1aa; }
+	.ed-ledger-new strong { color: #fafafa; font-weight: 600; }
+
+	.ed-faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; border-top: 1px solid rgba(255, 255, 255, 0.09); }
+	.ed-faq details { border-bottom: 1px solid rgba(255, 255, 255, 0.09); }
+	.ed-faq summary {
+		list-style: none;
+		cursor: pointer;
+		padding: 16px 0;
+		font-weight: 600;
+		font-size: 15px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+	}
+	.ed-faq summary::-webkit-details-marker { display: none; }
+	.ed-faq summary::after { content: '+'; font-family: var(--mono); color: #22d3ee; font-size: 16px; }
+	.ed-faq details[open] summary::after { content: '–'; }
+	.ed-faq details p { margin: 0 0 16px; font-size: 14px; color: #a1a1aa; line-height: 1.6; }
+
+	.ed-footer {
+		margin-top: 64px;
+		padding: 26px 0 44px;
+		border-top: 1px solid rgba(255, 255, 255, 0.09);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 13px;
+		color: #71717a;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.ed-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+	.ed-footer-links a { text-decoration: none; }
+	.ed-footer-links a:hover { color: #fafafa; }
+
+	@media (max-width: 920px) {
+		.ed-workflow-grid { grid-template-columns: 1fr; }
+		.ed-stats { grid-template-columns: repeat(2, 1fr); }
+		.ed-stat:nth-child(2) { border-right: 0; }
+		.ed-stat:nth-child(1), .ed-stat:nth-child(2) { border-bottom: 1px solid rgba(255, 255, 255, 0.09); }
+		.ed-ledger-row, .ed-faq-grid { grid-template-columns: 1fr; gap: 6px; }
+		.ed-sec-head { flex-direction: column; align-items: flex-start; }
+	}
+	@media (max-width: 640px) {
+		.ed-links a:not(.ed-ver):first-of-type ~ a:not(.ed-ver) { display: none; }
+	}
+</style>
+
+<script>
+	const INSTALL_CMDS: Record<string, string> = {
+		sh: 'curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh',
+		go: 'go install github.com/josephferrero/bmux/cmd/bmux@latest'
+	};
+	document.querySelectorAll('[data-install-widget]').forEach((widget) => {
+		const tabs = widget.querySelectorAll<HTMLButtonElement>('[data-install-tab]');
+		const cmdEl = widget.querySelector<HTMLElement>('[data-install-cmd]');
+		const copyBtn = widget.querySelector<HTMLButtonElement>('[data-copy-btn]');
+		tabs.forEach((tab) => {
+			tab.addEventListener('click', () => {
+				tabs.forEach((t) => t.classList.toggle('is-active', t === tab));
+				const key = tab.dataset.installTab;
+				if (cmdEl && key && INSTALL_CMDS[key]) {
+					cmdEl.textContent = INSTALL_CMDS[key];
+				}
+			});
+		});
+		copyBtn?.addEventListener('click', async () => {
+			const text = cmdEl?.textContent ?? '';
+			try {
+				await navigator.clipboard.writeText(text);
+			} catch {
+				const ta = document.createElement('textarea');
+				ta.value = text;
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand('copy');
+				ta.remove();
+			}
+			copyBtn.classList.add('is-copied');
+			copyBtn.textContent = 'Copied!';
+			setTimeout(() => {
+				copyBtn.classList.remove('is-copied');
+				copyBtn.textContent = 'Copy';
+			}, 1500);
+		});
+	});
+</script>

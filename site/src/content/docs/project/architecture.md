@@ -13,7 +13,7 @@ sidebar:
 - `internal/config`: the optional config file, defaults, environment overrides and validation.
 - `internal/integration`: agent hook/plugin files, their versions, and mapping hook events to `bmux agent` reports.
 - `internal/server`: session layout, emulator state, owned OS jobs and cancellation.
-- `internal/vt`: the terminal emulator, a copy of charmbracelet/x/vt carrying bmux's soft-wrap tracking and reflow (see [its README](https://github.com/bmux-dev/bmux/blob/main/internal/vt/README.md)).
+- `internal/vt`: the terminal emulator, forked from charmbracelet/x/vt with pointer-free 12-byte `Cell` values, an interned `StyleTable`, paged ring scrollback, ASCII fast-paths, per-row revisions, soft-wrap tracking and reflow (see [its README](https://github.com/bmux-dev/bmux/blob/main/internal/vt/README.md)).
 - `internal/client`: input, modeless selection, clipboard intent and preview display.
 
 ## Lock boundaries
@@ -82,8 +82,10 @@ budget. Pending user bytes include reservation, queued bytes and writer in-fligh
 bytes. Whole intent is admitted or rejected; accepted user bytes aren't truncated.
 
 The emulator pipe has a fast reader. Independent FIFO writing can wait on the PTY
-without blocking emulator state or shutdown. Zero-byte pipe fences synchronize
-user/reply classification; they are part of the contract, not redundant writes.
+without blocking emulator state or shutdown. `beginUserInput` lazily issues
+zero-byte pipe fences only when reply traffic is in flight or pending,
+preserving user/reply classification without adding a second syscall to idle
+typing.
 
 ## Line flags, reflow and history RPCs
 
@@ -202,8 +204,9 @@ progress) and OSC 777 `notify` set attention from emulator callbacks under
 transitions. `working` clears it. Reports never change recent-use order.
 
 Each session runs one agent sampler (`watchAgents`, 1 Hz, exits with the
-session). It copies the pane list under `session.mu`, releases it, queries
-each PTY's foreground group through `foregroundGroupCommand` (shared with
+session). It copies the pane list under `session.mu`, releases it, checks each
+pane's foreground process group via `foregroundGroupCommandForShell` (skipping
+process-tree walks when the shell itself is the foreground group, shared with
 editor navigation) with no state lock held, then applies the sample under
 `pane.mu`. Candidates are comm, the executable path and, only for node, bun,
 deno and python, argv[1]; no other argument or environment data is read.
@@ -394,9 +397,14 @@ Helix's config layout: kebab-case names and a top-level `theme`.
 
 ## User-visible behavior details
 
-- Attached-client snapshots are coalesced to at most 30 updates per second.
-  Each snapshot carries the visible viewport for each displayed pane, not its
-  full scrollback. Preview timing is described above.
+- Attached-client updates are event-driven rather than polled: panes signal
+  `dirtySignal`, and `session.snapshotDelta` + `pane.anchoredDeltaFrame` send
+  incremental row deltas immediately when idle (`frameBurstWindow` = 8 ms) or
+  coalesced across rapid output (`frameCoalesceDelay` = 3 ms). On the client,
+  `reconstructFrame` resolves deltas via `protocol.ApplyTerminalDelta`,
+  `frameVisibleChanged` skips redundant redraws, and `dividerScratch` reuses
+  divider buffers across frames. Each snapshot carries only the active window's
+  visible viewports, not full scrollback. Preview timing is described above.
 - Large pastes travel as bounded chunks. The server assembles and validates the
   complete paste before submitting one logical request to the PTY input bridge.
   Incomplete assemblies never submit partial input.

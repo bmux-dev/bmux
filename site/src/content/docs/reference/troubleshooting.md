@@ -11,7 +11,7 @@ After `bmux update` (or any upgrade that changed the protocol), commands fail
 until the server runs the new version too, and say which side is older:
 
 ```
-bmux: the running bmux server is an older version (protocol 8; this bmux speaks 10). Run bmux restart …
+bmux: the running bmux server is an older version (protocol 10; this bmux speaks 11). Run bmux restart …
 ```
 
 Run `bmux restart` with the new binary: it saves the sessions, stops the old

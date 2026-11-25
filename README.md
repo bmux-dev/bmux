@@ -12,8 +12,6 @@ mouse, and keep your layout across restarts, without a plugin manager.
 
 **[Documentation](https://bmux-dev.github.io/bmux/)**
 
-<!-- TODO: demo GIF: picker with live preview → attach → split → drag to copy -->
-
 ## Built in
 
 Everything below would take a plugin (or a separate app) with tmux. In bmux it
@@ -156,7 +154,7 @@ The sidebar on the left lists your sessions, then every agent across them:
 ```
  SESSIONS              │
  ● api                 │
-   web                 │
+ ○ web                 │
 ───────────────────────│
  AGENTS 2              │
  ● claude      waiting │
@@ -276,8 +274,10 @@ colors, the terminal window title (session and pane title, on by default),
 turning agent detection or restore off, whether to show images (`ui.graphics`), and per-agent resume commands; see
 [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/).
 
-The `BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`
-and `BMUX_SOUND` environment variables still work and override the file.
+`BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`,
+`BMUX_SOUND`, `BMUX_RUNTIME_DIR`, `BMUX_CONFIG`, `BMUX_NO_UPDATE_CHECK`, and
+`BMUX_PPROF_DIR` override the config file; see
+[environment variables](https://bmux-dev.github.io/bmux/configuration/environment/).
 
 `theme` colors bmux's own chrome (status bars, sidebar, tabs, pickers, dividers,
 selection) with a scheme's published palette. Like a terminal theme it only sets
@@ -304,8 +304,8 @@ for an example.
 
 ## Status
 
-This is an early prototype. CI runs on macOS and Ubuntu; it's used day to day
-on macOS and Linux.
+bmux is under active 0.x development; CI runs on macOS and Ubuntu, and it's
+used day to day on macOS and Linux.
 
 See the [roadmap](ROADMAP.md) for what's next.
 

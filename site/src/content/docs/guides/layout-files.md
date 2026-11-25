@@ -45,13 +45,13 @@ command = "npm run dev"
 A split's `first` and `second` can be splits themselves. Each command is one
 line typed into its pane's fresh shell, as if you typed it. Every pane must
 appear in exactly one window, directories must exist, and unknown settings
-are errors: a file with a problem gives one pane, and the status line says
+are errors: a file with a problem gives one pane, and the notice box says
 what's wrong.
 
 A folder's `.bmux.toml` can come from anyone who can write to the repository,
 so **its commands run only once you trust it**: `bmux layout trust` in that
 folder trusts its current content. Until then, sessions get its windows and
-panes and the status line says the commands were skipped. Editing the file
+panes and the notice box says the commands were skipped. Editing the file
 untrusts it again, like direnv. Trusted files are recorded by path and
 SHA-256 in `trusted-layouts.json` next to the saved sessions.
 
