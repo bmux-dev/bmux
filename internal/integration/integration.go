@@ -49,6 +49,7 @@ func System() (Env, error) {
 }
 
 var agents = []Agent{
+	withSkill(agyAgent()),
 	withSkill(claude.agent("Claude Code", "claude", "CLAUDE_CONFIG_DIR", ".claude", "")),
 	codex.agent("Codex", "codex", "CODEX_HOME", ".codex", "Codex runs new hooks only after you trust them: open /hooks in Codex once."),
 	withSkill(omp.agent("omp", "omp", ompDir, "")),

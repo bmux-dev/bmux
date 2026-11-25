@@ -305,7 +305,9 @@ func TestAttachedClientFocusControlsViewing(t *testing.T) {
 
 func TestAgentMatchRecognizesInstalledLayouts(t *testing.T) {
 	for command, want := range map[string]string{
-		"opencode": "opencode",
+		"agy":                     "agy",
+		"/home/me/.local/bin/agy": "agy",
+		"opencode":                "opencode",
 		"/opt/homebrew/Caskroom/codex/0.162.0/bin/codex": "codex",
 		"/Users/me/.local/share/claude/versions/2.1.296": "claude",
 		"/opt/homebrew/bin/pi":                           "pi",
