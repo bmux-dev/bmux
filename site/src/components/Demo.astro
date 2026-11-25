@@ -5,10 +5,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (ext: string) => `${base}/demo/demo.${ext}`;
 
 const chapters = [
-	{ id: 'agents', label: 'Agent sidebar & splits', key: 'Ctrl-a |', time: 0 },
-	{ id: 'sessions', label: 'Session picker', key: 'Ctrl-a s', time: 5.53 },
-	{ id: 'scrollback', label: 'Scrollback search', key: 'Ctrl-a /', time: 9.9 },
-	{ id: 'projects', label: 'Project & worktrees', key: 'Ctrl-a n', time: 14.26 },
+	{ id: 'projects', label: 'Open project', key: 'Ctrl-a n', time: 0 },
+	{ id: 'sidebar', label: 'Jump to blocked agent', key: 'Ctrl-h', time: 6.0 },
+	{ id: 'approve', label: 'Approve & live status', key: 'Enter', time: 9.37 },
+	{ id: 'sessions', label: 'Session preview', key: 'Ctrl-a s', time: 12.5 },
 ];
 ---
 
@@ -45,7 +45,7 @@ const chapters = [
 			playsinline
 			preload="metadata"
 			poster={`${base}/demo/demo-poster.png`}
-			aria-label="Real recording of bmux: agent sidebar with blocked and working coding agents, splitting panes, switching sessions with live previews, searching scrollback, and opening projects with git worktrees"
+			aria-label="Real One Dark recording of bmux: opening a project with Ctrl-a n, jumping via Ctrl-h to a blocked agent in a git worktree, approving its prompt so sidebar state flips to working, and previewing sessions with Ctrl-a s"
 		>
 			<source src={src('webm')} type="video/webm" />
 			<source src={src('mp4')} type="video/mp4" />
@@ -58,7 +58,7 @@ const chapters = [
 		margin: 26px auto 0;
 		border: 1px solid rgba(255, 255, 255, 0.16);
 		border-radius: 14px;
-		background: #1e1e2e;
+		background: #282c34;
 		overflow: hidden;
 		text-align: left;
 		box-shadow:

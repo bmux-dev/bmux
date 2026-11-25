@@ -16,6 +16,25 @@ b=$'\e[1m' dim=$'\e[2m' cyan=$'\e[36m' yellow=$'\e[33m' green=$'\e[32m' red=$'\e
 printf '\e[H\e[2J'
 printf ' %s%s%s %s· %s%s\n\n' "$b" "$name" "$r" "$dim" "$where" "$r"
 case "$state" in
+  blocked-interactive)
+    printf ' %s›%s Run the server tests\n\n' "$cyan" "$r"
+    printf ' %s●%s Ran go build ./...\n' "$green" "$r"
+    printf ' %s●%s Wants to run %sgo test ./...%s\n\n' "$yellow" "$r" "$b" "$r"
+    printf ' %s%sAllow this command?%s\n' "$b" "$red" "$r"
+    printf '   %s❯ 1. Yes%s\n' "$cyan" "$r"
+    printf "     2. Yes, don't ask again\n"
+    printf '     3. No, tell %s why\n' "$name"
+    bmux agent blocked "$name"
+    IFS= read -r _ || true
+    bmux agent working "$name"
+    printf '\e[H\e[2J'
+    printf ' %s%s%s %s· %s%s\n\n' "$b" "$name" "$r" "$dim" "$where" "$r"
+    printf ' %s✓%s Approved: %sgo test ./...%s\n\n' "$green" "$r" "$b" "$r"
+    printf ' %s●%s ok  internal/auth   0.41s\n' "$green" "$r"
+    printf ' %s●%s ok  internal/server 1.12s\n\n' "$green" "$r"
+    printf ' %s⠹ Working%s %s(running integration tests...)%s\n' "$yellow" "$r" "$dim" "$r"
+    exec sleep 86400
+    ;;
   blocked)
     printf ' %s›%s Run the server tests\n\n' "$cyan" "$r"
     printf ' %s●%s Ran go build ./...\n' "$green" "$r"

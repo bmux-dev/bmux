@@ -1,5 +1,8 @@
 ---
+import { Image } from 'astro:assets';
 import Demo from '../components/Demo.astro';
+import workspaceDark from '../assets/screenshots/workspace-dark.png';
+import projectPickerDark from '../assets/screenshots/project-picker-dark.png';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const title = 'bmux — The batteries-included multiplexer, built for coding agents';
@@ -87,6 +90,48 @@ const description =
 
 				<Demo />
 			</header>
+
+			<section class="ed-section" id="workflow" aria-label="Core workflows">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">Core workflows</div>
+						<h2>Built around agents and projects</h2>
+					</div>
+					<p>
+						Monitor every coding agent in a persistent sidebar and jump straight into any repository or git worktree without leaving the keyboard.
+					</p>
+				</div>
+
+				<div class="ed-workflow-grid">
+					<article class="ed-wf-card">
+						<div class="ed-wf-media">
+							<Image src={workspaceDark} alt="bmux One Dark workspace showing Claude working in the left pane, Codex waiting for approval in the right pane, and all five agents across git worktrees tracked in the left sidebar" />
+						</div>
+						<div class="ed-wf-body">
+							<div class="ed-wf-kicker">Agent sidebar · Ctrl-h</div>
+							<h3>Agent workflow across worktrees</h3>
+							<p>
+								Track <code>working</code>, <code>blocked</code>, and <code>idle</code> coding agents across every repository and git worktree in one sidebar. Jump straight to a waiting approval prompt with <code>Ctrl-h</code> + <code>Enter</code>, kept accurate by hooks or <code>bmux agent</code>.
+							</p>
+							<a class="ed-inline-link" href={`${base}/agents/sidebar/`}>Agent sidebar guide →</a>
+						</div>
+					</article>
+
+					<article class="ed-wf-card">
+						<div class="ed-wf-media">
+							<Image src={projectPickerDark} alt="bmux One Dark project opener popup listing active sessions, repositories under projects roots, and nested git worktrees with branch names" />
+						</div>
+						<div class="ed-wf-body">
+							<div class="ed-wf-kicker">Project opener · Ctrl-a n</div>
+							<h3>Open any project in two keystrokes</h3>
+							<p>
+								Fuzzy-find active sessions, git repositories, and nested worktrees with <code>Ctrl-a n</code> or <code>bmux project</code>. Opening a folder attaches to its running session or launches a fresh workspace from its trusted <code>.bmux.toml</code>.
+							</p>
+							<a class="ed-inline-link" href={`${base}/guides/project-picker/`}>Project opener guide →</a>
+						</div>
+					</article>
+				</div>
+			</section>
 
 			<section class="ed-section" id="benchmarks" aria-label="bmux performance highlights">
 				<div class="ed-sec-head">
@@ -444,6 +489,65 @@ const description =
 	.ed-sec-head h2 { margin: 0; font-size: clamp(1.5rem, 2.8vw, 2.1rem); letter-spacing: -0.03em; }
 	.ed-sec-head p { margin: 0; max-width: 440px; color: #a1a1aa; font-size: 15px; }
 
+	.ed-workflow-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 20px;
+	}
+	.ed-wf-card {
+		background: #111115;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 12px;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+	.ed-wf-media {
+		background: #282c34;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+	}
+	.ed-wf-media img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+	.ed-wf-body {
+		padding: 20px 22px 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		flex: 1;
+	}
+	.ed-wf-kicker {
+		font-family: var(--mono);
+		font-size: 12px;
+		color: #22d3ee;
+		letter-spacing: 0.04em;
+	}
+	.ed-wf-body h3 {
+		margin: 0;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		color: #fafafa;
+	}
+	.ed-wf-body p {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.6;
+		color: #a1a1aa;
+		flex: 1;
+	}
+	.ed-wf-body code {
+		font-size: 12.5px;
+		color: #e4e4e7;
+	}
+	.ed-wf-body .ed-inline-link {
+		font-size: 13.5px;
+		font-weight: 500;
+		margin-top: 2px;
+	}
+
 	.ed-ledger { border-top: 1px solid rgba(255, 255, 255, 0.09); }
 	.ed-ledger-row {
 		display: grid;
@@ -492,6 +596,7 @@ const description =
 	.ed-footer-links a:hover { color: #fafafa; }
 
 	@media (max-width: 920px) {
+		.ed-workflow-grid { grid-template-columns: 1fr; }
 		.ed-stats { grid-template-columns: repeat(2, 1fr); }
 		.ed-stat:nth-child(2) { border-right: 0; }
 		.ed-stat:nth-child(1), .ed-stat:nth-child(2) { border-bottom: 1px solid rgba(255, 255, 255, 0.09); }

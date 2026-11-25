@@ -162,7 +162,7 @@ func setupFixture(repoAbs, workRoot, binDir, bmuxBin, theme string) (*fixture, e
 		"GIT_COMMITTER_EMAIL":  "bmux@example.com",
 	})
 
-	bmuxTheme := "catppuccin-mocha"
+	bmuxTheme := "onedark"
 	if theme == "light" {
 		bmuxTheme = "catppuccin-latte"
 	}
@@ -188,7 +188,7 @@ check = false
 		return nil, err
 	}
 
-	// Write .bmux.toml project layouts for api, web, docs using [[windows]] + [[panes]]
+	// Write .bmux.toml project layouts for api, api-auth, web, docs, cli using [[windows]] + [[panes]]
 	apiLayout := `active = 1
 
 [[windows]]
@@ -196,7 +196,7 @@ name = "dev"
 focused = 2
 [windows.layout]
 direction = "horizontal"
-ratio = 5400
+ratio = 5200
 [windows.layout.first]
 pane = 1
 [windows.layout.second]
@@ -204,11 +204,11 @@ pane = 2
 
 [[panes]]
 id = 1
-command = "clear && tail -n 30 -f ~/server.log"
+command = "fake-agent working Claude"
 
 [[panes]]
 id = 2
-command = "fake-agent working Claude"
+command = "fake-agent blocked Codex"
 `
 	if err := os.WriteFile(filepath.Join(fx.projectsDir, "api", ".bmux.toml"), []byte(apiLayout), 0o644); err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ pane = 1
 
 [[panes]]
 id = 1
-command = "fake-agent blocked Claude"
+command = "fake-agent blocked-interactive Claude"
 `
 	if err := os.WriteFile(filepath.Join(fx.projectsDir, "api-auth", ".bmux.toml"), []byte(apiAuthLayout), 0o644); err != nil {
 		return nil, err
@@ -265,14 +265,27 @@ command = "fake-agent idle OpenCode"
 		return nil, err
 	}
 
+	cliLayout := `[[windows]]
+name = "claude"
+[windows.layout]
+pane = 1
+
+[[panes]]
+id = 1
+command = "fake-agent idle Claude"
+`
+	if err := os.WriteFile(filepath.Join(fx.projectsDir, "cli", ".bmux.toml"), []byte(cliLayout), 0o644); err != nil {
+		return nil, err
+	}
+
 	// Trust every generated .bmux.toml so its commands execute cleanly
-	for _, name := range []string{"api", "api-auth", "web", "docs"} {
+	for _, name := range []string{"api", "api-auth", "web", "docs", "cli"} {
 		if err := fx.runBmux("layout", "trust", filepath.Join(fx.projectsDir, name)); err != nil {
 			return nil, fmt.Errorf("trust layout %s: %w", name, err)
 		}
 	}
 
-	// Create server sessions
+	// Create server sessions (leave cli unopened so Ctrl-a n opens it live in the demo)
 	for _, s := range []struct {
 		name string
 		dir  string
@@ -287,8 +300,8 @@ command = "fake-agent idle OpenCode"
 		}
 	}
 
-	// Wait until all 4 fake-agent panes report their expected state
-	if err := fx.waitForAgents(4, 6*time.Second); err != nil {
+	// Wait until all 5 fake-agent panes report their expected state
+	if err := fx.waitForAgents(5, 6*time.Second); err != nil {
 		return nil, err
 	}
 	return fx, nil
@@ -591,37 +604,60 @@ func captureDemo(fx *fixture, renderer, theme, outDir string) error {
 
 	const fps = 30
 	tick := time.Second / fps
+	frames := 0
 	recordFor := func(d time.Duration) {
 		end := time.Now().Add(d)
 		for time.Now().Before(end) {
 			rec.appendFrame()
+			frames++
 			time.Sleep(tick)
 		}
 	}
+	markChapter := func(id string) {
+		fmt.Printf("CHAPTER %s %.2f\n", id, float64(frames)/float64(fps))
+	}
 
-	recordFor(2000 * time.Millisecond)
-	must(rec.send("\x01n")) // two-tab New Session / Projects popup
-	recordFor(2200 * time.Millisecond)
-	must(rec.send("\x1b")) // Esc
-	recordFor(500 * time.Millisecond)
-	must(rec.send("\x01s")) // session picker
-	recordFor(800 * time.Millisecond)
-	for _, ch := range "/web" {
+	// Chapter 1: Open project cleanly with Ctrl-a n
+	markChapter("projects")
+	recordFor(1600 * time.Millisecond)
+	must(rec.send("\x01n"))
+	recordFor(1400 * time.Millisecond)
+	for _, ch := range "cli" {
 		must(rec.send(string(ch)))
-		recordFor(120 * time.Millisecond)
+		recordFor(140 * time.Millisecond)
 	}
+	recordFor(800 * time.Millisecond)
+	must(rec.send("\r"))
+	recordFor(1800 * time.Millisecond)
+
+	// Chapter 2: Focus sidebar (Ctrl-h), move into AGENTS and jump to blocked Claude in api-auth worktree
+	markChapter("sidebar")
+	must(rec.send("\x08"))
+	recordFor(600 * time.Millisecond)
+	for i := 0; i < 3; i++ {
+		must(rec.send("j"))
+		recordFor(260 * time.Millisecond)
+	}
+	recordFor(800 * time.Millisecond)
+	must(rec.send("\r"))
+	recordFor(1200 * time.Millisecond)
+
+	// Chapter 3: Approve blocked prompt (Enter) -> sidebar updates live from blocked to working
+	markChapter("approve")
+	recordFor(700 * time.Millisecond)
+	must(rec.send("\r"))
+	recordFor(2500 * time.Millisecond)
+
+	// Chapter 4: Session picker with live preview (Ctrl-a s) back to api
+	markChapter("sessions")
+	must(rec.send("\x01s"))
+	recordFor(900 * time.Millisecond)
+	must(rec.send("j"))
+	recordFor(900 * time.Millisecond)
+	must(rec.send("k"))
 	recordFor(1000 * time.Millisecond)
-	must(rec.send("\x1b"))
-	recordFor(400 * time.Millisecond)
-	must(rec.send("\x01/")) // scrollback search
-	recordFor(400 * time.Millisecond)
-	for _, ch := range "timeout" {
-		must(rec.send(string(ch)))
-		recordFor(100 * time.Millisecond)
-	}
-	recordFor(1500 * time.Millisecond)
-	must(rec.send("\x1b"))
-	recordFor(800 * time.Millisecond)
+	must(rec.send("\r"))
+	recordFor(1000 * time.Millisecond)
 
 	framesPath := filepath.Join(fx.root, "demo.bin")
 	if err := rec.writeFile(framesPath, fps); err != nil {

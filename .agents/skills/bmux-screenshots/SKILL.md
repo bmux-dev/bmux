@@ -59,7 +59,8 @@ Use `--mode video --out-dir site/public/demo` to encode `demo.mp4`, `demo.webm`,
 ## Verification Checklist
 
 After regenerating screenshots, inspect at least one dark and one light PNG (plus any changed popup/overlay scene) directly before committing:
+- Dark theme uses **One Dark** (`onedark`) and light theme uses **Catppuccin Latte** (`catppuccin-latte`)
 - Text and box borders are crisp at 2x Retina (`20x40` cell grid, no subpixel blur)
-- Light mode (`catppuccin-latte`) text, borders, and highlights have strong contrast
+- Light mode (`catppuccin-latte`) and dark mode (`onedark`) text, borders, and highlights have strong contrast
 - Agent sidebar shows distinct states (`working`, `blocked`, `idle`) and git branch/worktree hierarchy
 - Keybinding hints match current defaults (`Ctrl-a n`, `Ctrl-a s`, `Ctrl-a /`, `Ctrl-a ?`)
