@@ -88,32 +88,41 @@ const description =
 				<Demo />
 			</header>
 
-			<section class="ed-stats" id="benchmarks" aria-label="bmux performance highlights">
-				<div class="ed-stat">
-					<div class="ed-stat-val">Instant typing</div>
-					<div class="ed-stat-label">Keystroke latency</div>
-					<div class="ed-stat-sub"><span>1.5 ms</span> median (2 ms p99)</div>
+			<section class="ed-section" id="benchmarks" aria-label="bmux performance highlights">
+				<div class="ed-sec-head">
+					<div>
+						<div class="ed-sec-kicker">Performance</div>
+						<h2>Fast and light</h2>
+					</div>
+					<p>
+						Measured against tmux 3.8 on Linux x86_64 with{' '}
+						<a class="ed-inline-link" href="https://github.com/bmux-dev/bmux/blob/main/scripts/compare-tmux.py">scripts/compare-tmux.py</a>.
+					</p>
 				</div>
-				<div class="ed-stat">
-					<div class="ed-stat-val">tmux-speed logs</div>
-					<div class="ed-stat-label">Heavy build output</div>
-					<div class="ed-stat-sub">200k lines in <span>0.06 s</span></div>
-				</div>
-				<div class="ed-stat">
-					<div class="ed-stat-val">Lightweight</div>
-					<div class="ed-stat-label">Memory footprint</div>
-					<div class="ed-stat-sub"><span>~21 MiB</span> for 4 sessions</div>
-				</div>
-				<div class="ed-stat">
-					<div class="ed-stat-val">Battery friendly</div>
-					<div class="ed-stat-label">Idle CPU usage</div>
-					<div class="ed-stat-sub"><span>0 Hz</span> redraws when idle</div>
+
+				<div class="ed-stats">
+					<div class="ed-stat">
+						<div class="ed-stat-val">Instant typing</div>
+						<div class="ed-stat-label">Keystroke latency</div>
+						<div class="ed-stat-sub"><span>1.5 ms</span> median (2 ms p99)</div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">tmux-speed logs</div>
+						<div class="ed-stat-label">Heavy build output</div>
+						<div class="ed-stat-sub">200k lines in <span>0.06 s</span></div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">Lightweight</div>
+						<div class="ed-stat-label">Memory footprint</div>
+						<div class="ed-stat-sub"><span>~21 MiB</span> for 4 sessions</div>
+					</div>
+					<div class="ed-stat">
+						<div class="ed-stat-val">Battery friendly</div>
+						<div class="ed-stat-label">Idle CPU usage</div>
+						<div class="ed-stat-sub"><span>0 Hz</span> redraws when idle</div>
+					</div>
 				</div>
 			</section>
-			<p class="ed-stats-note">
-				Measured against tmux 3.8 on Linux x86_64 with{' '}
-				<a class="ed-inline-link" href="https://github.com/bmux-dev/bmux/blob/main/scripts/compare-tmux.py">scripts/compare-tmux.py</a>.
-			</p>
 
 			<section class="ed-section" id="compare">
 				<div class="ed-sec-head">
@@ -403,7 +412,7 @@ const description =
 	.ed-install-note a:hover, .ed-inline-link:hover { text-decoration: underline; }
 
 	.ed-stats {
-		margin-top: 48px;
+		margin-top: 0;
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
 		border-top: 1px solid rgba(255, 255, 255, 0.09);
@@ -421,13 +430,6 @@ const description =
 	.ed-stat-label { margin-top: 4px; font-size: 14px; font-weight: 500; color: #a1a1aa; }
 	.ed-stat-sub { margin-top: 6px; font-family: var(--mono); font-size: 12px; color: #71717a; }
 	.ed-stat-sub span { color: #22d3ee; }
-	.ed-stats-note {
-		margin: 10px 0 0;
-		font-family: var(--mono);
-		font-size: 12px;
-		color: #71717a;
-		text-align: right;
-	}
 
 	.ed-section { padding: 64px 0 0; }
 	.ed-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
