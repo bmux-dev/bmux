@@ -1,4 +1,10 @@
-# bmux
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/src/assets/brand/mark-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="site/src/assets/brand/mark-light.svg" />
+    <img alt="bmux" src="site/src/assets/brand/mark-dark.svg" width="155" height="40" />
+  </picture>
+</h1>
 
 **The batteries-included terminal multiplexer, built for coding agents.**
 
