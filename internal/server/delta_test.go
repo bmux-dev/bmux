@@ -29,6 +29,7 @@ func newTestPane(t *testing.T, w, h int) *pane {
 		epoch:    1,
 	}
 	p.term.SetScrollbackSize(currentSettings().scrollback)
+	p.term.SetScrollbackMaxBytes(currentSettings().scrollbackMaxBytes)
 	p.term.SetCallbacks(vt.Callbacks{
 		Title:            func(title string) { p.title = title },
 		CursorVisibility: func(v bool) { p.visible = v },

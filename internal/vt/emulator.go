@@ -719,6 +719,18 @@ func (e *Emulator) SetScrollbackSize(maxLines int) {
 	e.scrs[0].SetScrollbackSize(maxLines)
 }
 
+// SetScrollbackMaxBytes sets the hard memory budget in bytes for scrollback
+// (0 means unlimited).
+func (e *Emulator) SetScrollbackMaxBytes(maxBytes int) {
+	e.scrs[0].SetScrollbackMaxBytes(maxBytes)
+}
+
+// ScrollbackBytes returns the tracked memory footprint in bytes of live rows in
+// the scrollback buffer.
+func (e *Emulator) ScrollbackBytes() int {
+	return e.scrs[0].Scrollback().Bytes()
+}
+
 // ClearScrollback clears the scrollback buffer.
 func (e *Emulator) ClearScrollback() {
 	sb := e.Scrollback()

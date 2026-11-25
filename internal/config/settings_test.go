@@ -95,6 +95,8 @@ func TestSettingSaveRejectsInvalidValuesWithoutWriting(t *testing.T) {
 		{"agents.working-after", "5ms"},
 		{"agents.working-after", "soon"},
 		{"scrollback.lines", "5"},
+		{"scrollback.max-mb", "-1"},
+		{"scrollback.max-mb", "2048"},
 		{"projects.roots", "relative/dir"},
 		{"sound.ready", "a\nb"},
 	} {

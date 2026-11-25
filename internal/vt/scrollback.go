@@ -1,6 +1,8 @@
 package vt
 
 import (
+	"unsafe"
+
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
@@ -14,7 +16,26 @@ const (
 	// maxRecycledPages bounds how many empty pages we keep for zero-alloc
 	// steady-state scrolling while freeing excess pages on shrink/clear.
 	maxRecycledPages = 4
+
+	cellBytes  = int(unsafe.Sizeof(Cell{}))
+	sbRowBytes = int(unsafe.Sizeof(sbRow{}))
 )
+
+func rowExtraBytes(ex rowExtra) int {
+	if len(ex) == 0 {
+		return 0
+	}
+	// Account for the sparse map header/bucket overhead plus per-entry string storage.
+	n := 48
+	for _, ce := range ex {
+		n += 64 + len(ce.grapheme) + len(ce.link.URL) + len(ce.link.Params)
+	}
+	return n
+}
+
+func scrollbackRowBytes(cellCount int, ex rowExtra) int {
+	return sbRowBytes + cellCount*cellBytes + rowExtraBytes(ex)
+}
 
 // scrollPage is a contiguous pointer-free arena of compact Cells backing
 // multiple scrollback rows.
@@ -40,6 +61,8 @@ type Scrollback struct {
 	head        int // index of oldest line in ring
 	count       int // number of live lines in ring
 	maxLines    int
+	maxBytes    int // hard byte cap across live rows; 0 = unlimited
+	liveBytes   int
 	pages       []*scrollPage
 	freePages   []uint32 // 1-based page indices whose refs == 0
 	tailPage    uint32   // 1-based index of page currently receiving appends (0 = none)
@@ -181,6 +204,7 @@ func (s *Scrollback) allocCells(n int) (uint32, uint32, []Cell) {
 // releaseSlot releases the cell page reference and side-table entry for ring slot.
 func (s *Scrollback) releaseSlot(slot int) {
 	row := s.ring[slot]
+	s.liveBytes = max(0, s.liveBytes-scrollbackRowBytes(int(row.length), s.extras[slot]))
 	s.ring[slot] = sbRow{}
 	if len(s.extras) > 0 {
 		delete(s.extras, slot)
@@ -215,6 +239,15 @@ func (s *Scrollback) releaseSlot(slot int) {
 	}
 }
 
+func (s *Scrollback) evictOldest() {
+	s.releaseSlot(s.head)
+	s.head++
+	if s.head >= len(s.ring) {
+		s.head = 0
+	}
+	s.count--
+}
+
 // pushCompact appends a compact cell row and its optional side-table + flags.
 // A wrapped row retains trailing spaces; an unwrapped row trims them.
 func (s *Scrollback) pushCompact(row []Cell, ex rowExtra, flags LineFlags) {
@@ -226,14 +259,22 @@ func (s *Scrollback) pushCompact(row []Cell, ex rowExtra, flags LineFlags) {
 		end = len(trimCompactRow(row))
 	}
 
-	if s.count >= s.maxLines {
-		// Evict oldest slot before allocating so a full ring recycles pages at 0 allocs.
-		s.releaseSlot(s.head)
-		s.head++
-		if s.head >= len(s.ring) {
-			s.head = 0
+	var cloned rowExtra
+	if end > 0 {
+		cloned = cloneRowExtra(ex, end)
+	}
+	needed := scrollbackRowBytes(end, cloned)
+	if s.maxBytes > 0 && needed > s.maxBytes {
+		for s.count > 0 {
+			s.evictOldest()
 		}
-		s.count--
+		s.totalPushed++
+		return
+	}
+
+	for s.count >= s.maxLines || (s.maxBytes > 0 && s.count > 0 && s.liveBytes+needed > s.maxBytes) {
+		// Evict oldest slot before allocating so a full ring recycles pages at 0 allocs.
+		s.evictOldest()
 	}
 
 	s.ensureRingCapacity(s.count + 1)
@@ -243,6 +284,7 @@ func (s *Scrollback) pushCompact(row []Cell, ex rowExtra, flags LineFlags) {
 
 	if end == 0 {
 		s.ring[slot] = sbRow{flags: flags}
+		s.liveBytes += needed
 		return
 	}
 
@@ -254,12 +296,13 @@ func (s *Scrollback) pushCompact(row []Cell, ex rowExtra, flags LineFlags) {
 		length:  uint32(end),
 		flags:   flags,
 	}
-	if cloned := cloneRowExtra(ex, end); cloned != nil {
+	if cloned != nil {
 		if s.extras == nil {
 			s.extras = make(map[int]rowExtra)
 		}
 		s.extras[slot] = cloned
 	}
+	s.liveBytes += needed
 }
 
 // Push adds a uv.Line without flags to the scrollback buffer.
@@ -355,6 +398,23 @@ func (s *Scrollback) Epoch() uint64 {
 	return s.epoch
 }
 
+// Bytes returns the tracked memory footprint in bytes of live rows in the
+// scrollback buffer.
+func (s *Scrollback) Bytes() int {
+	if s == nil {
+		return 0
+	}
+	return s.liveBytes
+}
+
+// MaxBytes returns the hard byte budget for live scrollback rows (0 = unlimited).
+func (s *Scrollback) MaxBytes() int {
+	if s == nil {
+		return 0
+	}
+	return s.maxBytes
+}
+
 // SetMaxLines sets the maximum number of lines in the scrollback buffer.
 // If the current number of lines exceeds the new maximum, oldest lines are
 // evicted and their slots are cleared.
@@ -363,15 +423,25 @@ func (s *Scrollback) SetMaxLines(maxLines int) {
 		return
 	}
 	s.maxLines = maxLines
-	if excess := s.count - maxLines; excess > 0 {
-		for range excess {
-			s.releaseSlot(s.head)
-			s.head++
-			if s.head >= len(s.ring) {
-				s.head = 0
-			}
+	for s.count > maxLines {
+		s.evictOldest()
+	}
+}
+
+// SetMaxBytes sets the hard byte budget for live scrollback rows (0 = unlimited).
+// If the current byte usage exceeds the new limit, oldest lines are evicted.
+func (s *Scrollback) SetMaxBytes(maxBytes int) {
+	if s == nil {
+		return
+	}
+	if maxBytes < 0 {
+		maxBytes = 0
+	}
+	s.maxBytes = maxBytes
+	if maxBytes > 0 {
+		for s.count > 0 && s.liveBytes > maxBytes {
+			s.evictOldest()
 		}
-		s.count -= excess
 	}
 }
 
@@ -470,6 +540,7 @@ func (s *Scrollback) Clear() {
 	clear(s.ring)
 	s.head = 0
 	s.count = 0
+	s.liveBytes = 0
 	clear(s.pages)
 	s.pages = nil
 	s.freePages = nil
@@ -518,6 +589,9 @@ func (s *Scrollback) replaceCompact(rows [][]Cell, extras []rowExtra, flags []Li
 			f = flags[i]
 		}
 		s.pushCompact(row, ex, f)
+	}
+	if !bumpEpoch && s.count < origLen {
+		bumpEpoch = true
 	}
 	if bumpEpoch {
 		s.epoch = savedEpoch + 1

@@ -10,18 +10,29 @@ import (
 )
 
 // trackHistory runs operation while syncing the pane's retained scrollback
-// limit (scrollback.lines, checked on every operation so a config reload
-// reaches running panes at their next output) and advancing the monotonic
-// historyTotal / coordinate epoch directly from the VT emulator's
+// limits (scrollback.lines and scrollback.max-mb, checked on every operation so
+// a config reload reaches running panes at their next output) and advancing the
+// monotonic historyTotal / coordinate epoch directly from the VT emulator's
 // ScrollbackTotal and ScrollbackEpoch counters. Caller holds pane.mu.
 func (p *pane) trackHistory(operation func()) {
-	limit := currentSettings().scrollback
+	settings := currentSettings()
+	limit := settings.scrollback
+	maxBytes := settings.scrollbackMaxBytes
 	trimmed := false
-	if sb := p.term.Scrollback(); sb != nil && sb.MaxLines() != limit {
-		if sb.Len() > limit {
-			trimmed = true
+	if sb := p.term.Scrollback(); sb != nil {
+		if sb.MaxLines() != limit {
+			if sb.Len() > limit {
+				trimmed = true
+			}
+			p.term.SetScrollbackSize(limit)
 		}
-		p.term.SetScrollbackSize(limit)
+		if sb.MaxBytes() != maxBytes {
+			beforeLen := sb.Len()
+			p.term.SetScrollbackMaxBytes(maxBytes)
+			if sb.Len() < beforeLen {
+				trimmed = true
+			}
+		}
 	}
 	beforeTotal := p.term.ScrollbackTotal()
 	beforeEpoch := p.term.ScrollbackEpoch()

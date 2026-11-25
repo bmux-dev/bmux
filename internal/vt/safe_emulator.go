@@ -244,6 +244,20 @@ func (se *SafeEmulator) SetScrollbackSize(maxLines int) {
 	se.Emulator.SetScrollbackSize(maxLines)
 }
 
+// SetScrollbackMaxBytes sets the scrollback byte budget in a concurrency-safe manner.
+func (se *SafeEmulator) SetScrollbackMaxBytes(maxBytes int) {
+	se.mu.Lock()
+	defer se.mu.Unlock()
+	se.Emulator.SetScrollbackMaxBytes(maxBytes)
+}
+
+// ScrollbackBytes returns the live scrollback footprint in bytes in a concurrency-safe manner.
+func (se *SafeEmulator) ScrollbackBytes() int {
+	se.mu.RLock()
+	defer se.mu.RUnlock()
+	return se.Emulator.ScrollbackBytes()
+}
+
 // ClearScrollback clears the scrollback buffer in a concurrency-safe manner.
 func (se *SafeEmulator) ClearScrollback() {
 	se.mu.Lock()

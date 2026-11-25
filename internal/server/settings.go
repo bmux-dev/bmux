@@ -21,6 +21,7 @@ type serverSettings struct {
 	resume                    map[string][]string // per-agent override; empty = none
 	passThrough               map[string]bool     // programs that get navigation keys
 	scrollback                int                 // history lines kept per pane
+	scrollbackMaxBytes        int                 // hard per-pane byte budget; 0 = unlimited
 	updateCheck               bool                // look for new releases
 	hooks                     map[string][]string // event -> shell commands
 	// paneFG and paneBG are the theme's default colors in panes, nil where the
@@ -62,9 +63,10 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		quietSamples: samplesFor(cfg.Agents.WaitingAfter.Duration),
 		restore:      cfg.Restore.Enabled,
 		resume:       cfg.Restore.Resume,
-		passThrough:  passThrough,
-		scrollback:   cfg.Scrollback.Lines,
-		updateCheck:  cfg.Update.Check,
+		passThrough:        passThrough,
+		scrollback:         cfg.Scrollback.Lines,
+		scrollbackMaxBytes: cfg.Scrollback.MaxMB << 20,
+		updateCheck:        cfg.Update.Check,
 		hooks:        cfg.Hooks,
 	}
 	if p, foreground, background := cfg.PaneColors(); foreground {
