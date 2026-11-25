@@ -12,12 +12,14 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 	if e.Err != nil {
 		u.notice(e.Err.Error())
 	} else if u.projects.open && u.projects.creating {
-		if u.projects.field == 1 {
+		switch u.projects.field {
+		case 0:
 			u.projects.dir += e.Text
-		} else {
+			u.projects.formErr, u.projects.candidates = "", nil
+		case 1:
 			u.projects.name += e.Text
+			u.projects.formErr, u.projects.candidates = "", nil
 		}
-		u.projects.formErr, u.projects.candidates = "", nil
 	} else if u.projects.open {
 		u.projects.query += e.Text
 		u.projects.chosen = 0
