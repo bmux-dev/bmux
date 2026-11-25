@@ -26,6 +26,8 @@ func TestUpdateRefusesBinariesItShouldntReplace(t *testing.T) {
 		{"/home/me/.local/bin/bmux", ok, ""},
 		{"/opt/homebrew/Cellar/bmux/0.6.0/bin/bmux", ok, "brew upgrade"},
 		{"/home/linuxbrew/.linuxbrew/Cellar/bmux/0.6.0/bin/bmux", ok, "brew upgrade"},
+		{"/opt/homebrew/Caskroom/bmux/0.7.6/bmux", ok, "brew upgrade"},
+		{"/home/linuxbrew/.linuxbrew/Caskroom/bmux/0.7.6/bmux", ok, "brew upgrade"},
 		{"/usr/local/bin/bmux", denied, "BMUX_INSTALL_DIR"},
 	} {
 		err := replaceable(c.exe, c.writable)

@@ -80,9 +80,9 @@ func runUpdate(socket string, args []string) error {
 }
 
 // replaceable refuses binaries bmux update shouldn't or can't replace. exe
-// has its symlinks resolved, so a Homebrew install is under a Cellar.
+// has its symlinks resolved, so a Homebrew install is under Cellar or Caskroom.
 func replaceable(exe string, writable func(dir string) error) error {
-	if strings.Contains(exe, "/Cellar/") {
+	if strings.Contains(exe, "/Cellar/") || strings.Contains(exe, "/Caskroom/") {
 		return fmt.Errorf("%s is managed by Homebrew; update it with brew upgrade", exe)
 	}
 	dir := filepath.Dir(exe)
