@@ -1,26 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">bmux — A terminal workspace. Already equipped.</title>
-  <desc id="desc">A modern terminal-inspired card for a batteries-included terminal multiplexer.</desc>
-  <rect width="1200" height="630" fill="#0B0B0B"/>
-  <path d="M64 64h1072v502H64z" fill="none" stroke="#343A3D" stroke-width="2"/>
-  <path d="M64 112h1072" stroke="#343A3D" stroke-width="2"/>
-  <circle cx="91" cy="88" r="5" fill="#83C8DC"/>
-  <circle cx="111" cy="88" r="5" fill="#555B5E"/>
-  <circle cx="131" cy="88" r="5" fill="#555B5E"/>
-  <text x="166" y="94" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">bmux — ready</text>
-  <text x="96" y="174" fill="#83C8DC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" letter-spacing="2">THE BATTERIES-INCLUDED TERMINAL MULTIPLEXER</text>
-  <text x="92" y="260" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="56" font-weight="600" letter-spacing="-2">A terminal workspace.</text>
-  <text x="92" y="328" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="56" font-weight="600" letter-spacing="-2">Already equipped.</text>
-  <text x="96" y="383" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21">Simple to start. Comfortable to use.</text>
-  <g transform="translate(96 430)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">
-    <text x="0" y="24" fill="#83C8DC">›</text><text x="22" y="24" fill="#E7E7E7">live session picker</text>
-    <text x="245" y="24" fill="#83C8DC">›</text><text x="267" y="24" fill="#E7E7E7">mouse copy</text>
-    <text x="422" y="24" fill="#83C8DC">›</text><text x="444" y="24" fill="#E7E7E7">saved layouts</text>
-    <text x="0" y="62" fill="#83C8DC">›</text><text x="22" y="62" fill="#E7E7E7">agent status</text>
-    <text x="245" y="62" fill="#83C8DC">›</text><text x="267" y="62" fill="#E7E7E7">project picker</text>
+  <title id="title">bmux — The batteries-included multiplexer, built for coding agents.</title>
+  <desc id="desc">Persistent sessions, a live session picker, git worktree grouping, an agent status sidebar, and modeless mouse selection over SSH in one static Go binary.</desc>
+  <defs>
+    <radialGradient id="glow" cx="72%" cy="50%" r="48%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#09090b" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#09090b" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+  <rect x="0.5" y="0.5" width="1199" height="629" fill="none" stroke="#27272a" />
+
+  <g transform="translate(64 72)">
+    <line x1="12" y1="17" x2="34" y2="17" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" />
+    <rect x="0" y="0" width="34" height="34" rx="4" fill="none" stroke="#22d3ee" stroke-width="2.6" />
+    <line x1="12" y1="0" x2="12" y2="34" stroke="#22d3ee" stroke-width="2.6" />
+    <text x="46" y="27" fill="#fafafa" font-family="'Adwaita Mono', 'JetBrains Mono', ui-monospace, monospace" font-size="29" font-weight="700">bmux</text>
+    <rect x="132" y="4" width="194" height="27" rx="13.5" fill="#18181b" stroke="#27272a" />
+    <text x="145" y="22" fill="#a1a1aa" font-family="'Adwaita Mono', 'JetBrains Mono', ui-monospace, monospace" font-size="13">Single Go binary · MIT</text>
   </g>
-  <path d="M96 526h1008" stroke="#343A3D" stroke-width="2"/>
-  <text x="96" y="554" fill="#E7E7E7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24" font-weight="700">bmux</text>
-  <text x="1086" y="553" text-anchor="end" fill="#929292" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">macOS · Linux</text>
-  <path d="M1096 538v18" stroke="#83C8DC" stroke-width="3"/>
+
+  <g transform="translate(64 188)" font-family="'Inter Display', 'Inter', system-ui, sans-serif" font-size="45" font-weight="700">
+    <text x="0" y="0" fill="#fafafa">The batteries-included</text>
+    <text x="0" y="56" fill="#fafafa">multiplexer, built for</text>
+    <text x="0" y="112" fill="#22d3ee">coding agents.</text>
+  </g>
+
+  <g transform="translate(64 356)" fill="#a1a1aa" font-family="'Inter', system-ui, sans-serif" font-size="19">
+    <text x="0" y="0">Live session picker · Git worktree grouping</text>
+    <text x="0" y="30">Agent sidebar · Modeless mouse copy over SSH</text>
+  </g>
+
+  <g transform="translate(64 424)" font-family="'Adwaita Mono', ui-monospace, monospace" font-size="14">
+    <rect x="0" y="0" width="116" height="32" rx="8" fill="#18181b" stroke="#27272a" />
+    <text x="12" y="21"><tspan fill="#22d3ee" font-weight="700">1.5 ms</tspan><tspan fill="#d4d4d8"> echo</tspan></text>
+    <rect x="126" y="0" width="190" height="32" rx="8" fill="#18181b" stroke="#27272a" />
+    <text x="138" y="21"><tspan fill="#22d3ee" font-weight="700">200k</tspan><tspan fill="#d4d4d8"> lines / 0.06 s</tspan></text>
+    <rect x="326" y="0" width="102" height="32" rx="8" fill="#18181b" stroke="#27272a" />
+    <text x="338" y="21"><tspan fill="#22d3ee" font-weight="700">0 Hz</tspan><tspan fill="#d4d4d8"> idle</tspan></text>
+  </g>
+
+  <line x1="64" y1="504" x2="552" y2="504" stroke="#27272a" />
+  <text x="64" y="540" font-family="'Adwaita Mono', ui-monospace, monospace" font-size="15">
+    <tspan fill="#e4e4e7" font-weight="700">bmux-dev.github.io/bmux</tspan>
+    <tspan fill="#71717a">  ·  macOS &amp; Linux</tspan>
+  </text>
+
+  <rect x="594" y="76" width="550" height="478" rx="12" fill="#18181b" stroke="#3f3f46" stroke-width="1.5" />
 </svg>
