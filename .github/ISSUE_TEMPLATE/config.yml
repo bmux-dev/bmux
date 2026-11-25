@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation & Guides
+    url: https://bmux-dev.github.io/bmux/
+    about: Configuration reference, keybindings, SSH/clipboard behavior, and troubleshooting.

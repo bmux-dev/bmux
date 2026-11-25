@@ -9,7 +9,7 @@ agent status sidebar, and modeless mouse selection, with no plugin manager.
 | | Version | Focus |
 | --- | --- | --- |
 | **Shipped** | [v0.7.6](#already-built) | Antigravity (`agy`) support, Homebrew tap, `bmux-dev/bmux` module path, redesigned docs & demo ([Releases](https://github.com/bmux-dev/bmux/releases)) |
-| **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: memory caps, signing, compatibility, quality |
+| **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: memory caps, bug fixes, compatibility, quality |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Worktree actions, popups, hints, multi-client, notifications |
 
@@ -23,14 +23,13 @@ Sizes are rough: **S** is a day or less, **M** a few days, **L** a week or more.
 
 | Item | Size | Status | Notes |
 | --- | --- | --- | --- |
-| Scrollback memory caps | M | To do | Hard per-pane byte/memory caps for large scrollback ([#157](https://github.com/bmux-dev/bmux/issues/157)), building on v0.7.5's 4.5× cell-memory reduction |
-| Open bugs & CI stability | S | To do | Copy Ctrl-clicked links over SSH when no local browser reaches you ([#183](https://github.com/bmux-dev/bmux/issues/183)); fix flaky `TestAttachedClientFocusControlsViewing` ([#150](https://github.com/bmux-dev/bmux/issues/150)) |
-| Signing & notarization | M | To do | Signed and notarized macOS binaries and release signatures (cosign/GPG); SHA-256 checksums and `brew install --cask bmux-dev/tap/bmux` are done |
+| Scrollback memory caps | M | Done | Configurable `scrollback.max-mb` per-pane byte cap (default 64 MiB, `0` = unlimited) in `internal/vt` and `config.toml` ([#157](https://github.com/bmux-dev/bmux/issues/157)), building on v0.7.5's 4.5× cell-memory reduction |
+| Open bugs & CI stability | S | Done | Ctrl-click over SSH or headless sessions copies unwrapped links via OSC 52 ([#183](https://github.com/bmux-dev/bmux/issues/183)); fixed `TestAttachedClientFocusControlsViewing` FIFO barrier ([#150](https://github.com/bmux-dev/bmux/issues/150)) |
 | Linux interactive QA | S | In progress | End-to-end Wayland (`wl-copy`) and X11 (`xclip`/`xsel`) clipboard and multi-terminal SSH verification |
-| Project hygiene | S | To do | Root `CONTRIBUTING.md` and GitHub issue/PR templates (contributor guide already lives on the [docs site](https://bmux-dev.github.io/bmux/project/contributing/)) |
+| Project hygiene | S | Done | Root [CONTRIBUTING.md](https://github.com/bmux-dev/bmux/blob/main/CONTRIBUTING.md) and `.github/` issue/PR templates (full guide on the [docs site](https://bmux-dev.github.io/bmux/project/contributing/)) |
 | Compatibility promise | M | Done | Save files, configs, and commands tested per release in `testdata/releases` ([#112](https://github.com/bmux-dev/bmux/issues/112), [#114](https://github.com/bmux-dev/bmux/issues/114); `v0.7.3` omitted as identical to `v0.7.2`). See [Compatibility](https://bmux-dev.github.io/bmux/reference/compatibility/) |
 | Quality & performance | L | Done | Fuzzing for session requests, parsers, and emulator input ([#133](https://github.com/bmux-dev/bmux/issues/133)), `esctest` conformance (`scripts/esctest.sh`), tmux benchmark suite (`scripts/compare-tmux.py`), and v0.7.5 performance overhaul ([#190](https://github.com/bmux-dev/bmux/pull/190)) |
-| Docs & changelog | M | Done | Redesigned docs site, 15s demo video, [tmux migration guide](https://bmux-dev.github.io/bmux/start/coming-from-tmux/), and [CHANGELOG.md](https://github.com/bmux-dev/bmux/blob/main/CHANGELOG.md) |
+| Docs & changelog | M | Done | Redesigned docs site, live-agent demo video, [tmux migration guide](https://bmux-dev.github.io/bmux/start/coming-from-tmux/), and [CHANGELOG.md](https://github.com/bmux-dev/bmux/blob/main/CHANGELOG.md) |
 
 ## v1.0: stable
 
@@ -61,6 +60,7 @@ Worth doing, not yet scheduled. Open or upvote an issue if one matters to you.
 | Terminal & sessions | Lock a session | `lock-session` |
 | Terminal & sessions | Nested SSH key-interception toggle | Pass prefix/root keys straight to an outer/inner bmux session over SSH |
 | Terminal & sessions | Sixel, iTerm2 images, and Kitty direct placements | Images today use Kitty Unicode placeholders (`allow-passthrough`) |
+| Packaging | Signed & notarized macOS binaries and release signatures | Apple Developer ID notarization + `cosign` signatures (SHA-256 checksums and `brew install --cask bmux-dev/tap/bmux` are shipped) |
 | Packaging | Native Linux distro packages | AUR, Nix flake, `.deb`/`.rpm` via GoReleaser nFPM |
 
 ## Principles
