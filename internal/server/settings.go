@@ -57,17 +57,17 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		passThrough[program] = true
 	}
 	settings := &serverSettings{
-		detect:       cfg.Agents.Detect,
-		agents:       agents,
-		busySamples:  samplesFor(cfg.Agents.WorkingAfter.Duration),
-		quietSamples: samplesFor(cfg.Agents.WaitingAfter.Duration),
-		restore:      cfg.Restore.Enabled,
-		resume:       cfg.Restore.Resume,
+		detect:             cfg.Agents.Detect,
+		agents:             agents,
+		busySamples:        samplesFor(cfg.Agents.WorkingAfter.Duration),
+		quietSamples:       samplesFor(cfg.Agents.WaitingAfter.Duration),
+		restore:            cfg.Restore.Enabled,
+		resume:             cfg.Restore.Resume,
 		passThrough:        passThrough,
 		scrollback:         cfg.Scrollback.Lines,
 		scrollbackMaxBytes: cfg.Scrollback.MaxMB << 20,
 		updateCheck:        cfg.Update.Check,
-		hooks:        cfg.Hooks,
+		hooks:              cfg.Hooks,
 	}
 	if p, foreground, background := cfg.PaneColors(); foreground {
 		settings.paneFG, settings.themeBG = rgbColor(p.Foreground), rgbColor(p.Background)
