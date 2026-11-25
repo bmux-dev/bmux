@@ -22,6 +22,7 @@ bmux integration uninstall claude
 
 | Agent | What it installs | Reports |
 | --- | --- | --- |
+| Antigravity (`agy`) | `hooks/bmux-agent-state.sh` and `bmux-agent-state` in `hooks.json`, plus the [bmux skill](/bmux/agents/scripting/) in `skills/bmux/SKILL.md`, in `~/.gemini/config` | working, idle, and the conversation for `agy --resume` |
 | Claude Code (`claude`) | `hooks/bmux-agent-state.sh` and hook entries in `settings.json`, plus the [bmux skill](/bmux/agents/scripting/) in `skills/bmux/SKILL.md`, in `$CLAUDE_CONFIG_DIR` or `~/.claude` | working, blocked on permission prompts and MCP questions, idle, and the session for `claude --resume` |
 | Codex (`codex`) | `hooks/bmux-agent-state.sh` and hook entries in `hooks.json`, in `$CODEX_HOME` or `~/.codex` | working, blocked on approvals, idle, and the session for `codex resume`. Codex runs new hooks only after you trust them in `/hooks`. |
 | omp (`omp`) | `extensions/bmux-agent-state.ts` and the bmux skill in `skills/bmux/SKILL.md`, in `$PI_CODING_AGENT_DIR`, `~/$PI_CONFIG_DIR/agent` or `~/.omp/agent` | working until a turn really ends, blocked on tool approvals, the ask tool and extensions' own prompts (see below), idle, and the session for `omp --resume`. Refuses to install where pi would load it too. |

@@ -37,7 +37,7 @@ const (
 
 // Executable or script names of coding agents, mapped to their labels.
 var agentCommands = map[string]string{
-	"aider": "aider", "amp": "amp", "claude": "claude", "codex": "codex",
+	"agy": "agy", "aider": "aider", "amp": "amp", "claude": "claude", "codex": "codex",
 	"copilot": "copilot", "crush": "crush", "cursor-agent": "cursor", "droid": "droid",
 	"gemini": "gemini", "goose": "goose", "grok": "grok", "kimi": "kimi",
 	"kiro-cli": "kiro", "omp": "omp", "opencode": "opencode", "pi": "pi", "qwen": "qwen",

@@ -280,10 +280,14 @@ for any job it would deliver the result of.
 `internal/integration` owns agents' config files; nothing else writes them.
 Integrations only add ways to call `bmux agent`; the server has no idea they
 exist. Claude Code and Codex get one managed script plus entries in their JSON
-hook tables; the script hands the event on stdin to `bmux integration hook
+hook tables; Antigravity (`agy`, in `~/.gemini/config/hooks.json`) uses
+top-level named hook entries (`bmux-agent-state`) covering flat
+`SessionStart`/`PreInvocation`/`Stop` lists and matcher-grouped `PostToolUse`,
+with its wrapper script printing `{}` to satisfy Antigravity's JSON stdout
+contract. Each script hands the event on stdin to `bmux integration hook
 AGENT`, where `HookReport` maps events to states in Go, so the script stays
-trivial and needs no jq. The hook path never prints, never starts a server and
-always exits 0.
+trivial and needs no jq. The hook path never prints anything extra, never starts
+a server and always exits 0.
 
 omp and pi get one managed extension file each, generated from one template:
 it keeps working/blocked/idle from their extension events (pi's
@@ -314,7 +318,7 @@ status compares that with the agent's current version, and a script whose
 hook entries are gone counts as not installed. Files are written atomically
 and keep their mode.
 
-Claude Code, omp and pi also get `skills/bmux/SKILL.md` through `withSkill`,
+Antigravity, Claude Code, omp and pi also get `skills/bmux/SKILL.md` through `withSkill`,
 which wraps an integration's install, uninstall and version check. The skill
 keeps its frontmatter first and carries the managed header in an HTML comment;
 a missing or older skill makes an installed integration count as outdated.

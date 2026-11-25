@@ -43,6 +43,6 @@ waiting command itself, even as a background job, would stay busy and stop
 answering its user.
 
 `bmux guide` prints the same for coding agents, with the supervision loop and
-rules, and `bmux --help` points agents to it. The Claude Code, omp and pi
-integrations also install a `bmux` skill, so those agents know about it
+rules, and `bmux --help` points agents to it. The Antigravity, Claude Code,
+omp and pi integrations also install a `bmux` skill, so those agents know about it
 without exploring.
