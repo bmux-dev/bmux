@@ -1,6 +1,6 @@
 ---
 name: bmux-screenshots
-description: Renders crisp 2x Retina PNG screenshots and MP4/WebM demo videos directly from the live bmux binary using its built-in VT emulator and Pillow/ffmpeg. Use when regenerating docs screenshots in site/src/assets/screenshots/, recording hero videos, or verifying UI changes visually across dark and light themes.
+description: Renders crisp 2x Retina PNG screenshots and real live-agent MP4/WebM/WebP demo videos directly from the live bmux binary using its built-in VT emulator and Pillow/ffmpeg. Use when regenerating docs screenshots in site/src/assets/screenshots/, recording homepage/README hero videos with real coding agents, or verifying UI and SVG renders visually across dark and light themes.
 ---
 
 # bmux-screenshots
@@ -28,11 +28,38 @@ Regenerate a single scene and theme (fast iteration):
 go run ./site/screenshots/capture -scene project-picker -theme light
 ```
 
-Record the 2x Retina homepage demo video (`demo.mp4`, `demo.webm`, `demo-poster.png`) into `site/public/demo/`:
+Record the scripted fallback demo video (for smoke-testing layout only; do **not** ship static `fake-agent` recordings as the homepage/README demo):
 
 ```bash
 go run ./site/screenshots/capture -scene demo -theme dark
 ```
+
+## Live Coding Agent Demo Recording (Homepage & README)
+
+For the public homepage and README demo (`site/public/demo/demo.{mp4,webm,webp}` and `demo-poster.png`), record **real coding agents** (`claude`, `codex`, `opencode`) running inside an isolated `bmux` server rather than static `fake-agent` scripts:
+
+1. **Isolate server & hooks completely** (never touch or kill the user's running `bmux` server):
+   - Build `./cmd/bmux` into a temp dir (e.g., `/tmp/bmux-live-demo/bin/bmux`) and prepend that directory to `PATH` so agent hooks (`bmux integration hook ...`) talk only to the demo binary.
+   - Set isolated `BMUX_RUNTIME_DIR` and `BMUX_CONFIG`, create throwaway git repos/worktrees under `/tmp/projects/`, and `kill-server` + `rm -rf` temp dirs on exit.
+2. **Agent CLI & prompt gotchas:**
+   - **Claude Code:** run `claude --model haiku --permission-mode default` (never `--no-session-persistence`, which only works with `--print`; never `exec claude`, or declining trust closes the pane). On the folder-trust prompt, `No, exit` is preselected—send `--key down --key enter`.
+   - **Codex:** run `codex -c check_for_update_on_startup=false`; send `--key escape` if a hook-review or skip banner appears.
+   - **OpenCode:** run `opencode --standalone`.
+   - **State polling:** `bmux agents --json` outputs a single JSON array (`[{...}]`), not NDJSON lines.
+   - **Cleanup:** Delete any temporary live-capture harness before committing.
+3. **Render video, poster, and looping README WebP:**
+   ```bash
+   python3 .agents/skills/bmux-screenshots/scripts/render_media.py \
+     --frames /tmp/live-demo.bin --mode video --theme dark --out-dir site/public/demo
+
+   # Looping animated WebP for README (15 fps, 1664px wide; stay <= 2.5 MB)
+   ffmpeg -y -i site/public/demo/demo.mp4 \
+     -vf "fps=15,scale=1664:-2:flags=lanczos" \
+     -c:v libwebp_anim -lossless 1 -compression_level 6 -q:v 75 -loop 0 \
+     site/public/demo/demo.webp
+   # If > 2.5 MB, re-encode with: -lossless 0 -compression_level 6 -q:v 85 -preset drawing -loop 0
+   ```
+   Verify `is_animated == True` and `loop == 0` with Pillow, and update `chapters` timestamps in `site/src/components/Demo.astro`.
 
 Available scenes:
 - `workspace` (`104x32`): multi-pane workspace with live sidebar and agent states
@@ -58,9 +85,12 @@ Use `--mode video --out-dir site/public/demo` to encode `demo.mp4`, `demo.webm`,
 
 ## Verification Checklist
 
-After regenerating screenshots, inspect at least one dark and one light PNG (plus any changed popup/overlay scene) directly before committing:
+After regenerating screenshots, demos, or rendered SVG/social-card graphics, inspect the rendered PNGs directly with `read_file` before committing:
 - Dark theme uses **One Dark** (`onedark`) and light theme uses **Catppuccin Latte** (`catppuccin-latte`)
 - Text and box borders are crisp at 2x Retina (`20x40` cell grid, no subpixel blur)
 - Light mode (`catppuccin-latte`) and dark mode (`onedark`) text, borders, and highlights have strong contrast
 - Agent sidebar shows distinct states (`working`, `blocked`, `idle`) and git branch/worktree hierarchy
 - Keybinding hints match current defaults (`Ctrl-a n`, `Ctrl-a s`, `Ctrl-a /`, `Ctrl-a ?`)
+- **Live demo motion:** extract frames from `demo.mp4` (including two frames ~0.4s apart during active agent work) and verify real spinner/timer/token progression and chapter transitions
+- **Rendered SVGs:** verify rasterized output has populated terminal content (no blank panels or collapsed `<tspan>` spacing)
+- **Privacy:** confirm zero leaked emails, API keys, auth tokens, cloud account IDs, or private repo paths in any frame

@@ -13,6 +13,9 @@ User docs live in `site/src/content/docs/`; update them with any user-visible
 change. `ROADMAP.md` and `docs/agents.md` (which the binary embeds for
 `bmux guide`) stay where they are and are synced into the site at build time,
 so edit them there, not under `site/`. Preview with `cd site && npm run dev`.
+For public demo videos, record real live coding agents in an isolated `bmux`
+server rather than static fake-agent scripts, and visually inspect rendered
+PNGs, video frames, and rasterized SVGs before committing.
 
 File a GitHub issue for every bug or feature before fixing it, labeled `bug` or
 `enhancement`, with Problem, Cause, Expected and Done when sections. Never
