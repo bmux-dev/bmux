@@ -1,0 +1,35 @@
+name: Bug report
+description: Report broken behavior or a regression in bmux
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened, and steps to reproduce?
+    validations:
+      required: true
+  - type: textarea
+    id: cause
+    attributes:
+      label: Cause
+      description: Root cause if known (optional for initial triage).
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: done_when
+    attributes:
+      label: Done when
+      description: Clear acceptance criteria for closing this issue.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, terminal emulator, SSH setup (if any), and `bmux --version` output.
+    validations:
+      required: true
