@@ -109,8 +109,25 @@ func linkAt(f *protocol.TerminalFrame, x, y int) string {
 	return ""
 }
 
+// canOpenLink reports whether openLink can reach a browser on the user's own
+// screen. When the bmux client runs over SSH or without a graphical display,
+// opening a link locally would either fail silently or open on the remote host.
+func canOpenLink(goos string, getenv func(string) string) bool {
+	if getenv("SSH_CONNECTION") != "" || getenv("SSH_TTY") != "" {
+		return false
+	}
+	switch goos {
+	case "darwin":
+		return true
+	case "linux", "freebsd", "openbsd", "netbsd":
+		return getenv("WAYLAND_DISPLAY") != "" || getenv("DISPLAY") != ""
+	default:
+		return false
+	}
+}
+
 // openLink opens raw with the desktop's handler on the machine running this
-// client, so it works from a remote session too.
+// client.
 func openLink(raw string) error {
 	if !openableLink(raw) {
 		return fmt.Errorf("won't open %q", raw)
