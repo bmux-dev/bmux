@@ -96,3 +96,56 @@ func TestScrollbackSettingAppliesToRunningPanes(t *testing.T) {
 		t.Fatalf("after lowering the limit: history %d, epoch %d -> %d", history, epoch, trimmed)
 	}
 }
+
+func TestScrollbackByteCapAppliesToRunningPanes(t *testing.T) {
+	setLimits := func(lines, maxMB int) {
+		cfg := config.Default()
+		cfg.Scrollback.Lines = lines
+		cfg.Scrollback.MaxMB = maxMB
+		activeSettings.Store(settingsFrom(cfg))
+	}
+	t.Cleanup(func() { activeSettings.Store(settingsFrom(config.Default())) })
+	setLimits(10000, 1)
+	t.Setenv("HOME", t.TempDir())
+	s, err := newSession("history-bytes", t.TempDir(), "/bin/sh", 200, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.stop()
+	p := s.panes[1]
+	writeWide := func(rows int) (history, bytes int, epoch uint64) {
+		line := strings.Repeat("W", 190) + "\r\n"
+		var output strings.Builder
+		for range rows {
+			output.WriteString(line)
+		}
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.trackHistory(func() { _, _ = p.term.WriteString(output.String()) })
+		return p.term.ScrollbackLen(), p.term.ScrollbackBytes(), p.epoch
+	}
+	// ~2320 bytes/row -> 1 MiB holds ~451 rows; writing 1000 must stay <= 1 MiB.
+	history, bytes, epoch := writeWide(1000)
+	if bytes == 0 || bytes > 1<<20 {
+		t.Fatalf("ScrollbackBytes = %d, want in (0, %d]", bytes, 1<<20)
+	}
+	if history >= 1000 {
+		t.Fatalf("history = %d, expected oldest lines dropped at 1 MiB cap", history)
+	}
+
+	// Lower byte cap below current usage via activeSettings; next write trims and bumps epoch.
+	p.mu.Lock()
+	p.term.SetScrollbackMaxBytes(4 << 10)
+	p.mu.Unlock()
+	activeSettings.Store(func() *serverSettings {
+		cfg := config.Default()
+		cfg.Scrollback.MaxMB = 1
+		s := settingsFrom(cfg)
+		s.scrollbackMaxBytes = 2 << 10
+		return s
+	}())
+	h2, b2, e2 := writeWide(1)
+	if b2 > 2<<10 || h2 >= history || e2 == epoch {
+		t.Fatalf("after shrinking byte cap: history %d->%d, bytes=%d, epoch %d->%d", history, h2, b2, epoch, e2)
+	}
+}

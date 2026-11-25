@@ -110,9 +110,10 @@ type Projects struct {
 	StartDir string   `toml:"start-dir"`
 }
 
-// Scrollback is how many lines of history each pane keeps.
+// Scrollback is how many lines and MiB of history each pane keeps.
 type Scrollback struct {
 	Lines int `toml:"lines"`
+	MaxMB int `toml:"max-mb"`
 }
 
 // Update controls the daily check for new bmux releases; bmux update
@@ -130,10 +131,13 @@ var HookEvents = []string{
 // NoticePositions are the values ui.notice-position accepts.
 var NoticePositions = []string{"top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"}
 
-// Bounds for scrollback.lines; each line holds a row of cells.
+// Bounds for scrollback.lines and scrollback.max-mb; each line holds a row of cells.
 const (
-	MinScrollbackLines = 100
-	MaxScrollbackLines = 200000
+	MinScrollbackLines     = 100
+	MaxScrollbackLines     = 200000
+	MinScrollbackMaxMB     = 0
+	MaxScrollbackMaxMB     = 1024
+	DefaultScrollbackMaxMB = 64
 )
 
 // Duration reads TOML strings such as "2s" or "1500ms".
@@ -158,7 +162,7 @@ func Default() Config {
 		Agents:     Agents{Detect: true, WorkingAfter: Duration{2 * time.Second}, WaitingAfter: Duration{2 * time.Second}},
 		Restore:    Restore{Enabled: true},
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3},
-		Scrollback: Scrollback{Lines: 10000},
+		Scrollback: Scrollback{Lines: 10000, MaxMB: DefaultScrollbackMaxMB},
 		Update:     Update{Check: true},
 	}
 }
@@ -381,6 +385,10 @@ func (c *Config) repair() []string {
 		bad("scrollback.lines %d must be between %d and %d", c.Scrollback.Lines, MinScrollbackLines, MaxScrollbackLines)
 		c.Scrollback.Lines = d.Scrollback.Lines
 	}
+	if c.Scrollback.MaxMB < MinScrollbackMaxMB || c.Scrollback.MaxMB > MaxScrollbackMaxMB {
+		bad("scrollback.max-mb %d must be between %d and %d", c.Scrollback.MaxMB, MinScrollbackMaxMB, MaxScrollbackMaxMB)
+		c.Scrollback.MaxMB = d.Scrollback.MaxMB
+	}
 	for event, commands := range c.Hooks {
 		if !slices.Contains(HookEvents, event) {
 			bad("hooks.%s isn't an event; use one of %s", event, strings.Join(HookEvents, ", "))
@@ -475,6 +483,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 [scrollback]
 # lines = 10000             # history kept per pane, 100-200000; bmux reload applies it
+# max-mb = 64               # memory cap per pane in MiB, 0 = unlimited (0-1024); bmux reload applies it
 
 [update]
 # check = true              # look for a new release once a day; bmux update installs it

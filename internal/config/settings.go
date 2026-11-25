@@ -169,6 +169,7 @@ var SettingTabs = []SettingTab{
 		),
 		group("History",
 			intSetting("scrollback.lines", "Scrollback lines", "History kept per pane, 100-200000", func(c *Config) *int { return &c.Scrollback.Lines }),
+			intSetting("scrollback.max-mb", "Scrollback memory (MiB)", "Per-pane memory cap in MiB, 0 = unlimited (0-1024)", func(c *Config) *int { return &c.Scrollback.MaxMB }),
 		),
 	)},
 }
