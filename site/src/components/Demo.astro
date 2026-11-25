@@ -1,29 +1,237 @@
 ---
-// Autoplaying demo for the home page: a muted looping recording of bmux in the
-// dark theme, shown on a dark stage in both site themes. Rendered by
-// `npm run screenshots` (scene "demo"). Honors reduced-motion by not autoplaying.
+// Real bmux demo video stage with synced clickable chapter pills.
+// Recorded from the live bmux binary in a 120x34 PTY at 30fps (1248x734).
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (ext: string) => `${base}/demo/demo.${ext}`;
+
+const chapters = [
+	{ id: 'agents', label: 'Agent sidebar & splits', key: 'Ctrl-a |', time: 0 },
+	{ id: 'sessions', label: 'Session picker', key: 'Ctrl-a s', time: 5.53 },
+	{ id: 'scrollback', label: 'Scrollback search', key: 'Ctrl-a /', time: 9.9 },
+	{ id: 'projects', label: 'Project & worktrees', key: 'Ctrl-a n', time: 14.26 },
+];
 ---
-<figure class="home-demo">
-	<video
-		id="home-demo-video"
-		autoplay
-		muted
-		loop
-		playsinline
-		preload="metadata"
-		poster={`${base}/demo/demo-poster.png`}
-		aria-label="Recording of bmux: attaching to a session, splitting a pane, switching sessions in the picker, searching scrollback and opening the project picker"
-	>
-		<source src={src('webm')} type="video/webm" />
-		<source src={src('mp4')} type="video/mp4" />
-	</video>
-</figure>
+
+<section class="demo-stage" id="demo" aria-label="Real bmux terminal demo">
+	<div class="demo-topbar">
+		<div class="demo-chapters" role="tablist" aria-label="Demo chapters">
+			{chapters.map((c, idx) => (
+				<button
+					type="button"
+					class:list={['demo-chap', { 'is-active': idx === 0 }]}
+					data-chapter-time={String(c.time)}
+					data-chapter-id={c.id}
+				>
+					<span>{c.label}</span>
+					<span class="demo-chap-key">{c.key}</span>
+				</button>
+			))}
+		</div>
+		<button type="button" class="demo-play-btn" data-demo-toggle aria-label="Pause or play demo video">
+			<span class="demo-play-dot"></span>
+			<span data-demo-toggle-label>Playing</span>
+		</button>
+		<div class="demo-progress-track" aria-hidden="true">
+			<div class="demo-progress-fill" data-demo-progress></div>
+		</div>
+	</div>
+
+	<figure class="demo-figure">
+		<video
+			id="home-demo-video"
+			autoplay
+			muted
+			loop
+			playsinline
+			preload="metadata"
+			poster={`${base}/demo/demo-poster.png`}
+			aria-label="Real recording of bmux: agent sidebar with blocked and working coding agents, splitting panes, switching sessions with live previews, searching scrollback, and opening projects with git worktrees"
+		>
+			<source src={src('webm')} type="video/webm" />
+			<source src={src('mp4')} type="video/mp4" />
+		</video>
+	</figure>
+</section>
+
+<style>
+	.demo-stage {
+		margin: 26px auto 0;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		border-radius: 14px;
+		background: #1e1e2e;
+		overflow: hidden;
+		text-align: left;
+		box-shadow:
+			0 32px 96px rgba(0, 0, 0, 0.7),
+			0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+	}
+
+	.demo-topbar {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 14px;
+		background: #0d0e14;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+		overflow-x: auto;
+	}
+
+	.demo-chapters {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-wrap: nowrap;
+	}
+
+	.demo-chap {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 12px;
+		border-radius: 7px;
+		font-size: 12.5px;
+		font-weight: 500;
+		color: #71717a;
+		border: 1px solid transparent;
+		white-space: nowrap;
+		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+	}
+	.demo-chap:hover {
+		color: #a1a1aa;
+		background: rgba(255, 255, 255, 0.03);
+	}
+	.demo-chap.is-active {
+		color: #fafafa;
+		background: rgba(34, 211, 238, 0.08);
+		border-color: rgba(34, 211, 238, 0.28);
+	}
+	.demo-chap-key {
+		font-family: var(--mono);
+		font-size: 11px;
+		color: #22d3ee;
+		opacity: 0.9;
+	}
+
+	.demo-play-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 5px 10px;
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		font-family: var(--mono);
+		font-size: 11.5px;
+		color: #a1a1aa;
+		white-space: nowrap;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+	.demo-play-btn:hover {
+		color: #fafafa;
+		border-color: rgba(255, 255, 255, 0.18);
+	}
+	.demo-play-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #22d3ee;
+	}
+	.demo-play-btn.is-paused .demo-play-dot {
+		background: #71717a;
+	}
+
+	.demo-progress-track {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 2px;
+		background: transparent;
+	}
+	.demo-progress-fill {
+		height: 100%;
+		width: 0%;
+		background: linear-gradient(90deg, rgba(34, 211, 238, 0.35), #22d3ee);
+		transition: width 0.1s linear;
+	}
+
+	.demo-figure {
+		margin: 0;
+		background: #1e1e2e;
+	}
+	.demo-figure video {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+</style>
+
 <script>
 	const video = document.getElementById('home-demo-video') as HTMLVideoElement | null;
-	if (video && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-		video.pause();
-		video.controls = true;
+	const chapBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-chapter-time]'));
+	const toggleBtn = document.querySelector<HTMLButtonElement>('[data-demo-toggle]');
+	const toggleLabel = document.querySelector<HTMLElement>('[data-demo-toggle-label]');
+	const progressFill = document.querySelector<HTMLElement>('[data-demo-progress]');
+
+	const params = new URLSearchParams(window.location.search);
+	const isCapture = params.get('capture') === '1';
+	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	function setActiveChapter(time: number) {
+		let activeBtn = chapBtns[0];
+		for (const btn of chapBtns) {
+			const t = Number(btn.dataset.chapterTime ?? 0);
+			if (time + 0.08 >= t) {
+				activeBtn = btn;
+			}
+		}
+		chapBtns.forEach((btn) => btn.classList.toggle('is-active', btn === activeBtn));
+	}
+
+	function syncPlayButton() {
+		if (!video || !toggleBtn || !toggleLabel) return;
+		const paused = video.paused;
+		toggleBtn.classList.toggle('is-paused', paused);
+		toggleLabel.textContent = paused ? 'Paused' : 'Playing';
+	}
+
+	if (video) {
+		if (isCapture || reduceMotion) {
+			video.pause();
+			if (reduceMotion) video.controls = true;
+			syncPlayButton();
+		}
+
+		chapBtns.forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const t = Number(btn.dataset.chapterTime ?? 0);
+				video.currentTime = t;
+				setActiveChapter(t);
+				if (video.duration && progressFill) {
+					progressFill.style.width = `${Math.min(100, (t / video.duration) * 100)}%`;
+				}
+				void video.play().then(syncPlayButton).catch(syncPlayButton);
+			});
+		});
+
+		toggleBtn?.addEventListener('click', () => {
+			if (video.paused) {
+				void video.play().then(syncPlayButton).catch(syncPlayButton);
+			} else {
+				video.pause();
+				syncPlayButton();
+			}
+		});
+
+		video.addEventListener('timeupdate', () => {
+			setActiveChapter(video.currentTime);
+			if (video.duration && progressFill) {
+				progressFill.style.width = `${Math.min(100, (video.currentTime / video.duration) * 100)}%`;
+			}
+		});
+		video.addEventListener('play', syncPlayButton);
+		video.addEventListener('pause', syncPlayButton);
+		syncPlayButton();
 	}
 </script>
