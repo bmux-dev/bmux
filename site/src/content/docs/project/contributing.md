@@ -148,10 +148,9 @@ git switch -c "docs/release-$V" origin/main
 
 Update:
 
-- `README.md`: the **vX.Y.Z pre-release for macOS and Linux** line near the top.
-- `ROADMAP.md`: the **Shipped** row of the table at the top; `Shipped in vX.Y.Z`
-  over the milestone's table when it's done; and a `vX.Y.Z added …` paragraph at
-  the end of **Already built**, matching the earlier ones.
+- `CHANGELOG.md`: add a new `## vX.Y.Z — YYYY-MM-DD` section at the top.
+- `ROADMAP.md`: update the **Shipped** row under **Now, next, later** and add a bullet or row under **Already built** when a milestone lands.
+- `site/src/pages/index.astro`: bump the `vX.Y.Z` release pill in the nav and hero eyebrow.
 - Any docs example that names a version that doesn't exist yet, such as
   `BMUX_VERSION=` in `install.sh` and the installation page.
 
