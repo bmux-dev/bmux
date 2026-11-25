@@ -69,6 +69,8 @@ func waitFrameMatching(t *testing.T, frames <-chan *protocol.Frame, timeout time
 
 func TestEventPushImmediateAfterIdle(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("BASH_SILENCE_DEPRECATION_WARNING", "1")
+	t.Setenv("PS1", "$ ")
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -82,15 +84,16 @@ func TestEventPushImmediateAfterIdle(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	// Use a small 20x4 viewport so JSON serialization overhead under -race
-	// doesn't mask event-driven wakeup latency.
-	if r := srv.request(protocol.Request{Op: "create", Name: "push", Dir: t.TempDir(), Width: 20, Height: 4}); r.Error != "" {
+	// Use a small 20x8 viewport so JSON serialization overhead under -race
+	// doesn't mask event-driven wakeup latency while leaving headroom for /bin/sh startup.
+	if r := srv.request(protocol.Request{Op: "create", Name: "push", Dir: t.TempDir(), Width: 20, Height: 8}); r.Error != "" {
 		t.Fatal(r.Error)
 	}
 	s := srv.sessions["push"]
-	_, _, frames := attachTestClient(t, l.Addr().String(), "push", 20, 4)
+	_, _, frames := attachTestClient(t, l.Addr().String(), "push", 20, 8)
 	// Initial frame arrives immediately without waiting on a 33ms ticker.
 	waitFrameMatching(t, frames, time.Second, func(f *protocol.Frame) bool { return len(f.Panes) == 1 })
+	time.Sleep(100 * time.Millisecond)
 
 	// Measure several idle -> dirty wakeups and take the best latency so a
 	// single scheduler pause under -race doesn't flake while still proving we
@@ -105,7 +108,7 @@ func TestEventPushImmediateAfterIdle(t *testing.T) {
 		}
 		marker := fmt.Sprintf("WAKE_%d", i)
 		start := time.Now()
-		s.panes[1].apply([]byte(marker + "\r\n"))
+		s.panes[1].apply([]byte("\r\n" + marker + "\r\n"))
 		waitFrameMatching(t, frames, time.Second, func(f *protocol.Frame) bool {
 			return len(f.Panes) > 0 && strings.Contains(frameText(f.Panes[0].Terminal), marker)
 		})
