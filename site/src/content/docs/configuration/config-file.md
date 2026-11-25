@@ -76,6 +76,7 @@ width = 24
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
 | `projects.start-dir` | `""` | Folder the new-session popup's Create tab starts in, and what its relative paths are relative to, e.g. `"~"`; absolute or `~/` path. Empty means the directory bmux was started in. |
 | `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
+| `scrollback.max-mb` | `64` | Hard memory cap per pane in MiB (0 to 1,024; `0` = unlimited); drops oldest lines once exceeded, and `bmux reload` applies it to running panes |
 | `update.check` | `true` | Look for a new release once a day and show `↑` in the status bar; see [Updates](/bmux/start/installation/#updates) |
 | `hooks.EVENT` | none | Shell commands to run when an event happens; see [Hooks](#hooks) |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](/bmux/configuration/rebinding-keys/) |

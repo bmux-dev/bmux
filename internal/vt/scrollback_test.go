@@ -163,4 +163,53 @@ func TestScrollback(t *testing.T) {
 			t.Errorf("expected empty scrollback after ED 3, got %d", e.ScrollbackLen())
 		}
 	})
+
+	t.Run("byte cap evicts oldest lines across wide rows and hyperlinks", func(t *testing.T) {
+		e := NewEmulator(200, 4)
+		e.SetScrollbackSize(10000)
+		// 64 KiB per-pane budget on a 200-col pane with OSC 8 hyperlinks (~24 KiB/row -> ~2 rows).
+		const capBytes = 64 << 10
+		e.SetScrollbackMaxBytes(capBytes)
+		if got := e.Scrollback().MaxBytes(); got != capBytes {
+			t.Fatalf("MaxBytes = %d, want %d", got, capBytes)
+		}
+		for range 50 {
+			e.WriteString("\x1b]8;;https://example.com/very/long/path/for/hyperlink\x07")
+			for range 190 {
+				e.WriteString("x")
+			}
+			e.WriteString("\x1b]8;;\x07\r\n")
+		}
+		if got := e.ScrollbackBytes(); got == 0 || got > capBytes {
+			t.Fatalf("ScrollbackBytes = %d, want in (0, %d]", got, capBytes)
+		}
+		if e.ScrollbackLen() >= 20 {
+			t.Fatalf("ScrollbackLen = %d, expected oldest lines evicted below byte cap", e.ScrollbackLen())
+		}
+
+		// Shrinking byte cap trims existing scrollback immediately.
+		e.SetScrollbackMaxBytes(4 << 10)
+		if got := e.ScrollbackBytes(); got > 4<<10 {
+			t.Fatalf("after shrink: ScrollbackBytes = %d, want <= %d", got, 4<<10)
+		}
+
+		// 0 disables the byte cap (falls back to line limit only).
+		beforeLen := e.ScrollbackLen()
+		e.SetScrollbackMaxBytes(0)
+		if e.Scrollback().MaxBytes() != 0 {
+			t.Fatalf("MaxBytes = %d, want 0", e.Scrollback().MaxBytes())
+		}
+		for range 10 {
+			e.WriteString("more\r\n")
+		}
+		if e.ScrollbackLen() <= beforeLen {
+			t.Fatalf("unlimited mode failed to retain new rows: %d -> %d", beforeLen, e.ScrollbackLen())
+		}
+
+		// Clear resets tracked bytes to 0.
+		e.ClearScrollback()
+		if got := e.ScrollbackBytes(); got != 0 {
+			t.Fatalf("after clear: ScrollbackBytes = %d, want 0", got)
+		}
+	})
 }

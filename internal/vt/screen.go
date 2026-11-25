@@ -1124,6 +1124,15 @@ func (s *Screen) SetScrollbackSize(maxLines int) {
 	}
 }
 
+// SetScrollbackMaxBytes sets the hard memory budget in bytes for the
+// scrollback buffer (0 means unlimited).
+func (s *Screen) SetScrollbackMaxBytes(maxBytes int) {
+	if s.scrollback == nil {
+		s.scrollback = newScrollback(DefaultScrollbackSize, s.styles)
+	}
+	s.scrollback.SetMaxBytes(maxBytes)
+}
+
 // markUsedStyles marks all StyleIDs referenced by this screen's cells and cursor.
 func (s *Screen) markUsedStyles(used []bool) {
 	for _, row := range s.rows {
