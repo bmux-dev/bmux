@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/graphics"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/graphics"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 )
 
 func newTestPane(t *testing.T, w, h int) *pane {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func layoutCommand(t *testing.T, s *session, r protocol.Request) protocol.PaneActivity {

@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/josephferrero/bmux/docs"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/version"
+	"github.com/bmux-dev/bmux/docs"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/version"
 )
 
 // command is one `bmux NAME` subcommand. This table drives dispatch, --help,

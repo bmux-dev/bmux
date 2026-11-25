@@ -7,8 +7,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // Scripting operations (bmux capture, bmux send) act on one pane from

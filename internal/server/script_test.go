@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 func awaitCapture(t *testing.T, srv *Server, pane int, want string) protocol.Response {

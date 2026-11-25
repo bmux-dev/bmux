@@ -1,6 +1,6 @@
 ---
 title: "Install and start"
-description: "Install bmux with a checksum-verified script or Go, start your first session, and keep it updated."
+description: "Install bmux with a checksum-verified script, Homebrew, or Go, start your first session, and keep it updated."
 sidebar:
   order: 1
 ---
@@ -27,10 +27,16 @@ you if that directory isn't on your `PATH`, or if another `bmux` comes first.
 Run it again to upgrade, or use [`bmux update`](/bmux/start/installation/#updates); if a server is
 running, `bmux restart` switches it to the new version.
 
+**With Homebrew** (macOS or Linux):
+
+```sh
+brew install --cask bmux-dev/tap/bmux
+```
+
 **With Go 1.27.3+** instead:
 
 ```sh
-go install github.com/josephferrero/bmux/cmd/bmux@latest
+go install github.com/bmux-dev/bmux/cmd/bmux@latest
 ```
 
 Go's binary directory must be on `PATH`. Check `go env GOBIN`; when empty, use

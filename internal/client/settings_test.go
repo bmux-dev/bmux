@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
 )
 
 func TestConfiguredPrefixReplacesCtrlA(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Session IDs never change or get reused while the server runs, unlike names.

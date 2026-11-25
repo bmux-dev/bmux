@@ -3,8 +3,8 @@ package client
 import (
 	"fmt"
 
+	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
 )
 
 // The welcome screen opens over the first attached session while the config

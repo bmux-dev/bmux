@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func attachTestClient(t *testing.T, addr, name string, width, height int) (net.Conn, *json.Encoder, <-chan *protocol.Frame) {

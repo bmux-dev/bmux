@@ -3,9 +3,9 @@ package client
 import (
 	"os"
 
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // applySettings installs client settings from the config file: prefix,

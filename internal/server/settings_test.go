@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func useConfig(t *testing.T, s *Server, content string) string {

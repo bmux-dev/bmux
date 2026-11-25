@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/josephferrero/bmux/internal/integration"
+	"github.com/bmux-dev/bmux/internal/integration"
 )
 
 const integrationUsage = "usage: bmux integration status [AGENT] | install [AGENT...] | uninstall AGENT..."

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/josephferrero/bmux/internal/graphics"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/graphics"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 )
 
 // images holds every pane's images, with the server-wide cap.

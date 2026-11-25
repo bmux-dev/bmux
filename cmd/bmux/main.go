@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"text/tabwriter"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/daemon"
-	"github.com/josephferrero/bmux/internal/profiling"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/daemon"
+	"github.com/bmux-dev/bmux/internal/profiling"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func main() {

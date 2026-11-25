@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Layout commands (bmux split, new-window, select, kill-pane, kill-window,

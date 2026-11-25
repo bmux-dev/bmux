@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/config"
 )
 
 func runThemeIn(t *testing.T, content string, env map[string]string, args ...string) (file, stdout, stderr string, err error) {

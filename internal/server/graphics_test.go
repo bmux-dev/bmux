@@ -14,8 +14,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/josephferrero/bmux/internal/graphics"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/graphics"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // testImage is an 8x8 PNG whose pixels all have the given value.

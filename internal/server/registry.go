@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func (s *Server) mutate(r protocol.Request) protocol.Response {

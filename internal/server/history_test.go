@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/config"
 )
 
 func TestRetainedViewportAnchorsAfterHistoryRingFills(t *testing.T) {

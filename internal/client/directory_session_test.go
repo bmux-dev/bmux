@@ -10,8 +10,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/server"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/server"
 )
 
 func TestDirectorySessionNamesAreValidAndKeepUTF8(t *testing.T) {

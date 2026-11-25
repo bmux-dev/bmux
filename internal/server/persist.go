@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Sessions survive server restarts and reboots as layouts, not processes:

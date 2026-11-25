@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Names lists every variable, in the order the docs give them.

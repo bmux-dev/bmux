@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // Shift+Enter reaches the program in the pane as plain Enter, unless the

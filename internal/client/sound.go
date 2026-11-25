@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/josephferrero/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/config"
 )
 
 // Alert sounds play on the machine running the attached client, like the

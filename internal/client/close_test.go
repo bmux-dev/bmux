@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // fakeRPC answers one-shot requests on a unix socket the way the server does.

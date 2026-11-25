@@ -15,11 +15,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/server"
-	"github.com/josephferrero/bmux/internal/update"
-	"github.com/josephferrero/bmux/internal/version"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/server"
+	"github.com/bmux-dev/bmux/internal/update"
+	"github.com/bmux-dev/bmux/internal/version"
 	"golang.org/x/sys/unix"
 )
 

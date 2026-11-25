@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // describe answers bmux list-panes, list-windows and display-message: one

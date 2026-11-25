@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/config"
 )
 
 // serverSettings are the config file's server-side settings. One server runs

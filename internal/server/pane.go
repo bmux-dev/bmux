@@ -18,9 +18,9 @@ import (
 	"github.com/creack/pty"
 	"golang.org/x/sys/unix"
 
-	"github.com/josephferrero/bmux/internal/graphics"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/graphics"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 )
 
 type pane struct {

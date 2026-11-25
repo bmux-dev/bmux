@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // Keep the picker and its cached terminal visible behind confirmation. Chrome

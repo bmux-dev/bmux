@@ -1,4 +1,4 @@
-module github.com/josephferrero/bmux
+module github.com/bmux-dev/bmux
 
 go 1.27.3
 

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/config"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/config"
 )
 
 func rebound(t *testing.T, toml string) config.Config {
