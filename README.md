@@ -1,256 +1,228 @@
 # bmux
 
-**The batteries-included terminal multiplexer.**
+**The batteries-included terminal multiplexer, built for coding agents.**
 
 [![CI](https://github.com/bmux-dev/bmux/actions/workflows/ci.yml/badge.svg)](https://github.com/bmux-dev/bmux/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bmux-dev/bmux?include_prereleases&label=release)](https://github.com/bmux-dev/bmux/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Platform: macOS & Linux](https://img.shields.io/badge/platform-macOS%20%26%20Linux-lightgrey)
 
-bmux brings common tmux-plugin workflows into one program. Browse sessions with
-live previews, watch your coding agents from a sidebar, copy text with the
-mouse, and keep your layout across restarts, without a plugin manager.
+bmux brings persistent sessions, a live-preview session picker, git worktree
+grouping, a coding-agent status sidebar, and modeless mouse selection over SSH
+into one static Go binary — local-first, zero telemetry, daily-driven on macOS
+and Linux.
 
-**v0.7.6 pre-release for macOS and Linux.**
+[Documentation](https://bmux-dev.github.io/bmux/guides/sessions/) · [Live Demo](https://bmux-dev.github.io/bmux/#demo) · [Coming from tmux](https://bmux-dev.github.io/bmux/start/coming-from-tmux/) · [Roadmap](ROADMAP.md)
 
-**[Documentation](https://bmux-dev.github.io/bmux/)**
+<p align="center">
+  <a href="https://bmux-dev.github.io/bmux/#demo">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="site/src/assets/screenshots/workspace-dark.png" />
+      <source media="(prefers-color-scheme: light)" srcset="site/src/assets/screenshots/workspace-light.png" />
+      <img alt="bmux workspace with coding agent panes, git worktree grouping, and the live agent sidebar" src="site/src/assets/screenshots/workspace-dark.png" width="100%" />
+    </picture>
+  </a>
+  <br />
+  <sub>Session &amp; agent sidebar (<code>Ctrl-h</code>) · Git worktree grouping · Live pane previews · <a href="https://bmux-dev.github.io/bmux/#demo">Watch the 15s interactive demo →</a></sub>
+</p>
 
-## Built in
+## Install & quick start
 
-Everything below would take a plugin (or a separate app) with tmux. In bmux it
-works out of the box, with no plugin manager.
+Requires macOS or Linux and an interactive terminal.
 
-| Instead of | Built into bmux |
-| --- | --- |
-| tmux-sessionx, tmux-fzf (sessions) | List-first session picker with fuzzy filtering and a live preview of the running terminal |
-| tmux-sessionist | Create (Ctrl-a n), rename and terminate sessions from the picker, toggle to the last session (Ctrl-a p), step to the previous or next one (Ctrl-a ( / )); bare `bmux` opens a session named after the current directory |
-| tmux-resurrect + tmux-continuum | Sessions, windows, splits, focus and each pane's directory saved every 5 seconds and on shutdown, restored automatically with agents reopening their conversations; [`bmux restart`](#restarts-and-upgrades) for upgrades |
-| sesh, tmux-sessionizer | [Project picker](https://bmux-dev.github.io/bmux/guides/project-picker/) (Ctrl-a n, `bmux project`): your sessions' folders and git repositories, landing in each folder's session or creating it |
-| tmuxinator, tmuxp | [Layout files](https://bmux-dev.github.io/bmux/guides/layout-files/): a `.bmux.toml` declares a folder's windows, splits and pane commands, which run once you trust the file; `bmux layout save` writes one |
-| vim-tmux-navigator | Vim/Neovim-aware [Ctrl-h/j/k/l](#vim-and-neovim-navigation) across bmux panes and into the sidebar; editor edges cross with one small mapping |
-| tmux-pain-control | Ctrl-a \| and - splits in the focused pane's directory, Ctrl-a x close (asks first if a program is running), Ctrl-h/j/k/l focus, Ctrl-a h/j/k/l resize that repeats with plain h/j/k/l, Ctrl-a m zoom |
-| tmux-yank | Drag, double-click or triple-click to select; copied on release with pbcopy, wl-copy, xclip, xsel, or OSC 52 over SSH. Apps' own OSC 52 copies (Neovim yanks) go to the same clipboard |
-| tmux-better-mouse-mode | Click to focus, drag dividers to resize, wheel scrolls history without copy mode, hold Alt to select or scroll in mouse-aware apps |
-| tmux-copycat, copy mode | An optional [scrollback view](https://bmux-dev.github.io/bmux/guides/selection-scrollback/#keyboard-scrollback) (Ctrl-a v) with vi keys, search (Ctrl-a /), and jumps between shell prompts; the mouse never needs it |
-| (no tmux equivalent) | Images programs draw in a pane (an agent sharing a screenshot) with the Kitty graphics protocol, kept per pane so they survive scrolling, splits, windows and detaching; see [images](https://bmux-dev.github.io/bmux/reference/troubleshooting/#images-in-panes) |
-| tmux-notify | A sound when an agent you aren't watching finishes or blocks; bells and OSC 9/777 notifications mark their pane in the sidebar |
-| tmux-prefix-highlight | The status line lists the prefix keys while Ctrl-a is pending and shows when repeat resizing is active |
-| tmux-powerline, tmux themes | Powerline status bars, accent colors, a light theme and presets for [Neovim colorschemes](#configuration) (Catppuccin, Tokyo Night, Gruvbox, Nord, ...) |
-| herdr (separate app) | [Agent sidebar](#agents): every coding agent across sessions with working, waiting and blocked state |
-
-The picker starts as a list: browse first, press **/** to search. See what's
-running before attaching. Mouse selection and scrolling work without entering
-copy mode. Split layouts and running shells stay available when you detach.
-
-For tmux or Zellij users, bmux focuses on list-first session switching and
-modeless mouse selection.
-
-## Quick start
-
-Requires macOS or Linux and an interactive terminal. Install the latest release
-with Homebrew, or into `~/.local/bin` with the install script:
+**Homebrew (macOS & Linux):**
 
 ```sh
 brew install --cask bmux-dev/tap/bmux
 ```
 
+**Install script** (SHA-256 verified against `checksums.txt`, installs to `~/.local/bin`, no `sudo` — see [`install.sh`](install.sh) and [installation options](https://bmux-dev.github.io/bmux/start/installation/)):
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
-bmux
 ```
 
-The script checks the download against the release's checksums and never uses
-`sudo`; see [installing](https://bmux-dev.github.io/bmux/start/installation/) for its options. With
-**Go 1.27.3+**, `go install github.com/bmux-dev/bmux/cmd/bmux@latest` works
-too (put `$(go env GOPATH)/bin` on your `PATH`).
-
-`bmux` creates a fresh session in the current directory, named after that
-directory. The server starts automatically. Existing sessions keep running.
-The first time, a welcome screen covers the basic keys and leads into the
-optional [agent integrations](#agents); it isn't shown again.
-
-Press **Ctrl-a d** to detach. Return with:
+**From source** (Go 1.27.3+ — Go is only needed when building from source; Homebrew and `install.sh` ship self-contained static binaries):
 
 ```sh
-bmux attach
+go install github.com/bmux-dev/bmux/cmd/bmux@latest
 ```
 
-This attaches to the most recently used session, including after
-`bmux restart`. Running bare `bmux` again always creates another session. Use
-`bmux list` to see sessions, or `bmux attach NAME` to choose one.
-`bmux kill NAME` terminates a session and all its panes.
+> **macOS note:** Release binaries are not Apple-notarized yet. The Homebrew cask clears `com.apple.quarantine` automatically and `curl` never sets it; manual browser downloads from [GitHub Releases](https://github.com/bmux-dev/bmux/releases) need `xattr -d com.apple.quarantine bmux`.
 
-**Coming from tmux:** the prefix is **Ctrl-a**; set `prefix = "C-b"` in the
-[config file](#configuration) for tmux's. Splits use **|** and **-**, as in many
-tmux configs. Every key can be [rebound](https://bmux-dev.github.io/bmux/configuration/rebinding-keys/),
-including giving Ctrl-l back to the shell.
+### Your first two minutes
 
-## Keys
+1. **Start a session** in any project folder:
+   ```sh
+   bmux
+   ```
+   The server starts automatically and names the session after the current directory. On first run, a welcome screen walks through the basic keys and optional [agent integrations](#agents).
+2. **Split and copy without modes:** press `Ctrl-a |` (side by side) or `Ctrl-a -` (stacked), move focus with `Ctrl-h/j/k/l` or a click, drag with the mouse to select and copy on release, and scroll history with the wheel.
+3. **Switch projects and watch agents:** press `Ctrl-a n` for the project & worktree picker, `Ctrl-a s` for the live-preview session picker (`/` filters), or launch a coding agent in any pane to track it in the left sidebar (`Ctrl-h` from the leftmost pane enters the sidebar).
+4. **Customize and detach:** press `Ctrl-a ,` for live-preview settings, `Ctrl-a ?` for all bindings, and `Ctrl-a d` to detach. Return with `bmux attach` (running bare `bmux` again always creates a new session; use `bmux list`, `bmux attach NAME`, and `bmux kill NAME` from the shell).
 
-`Ctrl-a s` means press **Ctrl-a**, release, then press **s**.
-
-| Action | Keys or mouse |
-| --- | --- |
-| Session picker | Ctrl-a s, or click the bottom status line |
-| New-session popup (find a project or create a session) | Ctrl-a n, or `bmux project [DIR]` |
-| Detach | Ctrl-a d |
-| Last session | Ctrl-a p |
-| Next / previous session | Ctrl-a ) / Ctrl-a ( |
-| New window / select 1–9 | Ctrl-a c / Ctrl-a 1…9, or click its tab on the top bar |
-| Next / previous / last window | Ctrl-a ] / Ctrl-a [ / Ctrl-a Tab |
-| Rename / close window | Ctrl-a R / Ctrl-a & (asks first if a program is running) |
-| Split side by side / stacked | Ctrl-a \| / Ctrl-a - |
-| Close pane | Ctrl-a x (asks first if a program is running) |
-| Last pane / swap / rotate | Ctrl-a ; / Ctrl-a { } / Ctrl-a Ctrl-o |
-| Pane to new window / into last window | Ctrl-a ! / Ctrl-a @ |
-| Preset layouts / even out splits | Ctrl-a Space (or Alt-1…5) / Ctrl-a E |
-| Focus pane | Ctrl-h/j/k/l, Ctrl-a arrows, click, or Ctrl-a o to cycle |
-| Sidebar | Ctrl-h from the leftmost pane; j/k select, Enter or l opens, d deletes a session, Esc returns |
-| Show / hide sidebar | Ctrl-a b |
-| Reload config | Ctrl-a r |
-| List key bindings | Ctrl-a ? |
-| Agent integrations | Ctrl-a i; Enter installs every agent found |
-| Settings | Ctrl-a ,; ←/→ switch tabs, Enter or Space changes a value (a choice opens a list; Enter picks, Esc reverts), saved to the config file |
-| Resize divider | Ctrl-a h/j/k/l, repeat h/j/k/l within one second; or drag it with the mouse |
-| Select and copy | Drag and release; Alt overrides mouse-aware apps. Or Ctrl-a v, move, v/V/Ctrl-v, y |
-| Scroll history | Mouse wheel or Shift-PageUp/PageDown |
-| Search history | Ctrl-a /, then n/N for the next match |
-| Paste | Your terminal's paste shortcut |
-| Send Ctrl-a to the application | Ctrl-a Ctrl-a |
-
-**Last session** toggles back to the session you came from. **Ctrl-h/j/k/l**
-navigate panes outside Vim/Neovim; inside those editors, the keys are forwarded.
-Other programs don't receive these shortcuts, including Ctrl-l to clear a shell.
-
-In the picker, **j/k** or arrows browse, **Enter** attaches, **n** creates,
-**r** renames, and **d** asks to terminate. **/** starts filtering; **Enter**
-finishes the filter, then **Enter** attaches.
-
-The [user guide](https://bmux-dev.github.io/bmux/) covers all controls, clipboard setup,
-[server shutdown](https://bmux-dev.github.io/bmux/reference/runtime-files/#stop-the-server), and [uninstalling](https://bmux-dev.github.io/bmux/reference/runtime-files/#uninstall).
-
-## Vim and Neovim navigation
-
-bmux has vim-tmux-navigator built in: **Ctrl-h/j/k/l** move between panes,
-and from the leftmost pane **Ctrl-h** continues into the sidebar. bmux checks
-the pane's foreground process; when it is Vim or Neovim, the keys go to the
-editor instead, so they still move between editor splits.
-
-To cross from an editor's edge split into the next bmux pane with the same
-keys, add one small mapping to `init.lua` or `.vimrc`, with no plugin and no plugin
-manager. It tries an editor split first, then calls `bmux focus DIRECTION`.
-The same mapping works in tmux. Copy it from
-[Vim and Neovim navigation](https://bmux-dev.github.io/bmux/guides/editor-navigation/).
-
-Outside an editor bmux keeps these keys, so by default **Ctrl-l doesn't clear
-the shell**. Set `"C-l" = "none"` under `[keys.root]` to give it back, or list
-programs such as fzf in `keys.pass-through` to forward the keys to them as to
-Vim. **Ctrl-a arrows**, **Ctrl-a o** and clicks always move between bmux panes
-directly, even with an editor in front.
-
-Focus events (`?1004`) work with no `focus-events on` setting: Neovim's
-`FocusGained`, `FocusLost` and `autoread` fire when you move between panes,
-switch terminal windows, open the picker or detach.
+**Coming from tmux?** The default prefix is `Ctrl-a`; set `prefix = "C-b"` in [configuration](#configuration) for tmux's, and every key can be [rebound](https://bmux-dev.github.io/bmux/configuration/rebinding-keys/).
 
 ## Agents
 
-Run agy, claude, codex, opencode, omp, pi, gemini or another coding agent in any
-pane; bmux recognizes it from the pane's foreground process, with no setup.
-The sidebar on the left lists your sessions, then every agent across them:
+Run **Claude Code, Codex, Antigravity (`agy`), Gemini CLI, OpenCode, omp, pi**, or any custom CLI in any pane. bmux detects it from the pane's foreground process with zero setup and lists your sessions (grouped by git worktree with optional `ui.show-branch` labels) alongside every running agent in the sidebar:
 
-```
- SESSIONS              │
- ● api                 │
- ○ web                 │
-───────────────────────│
- AGENTS 2              │
- ● claude      waiting │
-   api                 │
- ○ opencode       idle │
-   web                 │
-```
-
-| Icon | State |
+| Indicator | State |
 | --- | --- |
-| yellow ● | working: still drawing output |
-| teal ● | waiting: went quiet while you weren't looking; it finished or is asking you something |
-| red ● | blocked: the agent [reported](https://bmux-dev.github.io/bmux/agents/reporting-state/) it needs a decision |
-| green ○ | idle: ready, and you've seen it |
+| red `●` | **blocked**: agent [reported](https://bmux-dev.github.io/bmux/agents/reporting-state/) it needs a decision |
+| teal `●` | **waiting**: went quiet while unviewed (finished or asking for input) |
+| teal `●` | **bell**: program sent a bell or desktop notification (OSC 9/777) |
+| yellow `●` | **working**: actively drawing output |
+| green `○` | **idle**: ready, and already seen |
 
-Press **Ctrl-h** from the leftmost pane to move into the sidebar, **j/k** to
-pick an agent, and **Enter** or **l** to jump to its pane, in whichever session
-it is. A sound plays when an agent you aren't looking at becomes ready or
-blocked (`BMUX_SOUND=0` mutes it). Any program's bell or desktop notification
-marks its pane too. **Ctrl-a b** hides the sidebar; it hides itself below 80
-columns. Icons and colors follow herdr's defaults.
+A sound plays when an unviewed agent becomes ready or when any agent becomes blocked (`BMUX_SOUND=0` mutes it). Press `Ctrl-h` from the leftmost pane to move into the sidebar (`j/k` selects, `Enter` or `l` jumps to that pane across any session), and `Ctrl-a b` to toggle it (auto-hides below 80 columns).
 
-bmux never reads agent state from the screen's text. For exact state, such as
-telling a permission prompt from a finished turn, install an agent's
-integration: it makes the agent report its own state and session. Press
-**Ctrl-a i** for the integrations panel, or use the command line:
+bmux never scrapes agent state from screen text. For exact `working`/`blocked`/`idle` reporting and exact-session resume, install an agent's integration via `Ctrl-a i` or the CLI:
 
 ```sh
-bmux integration status          # what's installed, and what's on your PATH
-bmux integration install         # every agent found, or name some: install claude
+bmux integration status          # what's installed and on PATH
+bmux integration install         # every agent found, or name one: install claude
 bmux integration uninstall codex
 ```
 
-Integrations exist for Antigravity, Claude Code, Codex, omp, opencode and pi; they add
-hooks, an extension or a plugin to the agent's own config, keep your other
-settings and only run inside bmux panes. Any other agent can report with
-`bmux agent working|blocked|idle`; see
-[reporting agent state](https://bmux-dev.github.io/bmux/agents/reporting-state/).
+Integrations exist for **Antigravity (`agy`), Claude Code, Codex, omp, opencode, and pi** (and also install the `bmux` skill for `agy`, `claude`, `omp`, and `pi`). Any custom agent can report state with `bmux agent working|blocked|idle|clear`. See [agent sidebar](https://bmux-dev.github.io/bmux/agents/sidebar/), [agent integrations](https://bmux-dev.github.io/bmux/agents/integrations/), and [reporting agent state](https://bmux-dev.github.io/bmux/agents/reporting-state/).
 
-Agents can drive bmux too. `bmux agents`, `bmux capture`, `bmux send` and
-`bmux wait-agent` list agent panes, read what they ask, answer them and wait
-until one needs you; `bmux guide` teaches an agent all of it, so one agent can
-supervise the others and report to you. See
-[scripting panes and agents](https://bmux-dev.github.io/bmux/agents/scripting/).
+Agents can drive bmux directly (`bmux guide` teaches them the workflow):
+
+```sh
+bmux agents --json                                    # list agent panes + sequence numbers
+bmux capture api:2                                    # read a pane's visible screen
+bmux send api:2 --if-seq 12 --text "y" --key enter    # guard against races before sending
+bmux wait-agent --since 12                            # block until another agent needs attention
+```
+
+See [scripting panes and agents](https://bmux-dev.github.io/bmux/agents/scripting/).
+
+## Why bmux
+
+| Instead of | Built into bmux |
+| --- | --- |
+| tmux-sessionx / tmux-fzf | List-first session picker with fuzzy filter (`/`) and live terminal preview |
+| sesh / tmuxinator / tmuxp | Git-worktree project picker (`Ctrl-a n`) + trusted `.bmux.toml` layout files (`bmux layout save`) |
+| tmux-resurrect + continuum | Auto-saves every 5s and on shutdown; restores layouts, directories, and agent conversations; `bmux restart` for upgrades |
+| tmux-yank / copy-mode | Drag/double/triple-click copy (`pbcopy`, `wl-copy`, `xclip`, `xsel`, OSC 52) + optional vi scrollback view (`Ctrl-a v`) |
+| vim-tmux-navigator | Foreground-aware `Ctrl-h/j/k/l` across panes and sidebar; `FocusGained`/`FocusLost` out of the box |
+| tmux `allow-passthrough` | Native Kitty graphics retained per pane across scrollback, splits, windows, and detach |
+| Separate agent dashboards | Built-in agent status sidebar, sound/notification alerts, hooks, and agent-control CLI |
+
+<details>
+<summary>Full 15-plugin tmux comparison &amp; live-preview screenshot</summary>
+
+| Instead of | Built into bmux |
+| --- | --- |
+| tmux-sessionist | Create (`Ctrl-a n`), rename, and kill from the picker; `Ctrl-a p` last session; `Ctrl-a (` / `)` prev/next |
+| tmux-pain-control | Splits (`Ctrl-a \|` / `-`) in focused dir, `Ctrl-a x` close with confirmation, `Ctrl-a h/j/k/l` repeatable resize, `Ctrl-a m` zoom |
+| tmux-better-mouse-mode | Click to focus, drag dividers to resize, wheel scrolls history, `Alt`/`Shift` overrides mouse-aware apps |
+| tmux-copycat | Scrollback search (`Ctrl-a /`), `n`/`N` matches, `[`/`]` prompt jumps (OSC 133) |
+| tmux-notify | Sound on ready/blocked agents; bells and OSC 9/777 mark sidebar panes |
+| tmux-prefix-highlight | Status line shows pending prefix and active resize repeat mode |
+| tmux-powerline / themes | Powerline status bars, accent colors, and Neovim colorscheme presets (`bmux theme`) |
+
+See [Coming from tmux](https://bmux-dev.github.io/bmux/start/coming-from-tmux/) for the complete side-by-side breakdown.
+
+<p align="center">
+  <a href="https://bmux-dev.github.io/bmux/guides/sessions/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="site/src/assets/screenshots/session-picker-dark.png" />
+      <source media="(prefers-color-scheme: light)" srcset="site/src/assets/screenshots/session-picker-light.png" />
+      <img alt="bmux session picker with fuzzy filter and live terminal preview" src="site/src/assets/screenshots/session-picker-dark.png" width="100%" />
+    </picture>
+  </a>
+</p>
+
+</details>
+
+### How bmux compares
+
+- **vs. tmux + TPM:** Same client-server Unix socket architecture (server owns terminal state, attached clients own clipboard) and optional `prefix = "C-b"`, without maintaining a plugin manager or fragile clipboard/focus-event config.
+- **vs. Zellij:** Familiar prefix ergonomics instead of modal locks that intercept shell keys, lighter chrome, list-first session/worktree switching, and native coding-agent orchestration.
+- **Trade-offs:** No runtime plugin system by design (use `[hooks]` and the CLI instead), macOS & Linux only (no native Windows yet), and 0.x means config/CLI details may still evolve before 1.0.
+
+## Performance
+
+| Metric | bmux | Notes |
+| --- | --- | --- |
+| Keystroke latency | `1.5 ms` median (`2 ms` p99) | End-to-end client → server → PTY → client |
+| Heavy build output | `200k` lines in `0.06 s` | On par with tmux |
+| Memory footprint | `~21 MiB` RSS | Measured across 4 active sessions |
+| Idle CPU usage | `0 Hz` redraws | Event-driven row delta pushes |
+
+Measured against tmux 3.8 on Linux x86_64; reproduce locally with [`scripts/compare-tmux.py`](scripts/compare-tmux.py).
+
+## Keys
+
+`Ctrl-a s` means press `Ctrl-a`, release, then press `s`.
+
+| Action | Keys or mouse |
+| --- | --- |
+| Session picker | `Ctrl-a s`, or click bottom status line (`/` filters, `j/k` moves, `Enter` attaches) |
+| Project / worktree picker | `Ctrl-a n`, or `bmux project` (`bmux project DIR` attaches/creates directly) |
+| Split side by side / stacked | `Ctrl-a \|` / `Ctrl-a -` |
+| Focus pane / enter sidebar | `Ctrl-h/j/k/l`, `Ctrl-a` arrows, click (`Ctrl-h` from leftmost pane enters sidebar) |
+| Zoom / close pane | `Ctrl-a m` / `Ctrl-a x` (asks first if a program is running) |
+| Select & copy | Drag and release (`Alt` or `Shift` overrides mouse-aware apps); or `Ctrl-a v` |
+| Search history | `Ctrl-a /`, then `n`/`N` |
+| Settings | `Ctrl-a ,` |
+| Detach / list all keys | `Ctrl-a d` / `Ctrl-a ?` |
+
+<details>
+<summary>All default keybindings</summary>
+
+| Action | Keys or mouse |
+| --- | --- |
+| Last / next / prev session | `Ctrl-a p` / `Ctrl-a )` / `Ctrl-a (` |
+| New window / select 1–9 | `Ctrl-a c` / `Ctrl-a 1…9`, or click tab on top bar |
+| Next / prev / last window | `Ctrl-a ]` / `Ctrl-a [` / `Ctrl-a Tab` |
+| Rename / close window | `Ctrl-a R` / `Ctrl-a &` (asks first if running) |
+| Last pane / swap / rotate | `Ctrl-a ;` / `Ctrl-a {` `}` / `Ctrl-a Ctrl-o` |
+| Pane to new / last window | `Ctrl-a !` / `Ctrl-a @` |
+| Preset layouts / equalize | `Ctrl-a Space` (`Ctrl-a Alt-1…5`) / `Ctrl-a E` |
+| Resize divider | `Ctrl-a h/j/k/l`, repeat `h/j/k/l` within 1s, or drag divider |
+| Toggle / drive sidebar | `Ctrl-a b`; inside sidebar: click row, or `j/k`, `Enter`/`l`, `n` new, `d` delete, `Esc` |
+| Copy / keyboard scrollback | `Ctrl-a y` copies selection; `Ctrl-a v` then vi moves, `v`/`V`/`Ctrl-v`, `y` |
+| Scroll history | Mouse wheel or `Shift-PageUp`/`PageDown` |
+| Paste / reload config | Terminal paste shortcut / `Ctrl-a r` |
+| Send `Ctrl-a` to pane | `Ctrl-a Ctrl-a` |
+
+</details>
+
+See the [keybindings guide](https://bmux-dev.github.io/bmux/guides/keys/), [stopping the server](https://bmux-dev.github.io/bmux/reference/runtime-files/#stop-the-server), and [uninstalling](https://bmux-dev.github.io/bmux/reference/runtime-files/#uninstall).
+
+## Vim and Neovim navigation
+
+`Ctrl-h/j/k/l` move between panes and into the sidebar when the pane is not running Vim or Neovim; inside those editors, the keys pass through to move between editor splits. Add [`nvim-bmux-navigator` or a small mapping](https://bmux-dev.github.io/bmux/guides/editor-navigation/) to cross seamlessly from an editor edge split into adjacent bmux panes.
+
+Outside an editor, bmux intercepts these keys, so `Ctrl-l` does not clear the shell by default. Add `"C-l" = "none"` under `[keys.root]` to give it back, or add programs like `fzf` to `keys.pass-through` (`Ctrl-a` arrows, `Ctrl-a o`, and clicks always switch panes directly). Terminal focus events (`FocusGained`, `FocusLost`, `autoread`) work automatically without extra configuration.
 
 ## Restarts and upgrades
 
-bmux saves every session every few seconds and when the server stops. After an
-upgrade, a crash or a reboot, the next server brings back:
+bmux saves snapshots every 5 seconds and on clean shutdown. After an upgrade, crash, or reboot, the next server restores:
 
-- every session with its name, split layout and focused pane;
-- a fresh shell in each pane, in the directory that pane was in;
-- each agent, reopening its latest conversation in that directory
-  (`agy --continue`, `claude --continue`, `codex resume --last`,
-  `opencode --continue`, `omp --continue`, `pi --continue`), or the exact session its hooks reported.
+- every session, its windows and window names, split layout, zoom state, and focused pane;
+- a fresh shell in each pane's last directory;
+- built-in resume for `agy --continue`, `claude --continue`, `codex resume --last`, `opencode --continue`, `omp --continue`, and `pi --continue` (plus any custom agent configured under `[restore.resume]` or reporting a resume command via its integration).
 
-Scrollback and other running programs don't come back: restored panes are new
-processes, and resumed agents reopen their saved conversation rather than
-continuing the process that was running.
+Restored panes are fresh processes rather than live-migrated PTYs: scrollback and arbitrary running programs do not come back after a reboot.
 
-When a newer release is out, a small **↑** appears at the right end of the
-status bar (`↑ 0.8.0` when there's room). To upgrade:
+When a new release is out, `↑` appears on the right end of the status line:
 
-```sh
-bmux update     # downloads the release and checks it against its checksums
-bmux restart
-```
+- **Homebrew:** `brew upgrade --cask bmux && bmux restart`
+- **Install script / release binary:** `bmux update && bmux restart`
 
-`bmux update` replaces the binary only; `bmux restart` switches the server to
-it, so you choose when programs running in panes end. Until then the hint
-shows **↻**. Release builds query GitHub's public releases API
-(`api.github.com/repos/bmux-dev/bmux/releases`) once a day with zero telemetry
-or identifying payload; `[update] check = false` in the config file or
-`BMUX_NO_UPDATE_CHECK=1` turns that off.
-
-`bmux restart` saves, stops the old server, starts the new one and restores your sessions.
-Attached clients reconnect on their own. It works from inside a pane too. See
-[Restarts and reboots](https://bmux-dev.github.io/bmux/guides/restarts/) for details and where
-sessions are saved.
+`bmux update` replaces only the binary (until `bmux restart`, the hint shows `↻`), then `bmux restart` restarts the server and reconnects attached clients automatically. Release and `go install ...@latest` builds check `api.github.com/repos/bmux-dev/bmux/releases` once daily with zero telemetry (local `go build` checkouts skip this); set `update.check = false` or `BMUX_NO_UPDATE_CHECK=1` to disable it. See [Restarts and reboots](https://bmux-dev.github.io/bmux/guides/restarts/).
 
 ## Configuration
 
-Everything works without a config file. Press **Ctrl-a ,** to change common
-settings in a tabbed page; each change is saved to the config file and applies
-at once. Keybindings and a few other settings are edited in the file. The file
-is `~/.config/bmux/config.toml`, laid out like Helix's: a theme and the
-prefix at the top, one table per area, kebab-case keys, and only the lines you
-change. `bmux default-config` prints every setting with its default.
+Everything works with no config file. Press `Ctrl-a ,` for the live-preview settings UI, or edit `~/.config/bmux/config.toml` (`bmux default-config` prints every option with defaults):
 
 ```toml
-theme = "catppuccin-mocha"  # or tokyonight, gruvbox-light, nord, dracula, ...
-prefix = "C-b"            # tmux's prefix instead of Ctrl-a
+theme = "catppuccin-mocha"  # or tokyonight, gruvbox-light, nord, onedark, dracula, ...
+prefix = "C-b"
 
 [ui]
 accent = "amber"
@@ -259,84 +231,36 @@ accent = "amber"
 width = 30
 
 [agents]
-extra = ["myagent"]       # more programs to show as agents
-waiting-after = "5s"      # quiet this long before an agent counts as waiting
+extra = ["myagent"]
+waiting-after = "5s"
 
 [restore.resume]
 claude = ["claude", "--continue", "--model", "opus"]
 
-[keys.root]               # keys that work without the prefix
-"C-l" = "none"            # Ctrl-l clears the shell again
+[keys.root]
+"C-l" = "none"              # restore Ctrl-l clear-screen in shells
 
-[keys.prefix]             # keys after the prefix
+[keys.prefix]
 "v" = "split-right"
 "minus" = "split-down"
 ```
 
-Apply changes with **Ctrl-a r**, `bmux reload`, or `SIGUSR1` to the server, as
-in Helix; attached clients pick them up. Mistakes are shown in the status line
-and that setting keeps its default. The file also covers sounds, agent state
-colors, the terminal window title (session and pane title, on by default),
-turning agent detection or restore off, whether to show images (`ui.graphics`), and per-agent resume commands; see
-[configuration](https://bmux-dev.github.io/bmux/configuration/config-file/).
+Reload changes with `Ctrl-a r`, `bmux reload`, or `SIGUSR1` to the server. Mistakes appear in a floating notice box and that setting keeps its default.
 
-`BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`,
-`BMUX_SOUND`, `BMUX_RUNTIME_DIR`, `BMUX_CONFIG`, `BMUX_NO_UPDATE_CHECK`, and
-`BMUX_PPROF_DIR` override the config file; see
-[environment variables](https://bmux-dev.github.io/bmux/configuration/environment/).
-
-`theme` colors bmux's own chrome (status bars, sidebar, tabs, pickers, dividers,
-selection) with a scheme's published palette. Like a terminal theme it only sets
-defaults: panes use the theme's background and foreground wherever a program sets
-none (a plain shell), and colors a program sets itself, such as Neovim's or
-another CLI's own theme, and the ANSI palette, are left alone, so set the
-terminal to the same scheme for those. Programs that ask for the terminal's colors
-are told what panes show. `ui.pane-background = "terminal"` keeps your terminal's
-background in panes, `ui.theme-panes = false` keeps its colors there entirely,
-and `dark` and `light` always do.
-The names are `dark` (the default), `light`,
-`catppuccin-{mocha,macchiato,frappe,latte}`, `tokyonight-{night,storm,moon,day}`,
-`gruvbox-{dark,light}`, `nord`, `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`,
-`kanagawa-{wave,dragon,lotus}`, `onedark`, `dracula`,
-`everforest-{dark,light}` and `solarized-{dark,light}`. A scheme name without a
-variant picks its default: `catppuccin` is mocha, `tokyonight` night, `gruvbox`
-dark, `kanagawa` wave, `everforest` dark and `solarized` dark. `ui.accent` and
-`ui.agent-colors` still override the theme's colors.
-
-`bmux theme NAME` switches theme from a script: it saves the name to the config
-file and reloads, so attached clients change at once. In Neovim, a `ColorScheme`
-autocmd can call it; see [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/#switching-themes-from-a-script-or-neovim)
-for an example.
-
-## Status
-
-bmux is under active 0.x development; CI runs on macOS and Ubuntu, and it's
-used day to day on macOS and Linux.
-
-See the [roadmap](ROADMAP.md) for what's next.
+bmux ships 25 theme presets (`dark`, `light`, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Kanagawa, One Dark, Dracula, Everforest, Solarized) with `bmux theme NAME` for scripts or Neovim `ColorScheme` autocmds, plus `[hooks]` for lifecycle events and `BMUX_*` environment variables (`BMUX_THEME`, `BMUX_ACCENT`, `BMUX_POWERLINE_ASCII`, `BMUX_TERMINAL_PADDING`, `BMUX_SOUND`, `BMUX_NO_UPDATE_CHECK` override config settings; `BMUX_CONFIG`, `BMUX_RUNTIME_DIR`, and `BMUX_PPROF_DIR` configure paths and profiling). See [configuration](https://bmux-dev.github.io/bmux/configuration/config-file/), [switching themes](https://bmux-dev.github.io/bmux/configuration/config-file/#switching-themes-from-a-script-or-neovim), and [environment variables](https://bmux-dev.github.io/bmux/configuration/environment/).
 
 ## Contributing
 
-Issues and pull requests are welcome. For bugs, include your OS, terminal
-emulator, `bmux version`, and steps to reproduce.
-
-Build from a checkout and run the checks:
+Issues and pull requests are welcome (include OS, terminal emulator, `bmux version`, and reproduction steps for bugs). Check [ROADMAP.md](ROADMAP.md) for what's next, and read [AGENTS.md](AGENTS.md) and the [architecture guide](https://bmux-dev.github.io/bmux/project/architecture/) before changing terminal or session behavior.
 
 ```sh
 go build -o bin/bmux ./cmd/bmux
-./bin/bmux
 go test ./...
 go test -race ./...
 go vet ./...
 ```
 
-Read [AGENTS.md](AGENTS.md) and the [architecture guide](https://bmux-dev.github.io/bmux/project/architecture/)
-before changing terminal or session behavior.
-
-Releases are built by [GoReleaser](.goreleaser.yaml) from a tag on `main`;
-[Releasing](https://bmux-dev.github.io/bmux/project/contributing/#releasing)
-walks through cutting one. `goreleaser release --snapshot --clean` builds the
-same archives locally into `dist/`.
+See [Releasing](https://bmux-dev.github.io/bmux/project/contributing/#releasing) for release steps.
 
 ## License
 
