@@ -137,7 +137,7 @@ See [Coming from tmux](https://bmux-dev.github.io/bmux/start/coming-from-tmux/) 
 
 - **vs. tmux + TPM:** Same client-server Unix socket architecture (server owns terminal state, attached clients own clipboard) and optional `prefix = "C-b"`, without maintaining a plugin manager or fragile clipboard/focus-event config.
 - **vs. Zellij:** Familiar prefix ergonomics instead of modal locks that intercept shell keys, lighter chrome, list-first session/worktree switching, and native coding-agent orchestration.
-- **Trade-offs:** No runtime plugin system by design (use `[hooks]` and the CLI instead), macOS & Linux only (no native Windows yet), and 0.x means config/CLI details may still evolve before 1.0.
+- **Trade-offs:** No runtime plugin system by design (use `[hooks]` and the CLI instead), macOS & Linux only (no native Windows), and 0.x means config/CLI details may still evolve before 1.0.
 
 ## Performance
 
