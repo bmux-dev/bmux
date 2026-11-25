@@ -8,14 +8,22 @@ sidebar:
 Issues and pull requests are welcome. For bugs, include your OS, terminal
 emulator, `bmux version`, and steps to reproduce.
 
-Build from a checkout and run the checks:
+Build from a checkout (requires **Go 1.27.3+**) and run the checks:
 
 ```sh
+gofmt -l .
 go build -o bin/bmux ./cmd/bmux
 ./bin/bmux
 go test ./...
 go test -race ./...
 go vet ./...
+```
+
+To preview user docs or regenerate the 2× Retina documentation screenshots:
+
+```sh
+cd site && npm run dev
+go run ./site/screenshots/capture -scene all -theme both
 ```
 
 Read [AGENTS.md](https://github.com/bmux-dev/bmux/blob/main/AGENTS.md) and the [architecture guide](/bmux/project/architecture/)
@@ -111,7 +119,7 @@ You need push access and the [GitHub CLI](https://cli.github.com/) (`gh`),
 logged in. Set the version once; the commands below use it:
 
 ```sh
-V=v0.5.3
+V=v0.7.5
 ```
 
 ### 1. Pick the version

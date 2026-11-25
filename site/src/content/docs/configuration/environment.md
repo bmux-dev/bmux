@@ -16,9 +16,11 @@ export them in your shell startup file.
 | `BMUX_POWERLINE_ASCII` | `1` forces `<` and `>` separators |
 | `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding |
 | `BMUX_SOUND` | `0` turns off agent alert sounds |
-| `BMUX_RUNTIME_DIR` | Custom runtime directory; default follows the rules below |
+| `BMUX_RUNTIME_DIR` | Custom runtime directory; default follows the [runtime directory rules](/bmux/reference/runtime-files/) |
+| `BMUX_NO_UPDATE_CHECK` | Non-empty value (`1`) disables background update checks (same as `[update] check = false`) |
+| `BMUX_PPROF_DIR` | Directory where opted-in clients and servers create private `pprof` sockets; disabled by default. See [CPU and allocation profiles](/bmux/reference/troubleshooting/#cpu-and-allocation-profiles) |
 
-Appearance settings affect bmux's bars and highlights, not application colors.
+Appearance variables affect bmux chrome—and, for named themes when `ui.theme-panes` is enabled, unstyled panes. Variables read by the server (such as `BMUX_RUNTIME_DIR`, `BMUX_CONFIG`, and `BMUX_PPROF_DIR`) take effect when that server starts.
 
 ```sh
 BMUX_THEME=light BMUX_ACCENT=amber bmux

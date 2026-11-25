@@ -35,8 +35,8 @@ printed seq walks through every change in order. `--json` on `agents` and
 `capture` includes the seq.
 
 `bmux wait-agent --notify SESSION:PANE` keeps running and, instead of
-printing, types one `[bmux] … is blocked …` line into that agent's pane for
-each change, only while that agent is idle and only after it has handled the
+printing, types one `[bmux] …` line into that agent's pane for
+each `blocked` or `idle` transition, only while that agent is idle and only after it has handled the
 previous line. It keeps just each pane's newest change and drops panes that
 went back to work. Run it in a pane of its own: a supervising agent that ran a
 waiting command itself, even as a background job, would stay busy and stop
