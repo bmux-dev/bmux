@@ -134,3 +134,37 @@ session-closed = ["echo ran >> `+ran+`"]
 	runHooks("session-closed", protocol.PaneInfo{})
 	awaitLines(t, ran, "ran")
 }
+
+func TestHooksPreventShellInjectionFromPaneMetadata(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "hooks.log")
+	marker := filepath.Join(dir, "pwned")
+	evilTitle := "evil'; touch " + marker + "; echo '$(touch " + marker + ")'"
+	info := protocol.PaneInfo{
+		Session: "api", SessionID: 1, SessionPath: dir, Window: 1, WindowName: evilTitle,
+		Pane: 1, Path: dir, Command: "ssh", Title: evilTitle, Agent: "claude", State: "blocked",
+	}
+	for _, cmd := range []string{
+		"printf 'unquoted=%s\\n' #{pane_title} >> " + log,
+		"printf 'single=%s\\n' '#{window_name}' >> " + log,
+		`printf 'double=%s\n' "#{pane_title}" >> ` + log,
+		`printf 'env=%s\n' "$BMUX_PANE_TITLE" >> ` + log,
+	} {
+		if _, err := runCommand(cmd, info, 5*time.Second, "BMUX_HOOK=client-attached"); err != nil {
+			t.Fatalf("%q failed: %v", cmd, err)
+		}
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Fatalf("injected command created marker file %s", marker)
+	}
+	data, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, prefix := range []string{"unquoted=", "single=", "double=", "env="} {
+		want := prefix + evilTitle
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("missing literal %q in:\n%s", want, data)
+		}
+	}
+}

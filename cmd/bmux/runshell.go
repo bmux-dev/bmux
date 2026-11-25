@@ -38,7 +38,7 @@ func shellPane(socket, target string) (protocol.PaneInfo, error) {
 // paneShell is /bin/sh running command for info's pane, attached to this
 // terminal.
 func paneShell(info protocol.PaneInfo, command string) *exec.Cmd {
-	cmd := exec.Command("/bin/sh", "-c", format.Expand(command, format.Vars(info)))
+	cmd := exec.Command("/bin/sh", "-c", format.ExpandShell(command, format.Vars(info)))
 	for _, dir := range []string{info.Path, info.SessionPath} {
 		if stat, err := os.Stat(dir); dir != "" && err == nil && stat.IsDir() {
 			cmd.Dir = dir
@@ -52,7 +52,8 @@ func paneShell(info protocol.PaneInfo, command string) *exec.Cmd {
 			env = append(env, entry)
 		}
 	}
-	cmd.Env = append(env, "BMUX_SESSION="+info.Session, "BMUX_SESSION_ID="+strconv.FormatUint(info.SessionID, 10), "BMUX_PANE="+strconv.Itoa(info.Pane))
+	env = append(env, "BMUX_SESSION="+info.Session, "BMUX_SESSION_ID="+strconv.FormatUint(info.SessionID, 10), "BMUX_PANE="+strconv.Itoa(info.Pane))
+	cmd.Env = format.ApplyEnv(env, info)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd
 }

@@ -39,9 +39,10 @@ type panePipe struct {
 // pane's before anything can stop it; onExit runs once the command exits by
 // itself or after stop, and must clear the pipe from its pane.
 func startPipe(command string, info protocol.PaneInfo, attach, onExit func(*panePipe)) (*panePipe, error) {
-	cmd := exec.Command("/bin/sh", "-c", format.Expand(command, format.Vars(info)))
+	cmd := exec.Command("/bin/sh", "-c", format.ExpandShell(command, format.Vars(info)))
 	cmd.Dir = hookDir(info)
-	cmd.Env = append(shellEnv(os.Environ(), info.SessionID, info.Session, info.Pane), "BMUX_PIPE=1")
+	env := format.ApplyEnv(shellEnv(os.Environ(), info.SessionID, info.Session, info.Pane), info)
+	cmd.Env = append(env, "BMUX_PIPE=1")
 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr // the server log
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	stdin, err := cmd.StdinPipe()

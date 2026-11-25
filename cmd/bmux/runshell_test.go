@@ -32,4 +32,18 @@ func TestPaneShellActsAsTheTargetPane(t *testing.T) {
 	if cmd := paneShell(protocol.PaneInfo{Path: "/missing", SessionPath: "/also-missing"}, "true"); cmd.Dir != "" {
 		t.Fatalf("dir %q for missing directories", cmd.Dir)
 	}
+
+	// Untrusted pane metadata is exported via BMUX_* and shell-escaped in #{...}.
+	t.Setenv("BMUX_PANE_TITLE", "inherited")
+	evil := "x'; touch /tmp/pwn; echo '"
+	injected := paneShell(protocol.PaneInfo{Session: "api", SessionID: 9, Pane: 7, Path: dir, Title: evil, Agent: "claude"}, "printf '%s' '#{pane_title}'")
+	if !slices.Contains(injected.Env, "BMUX_PANE_TITLE="+evil) || !slices.Contains(injected.Env, "BMUX_PANE_PATH="+dir) {
+		t.Fatalf("expected BMUX_PANE_TITLE and BMUX_PANE_PATH in env")
+	}
+	if slices.Contains(injected.Env, "BMUX_PANE_TITLE=inherited") {
+		t.Fatalf("inherited BMUX_PANE_TITLE leaked through")
+	}
+	if got := injected.Args[len(injected.Args)-1]; got != "printf '%s' 'x'\\''; touch /tmp/pwn; echo '\\'''" {
+		t.Fatalf("unexpected quoted command: %q", got)
+	}
 }

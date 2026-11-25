@@ -36,9 +36,9 @@ sidebar:
 | `bmux reload` | Tell the running server to reload `config.toml` and notify every attached client to reload theirs |
 | `bmux theme [NAME \| --list]` | Switch the theme in `config.toml` and reload clients, or print every built-in theme with `--list` |
 | `bmux default-config` | Print every `config.toml` setting, commented out, with its default |
-| `bmux run-shell [-t TARGET] [-b] COMMAND` | Run a shell command for a pane (the calling pane by default): its `#{...}` variables, directory and `BMUX_*` environment; exits with the command's status. `-b` doesn't wait |
+| `bmux run-shell [-t TARGET] [-b] COMMAND` | Run a shell command for a pane (the calling pane by default): `BMUX_*` metadata env vars, shell-escaped `#{...}` variables and directory; exits with the command's status. `-b` doesn't wait |
 | `bmux if-shell [-t TARGET] CONDITION COMMAND [ELSE]` | Run `CONDITION` the same way, then `COMMAND` if it succeeded or `ELSE` if it failed |
-| `bmux pipe-pane [-t TARGET] [-o] [COMMAND]` | Copy everything the pane prints, escape sequences included, into `COMMAND`'s stdin, like tmux's `pipe-pane`: `bmux pipe-pane 'cat >> ~/#{session_name}-#{pane_id}.log'`. `COMMAND` runs like `run-shell`'s; a new one replaces the old. No `COMMAND` stops piping; `-o` stops a piped pane and starts an unpiped one, so one key can toggle logging. Piping stops when the command exits or the pane closes. A command that can't keep up loses output; the pane never waits for it |
+| `bmux pipe-pane [-t TARGET] [-o] [COMMAND]` | Copy everything the pane prints, escape sequences included, into `COMMAND`'s stdin, like tmux's `pipe-pane`: `bmux pipe-pane 'cat >> ~/${BMUX_SESSION}-${BMUX_PANE}.log'`. `COMMAND` runs like `run-shell`'s; a new one replaces the old. No `COMMAND` stops piping; `-o` stops a piped pane and starts an unpiped one, so one key can toggle logging. Piping stops when the command exits or the pane closes. A command that can't keep up loses output; the pane never waits for it |
 | `bmux guide` | Print the guide for coding agents: how to read, drive and watch panes |
 | `bmux capabilities` | Print the version, protocol version, commands and calling pane as JSON |
 | `bmux integration status [AGENT]` | List agent integrations: installed, update available, available (the agent is on `PATH`) or not found |

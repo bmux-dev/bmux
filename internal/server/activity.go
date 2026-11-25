@@ -216,10 +216,12 @@ func validateAgentLabel(label string) error {
 	if len(label) > maxAgentLabelBytes {
 		return fmt.Errorf("agent name must be at most %d bytes", maxAgentLabelBytes)
 	}
-	for _, r := range label {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("agent name must be printable text")
+	for i := 0; i < len(label); i++ {
+		c := label[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-' {
+			continue
 		}
+		return fmt.Errorf("agent name may contain only letters, digits, '.', '_' and '-'")
 	}
 	return nil
 }

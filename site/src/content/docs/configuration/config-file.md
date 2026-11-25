@@ -170,9 +170,9 @@ fail without changing anything.
 
 ```toml
 [hooks]
-agent-blocked = ["notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"]
+agent-blocked = ["notify-send 'bmux' \"$BMUX_SESSION: $BMUX_PANE_AGENT needs you\""]
 session-created = ["bmux split -h -d"]
-pane-exited = ["echo '#{pane_target} exited' >> ~/.local/state/bmux/exits.log"]
+pane-exited = ["echo \"$BMUX_PANE_TARGET exited\" >> ~/.local/state/bmux/exits.log"]
 ```
 
 | Event | When | Its pane |
@@ -185,11 +185,14 @@ pane-exited = ["echo '#{pane_target} exited' >> ~/.local/state/bmux/exits.log"]
 | `agent-blocked` | A pane's agent starts waiting on a decision | That pane |
 | `agent-idle` | A pane's agent finishes a turn | That pane |
 
-Each command runs with `/bin/sh -c` after its [`#{...}` variables](/bmux/reference/commands/#format-variables)
-are filled in for the event's pane. It runs in that pane's directory, with
-`BMUX_SESSION`, `BMUX_SESSION_ID` and `BMUX_PANE` set for it and `BMUX_HOOK` set
-to the event, so `bmux` commands in a hook act on that pane. Hooks run in the
-background and never hold anything up: each gets one minute, at most eight run
+Each command runs with `/bin/sh -c` in that pane's directory, with `BMUX_HOOK`
+set to the event and pane metadata exported as environment variables:
+`BMUX_SESSION`, `BMUX_SESSION_ID`, `BMUX_SESSION_PATH`, `BMUX_WINDOW_INDEX`,
+`BMUX_WINDOW_NAME`, `BMUX_PANE`, `BMUX_PANE_TARGET`, `BMUX_PANE_PATH`,
+`BMUX_PANE_COMMAND`, `BMUX_PANE_TITLE`, `BMUX_PANE_AGENT`, and
+`BMUX_PANE_AGENT_STATE`. [`#{...}` format variables](/bmux/reference/commands/#format-variables)
+are also supported and are shell-escaped for their quoting context, though `"$BMUX_..."`
+variables are preferred. Hooks run in the background and never hold anything up: each gets one minute, at most eight run
 at once (more are skipped), and their output and failures go to `server.log`.
 Stopping the server (`bmux restart`) doesn't count as panes exiting. A hook
 that creates sessions on `session-created` would create them forever.
