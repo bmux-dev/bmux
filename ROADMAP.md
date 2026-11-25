@@ -75,7 +75,7 @@ Shipped in v0.4.0 ([#15](https://github.com/josephferrero/bmux/issues/15)–[#21
 
 | Item | Size | Status |
 | --- | --- | --- |
-| Windows (tabs) per session | L | Done: Ctrl-a c, 1–9, ] / [, Tab, `,` rename, & close; tabs on the top bar; saved and restored |
+| Windows (tabs) per session | L | Done: Ctrl-a c, 1–9, ] / [, Tab, R rename, & close; tabs on the top bar; saved and restored |
 | Swap and rotate panes | S | Done: Ctrl-a { / }, Ctrl-a Ctrl-o |
 | Break and join panes | M | Done: Ctrl-a ! / @ |
 | Preset layouts | M | Done: Ctrl-a Space cycles, Alt-1…5 pick, Ctrl-a E equalizes |
@@ -116,7 +116,7 @@ Shipped in v0.6.0:
 | `send-keys`, `capture-pane` | M | Done: `bmux send` and `bmux capture` take every target form |
 | Layout commands | M | Done: `bmux split`, `new-window`, `select`, `kill-pane`, `kill-window`, `resize`, `zoom`, `rename-window`, with targets ([#84](https://github.com/bmux-dev/bmux/issues/84)) |
 | `list-panes`, `list-windows`, `display-message` | S | Done: `-F` formats, `-a` for every session, `--json`; `display-message` without `-p` shows in the session's status lines ([#86](https://github.com/bmux-dev/bmux/issues/86)) |
-| Format variables | M | Done: `#{session_name}`, `#{window_index}`, `#{pane_current_path}`, `#{pane_current_command}` and 17 more |
+| Format variables | M | Done: `#{session_name}`, `#{window_index}`, `#{pane_current_path}`, `#{pane_current_command}` and 18 more |
 | Hooks | M | Done: `[hooks]` in the config file for `session-created`, `session-closed`, `window-created`, `pane-exited`, `client-attached`, `client-detached`, `agent-blocked`, `agent-idle` ([#88](https://github.com/bmux-dev/bmux/issues/88)) |
 | `run-shell`, `if-shell` | S | Done: `bmux run-shell` and `bmux if-shell` for a pane, and keys bound to `run-shell COMMAND` ([#90](https://github.com/bmux-dev/bmux/issues/90)) |
 | Log a pane to a file | S | Done: `bmux pipe-pane [-o] COMMAND`, e.g. `cat >> pane.log`, and `#{pane_pipe}` ([#92](https://github.com/bmux-dev/bmux/issues/92)) |
@@ -131,10 +131,10 @@ existing sessions without warning.
 | Item | Size | Notes |
 | --- | --- | --- |
 | Compatibility promise | M | Done: save files, configs and commands from every release are tested against today's code (`testdata/releases`, recorded per release); mismatches say to run `bmux restart` ([#112](https://github.com/bmux-dev/bmux/issues/112), [#114](https://github.com/bmux-dev/bmux/issues/114)). See [Compatibility](https://bmux-dev.github.io/bmux/reference/compatibility/) |
-| Quality | L | Partly done: fuzzing for the protocol and emulator input ([#133](https://github.com/bmux-dev/bmux/issues/133)), esctest conformance runs (`scripts/esctest.sh`), and a latency, throughput and memory comparison with tmux (`scripts/compare-tmux.py`). Still to do: memory caps for large scrollback ([#157](https://github.com/bmux-dev/bmux/issues/157)) and closing the gaps the comparison found ([#153](https://github.com/bmux-dev/bmux/issues/153)-[#156](https://github.com/bmux-dev/bmux/issues/156)) |
+| Quality | L | Done through v0.7.5: fuzzing for the protocol and emulator input ([#133](https://github.com/bmux-dev/bmux/issues/133)), esctest conformance runs (`scripts/esctest.sh`), tmux latency/throughput/memory benchmark suite (`scripts/compare-tmux.py`), and performance gap closures ([#153](https://github.com/bmux-dev/bmux/issues/153)-[#156](https://github.com/bmux-dev/bmux/issues/156), [#190](https://github.com/bmux-dev/bmux/pull/190)). Still to do: hard memory caps for large scrollback ([#157](https://github.com/bmux-dev/bmux/issues/157)) |
 | Linux | S | Daily interactive use on Linux, not only CI. Wayland and X11 clipboard checked |
 | Distribution | M | Homebrew tap, signed and notarized macOS binaries, release signatures |
-| Docs | M | Demo GIF, tmux migration guide (config and plugin equivalents), CHANGELOG |
+| Docs | M | Demo video and tmux migration guide live on docs site; CHANGELOG still to do |
 | Project | S | CONTRIBUTING.md, issue and PR templates |
 
 ## v1.0: stable

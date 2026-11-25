@@ -24,6 +24,16 @@ it does not move existing sessions.
 | `server.sock` | Local client/server connection |
 | `server.lock` | Prevents duplicate servers in this directory |
 
+## Persistent state
+
+Saved sessions (`sessions.json`), trusted `.bmux.toml` hashes (`trusted-layouts.json`),
+and update-check state (`update-check.json`) live in a persistent state directory so
+they survive runtime-cache cleanups:
+
+1. `BMUX_RUNTIME_DIR`, if set (alongside the runtime files).
+2. On macOS, `~/Library/Application Support/bmux/`.
+3. On Linux, `$XDG_STATE_HOME/bmux/`, or `~/.local/state/bmux/` if unset.
+
 ## Stop the server
 
 Use **Ctrl-a d** to detach and leave work running. To upgrade, use
@@ -70,5 +80,6 @@ rm "$go_bin/bmux"
 
 If you moved the binary or built from source, remove that executable instead;
 `command -v bmux` locates the one on your `PATH`. After shutdown, you can remove
-`server.log` and `server.lock` from the runtime directory. Remove any `BMUX_*`
-settings you added to your shell configuration.
+the runtime directory, persistent state files (`sessions.json`,
+`trusted-layouts.json`, `update-check.json`), and `~/.config/bmux`. Remove any
+`BMUX_*` settings you added to your shell configuration.

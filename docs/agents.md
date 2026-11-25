@@ -42,7 +42,7 @@ ops:1   omp     idle     12   (this pane)
 
 `--json` prints the same as a list of objects with `target`, `session`,
 `session_id`, `pane`, `window`, `index` (the pane's window and position in
-it), `agent`, `state`, `seq`, `attention` and `self`.
+it), `seq`, and optional `agent`, `state`, `attention`, and `self` fields (omitted when empty or false).
 
 States: `working` (busy), `blocked` (waiting on a decision: a question, a
 permission prompt), `idle` (turn finished, waiting for a prompt). Agents with
@@ -57,7 +57,7 @@ the state you looked at.
 
 ```
 bmux capture api:1          # visible text
-bmux capture --json api:1   # {"target","window","index","agent","state","seq","text"}
+bmux capture --json api:1   # {"target","window","index","seq","text", plus "agent"/"state" on agent panes}
 ```
 
 This is the screen as the user would see it: the question, its options and
@@ -157,7 +157,7 @@ is idle and types one line into it, as if the user had:
 
 It types one change at a time, keeps only each pane's newest change, drops
 panes that went back to work, and types nothing more until the receiving
-agent has handled the last line. At start it reports only panes already
+agent has handled the last line. At start without `--since`, it reports only panes already
 blocked. You never run a waiting command, so you stay free to talk.
 
 ## Supervise other agents

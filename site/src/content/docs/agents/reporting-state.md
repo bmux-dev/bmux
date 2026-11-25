@@ -6,8 +6,8 @@ sidebar:
 ---
 
 Agents without an integration, or your own scripts, can report exact state by
-calling `bmux agent` from inside their pane; `BMUX_SESSION_ID` and `BMUX_PANE`
-identify the pane. Reports replace output timing for that pane. Report
+calling `bmux agent` from inside their pane; `BMUX_SESSION`,
+`BMUX_SESSION_ID` and `BMUX_PANE` identify the pane. Reports replace output timing for that pane. Report
 `working` when a turn starts, `idle` when it ends, `blocked` when the agent
 needs a decision, and `clear` when it exits. The optional name (at most 40
 bytes) labels the sidebar row and persists across reports. A report never

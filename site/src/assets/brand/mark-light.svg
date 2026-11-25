@@ -1,3 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="205 62 290 106" role="img" aria-label="bmux">
-  <text x="350" y="150" text-anchor="middle" fill="#0B0B0B" font-family="IBM Plex Mono, DejaVu Sans Mono, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="104" font-weight="500" letter-spacing="1">bmux</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 32" role="img" aria-label="bmux">
+  <rect x="2.5" y="4.5" width="23" height="23" rx="3" fill="none" stroke="#0891a5" stroke-width="2" />
+  <line x1="10.5" y1="4.5" x2="10.5" y2="27.5" stroke="#0891a5" stroke-width="2" />
+  <line x1="10.5" y1="16" x2="25.5" y2="16" stroke="rgba(9,9,11,0.35)" stroke-width="1.75" />
+  <text x="36" y="23" fill="#09090b" font-family="'JetBrains Mono', 'IBM Plex Mono', 'DejaVu Sans Mono', ui-monospace, monospace" font-size="22" font-weight="600" letter-spacing="-0.5">bmux</text>
 </svg>

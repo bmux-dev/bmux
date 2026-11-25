@@ -9,8 +9,8 @@ import Screenshot from '../../../components/Screenshot.astro';
 
 The sidebar runs down the left side of the attached view, on the bar
 background. Its top section lists every session in creation order, marked
-with the most urgent state inside it, or a `-` when no agent has anything to
-show. Below a divider, the **Agents** section
+with the most urgent state inside it, or a `-` on top-level session rows when
+no agent has anything to show (nested worktree rows omit the `-`). Below a divider, the **Agents** section
 lists every agent in every session, each with its state and session name, plus
 any other pane waiting on you. Terminals narrower than 80 columns hide it;
 Ctrl-a b hides or shows it at any width that fits.
