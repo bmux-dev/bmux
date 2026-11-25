@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -70,10 +71,12 @@ type ui struct {
 	appMouseButton                  int
 	linkHeld                        bool               // a Ctrl+click opened a link; swallow the rest of that press
 	opener                          func(string) error // opens links; nil means openLink
+	canOpen                         func() bool        // nil means canOpenLink(runtime.GOOS, os.Getenv)
 	divider                         *dividerDrag       // divider being dragged, or nil
 	quitting                        bool
 	clipboard                       *clipboardWorker
 	clipboardSeq                    uint64
+	clipboardCopiedNotice           string // custom notice for active clipboardSeq; empty uses default
 	sidebarHidden, sidebarFocus     bool
 	sidebarSelected                 sidebarTarget
 	sidebarBusy                     bool
@@ -795,7 +798,17 @@ func (u *ui) copy() {
 // copyText puts text on the clipboard of the machine running this client. It
 // reports whether the copy was accepted; if not, the notice says why.
 func (u *ui) copyText(text string) bool {
+	return u.copyTextWithNotice(text, "")
+}
+
+// copyLink puts a clicked URL on the clipboard when no local browser can open it.
+func (u *ui) copyLink(link string) bool {
+	return u.copyTextWithNotice(link, "Link copied (no browser here)")
+}
+
+func (u *ui) copyTextWithNotice(text, copiedNotice string) bool {
 	u.clipboardSeq++
+	u.clipboardCopiedNotice = copiedNotice
 	if u.clipboard == nil {
 		u.finishClipboard(clipboardResult{Seq: u.clipboardSeq, Text: text})
 		return true
@@ -827,6 +840,12 @@ func (u *ui) finishClipboard(result clipboardResult) bool {
 	}
 	if result.Err != nil {
 		u.notice("Clipboard failed: " + result.Err.Error())
+	} else if u.clipboardCopiedNotice != "" {
+		if result.Available {
+			u.notice(u.clipboardCopiedNotice)
+		} else {
+			u.notice(u.clipboardCopiedNotice + " via OSC 52")
+		}
 	} else if result.Available {
 		u.notice("Copied to system clipboard")
 	} else {
@@ -989,10 +1008,20 @@ func (u *ui) mouse(e *tcell.EventMouse) {
 	}
 	x = max(0, min(x, len(u.frame.Rows[y])-1))
 	if e.Buttons()&tcell.Button1 != 0 && e.Modifiers()&tcell.ModCtrl != 0 && !u.selection.dragging && !u.appMouseDown {
-		// Ctrl+click opens a link and nothing else: no selection, and the
-		// application never sees the click.
+		// Ctrl+click opens a link locally or copies it when no browser reaches
+		// the user: no selection, and the application never sees the click.
 		if link := linkAt(u.frame, x, y); link != "" {
 			u.linkHeld = true
+			local := true
+			if u.canOpen != nil {
+				local = u.canOpen()
+			} else if u.opener == nil {
+				local = canOpenLink(runtime.GOOS, os.Getenv)
+			}
+			if !local {
+				u.copyLink(link)
+				return
+			}
 			open := u.opener
 			if open == nil {
 				open = openLink
