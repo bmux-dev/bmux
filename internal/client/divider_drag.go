@@ -1,6 +1,6 @@
 package client
 
-import "github.com/josephferrero/bmux/internal/protocol"
+import "github.com/bmux-dev/bmux/internal/protocol"
 
 // dividerDrag is a mouse drag moving the divider between two panes. The pane
 // pair identifies the divider on the server, so it survives the layout

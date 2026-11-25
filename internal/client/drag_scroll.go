@@ -3,7 +3,7 @@ package client
 import (
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Dragging a mouse selection above or below the focused pane scrolls its

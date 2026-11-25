@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"sync/atomic"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // terminalColors are the default colors the last attaching terminal reported.

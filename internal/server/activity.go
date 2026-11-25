@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // Pane activity never interprets screen text. Agents are recognized by the

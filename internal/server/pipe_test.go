@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 func TestPipePaneCopiesOutputUntilStoppedOrTheCommandExits(t *testing.T) {

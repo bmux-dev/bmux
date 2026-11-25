@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmux-dev/bmux/internal/vt"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/creack/pty"
-	"github.com/josephferrero/bmux/internal/vt"
 )
 
 var allPNGScenes = []string{

@@ -3,9 +3,9 @@ package client
 import (
 	"testing"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 func TestSelectionRepaintInvalidatesCopySource(t *testing.T) {

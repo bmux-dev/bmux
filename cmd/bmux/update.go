@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/update"
-	"github.com/josephferrero/bmux/internal/version"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/update"
+	"github.com/bmux-dev/bmux/internal/version"
 	"golang.org/x/sys/unix"
 )
 

@@ -1,6 +1,6 @@
 package client
 
-import "github.com/josephferrero/bmux/internal/protocol"
+import "github.com/bmux-dev/bmux/internal/protocol"
 
 // The update hint sits at the right end of the bottom bar: ↑ when a newer
 // release is out, ↻ once bmux update installed it and the server still runs

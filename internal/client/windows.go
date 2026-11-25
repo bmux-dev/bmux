@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/gdamore/tcell/v2"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // windows lists the attached session's windows from its latest frame.

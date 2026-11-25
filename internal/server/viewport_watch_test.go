@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/vt"
+	"github.com/bmux-dev/bmux/internal/vt"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func viewportSession(t *testing.T) (*Server, *session) {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
 )
 
 // plainURL finds the start of a link printed as ordinary text; trimURL then

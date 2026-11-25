@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/vt"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/vt"
 )
 
 // trackHistory runs operation while syncing the pane's retained scrollback

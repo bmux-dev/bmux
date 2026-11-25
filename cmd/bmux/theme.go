@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/config"
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 // runTheme switches the chrome theme: it saves the name to the config file,

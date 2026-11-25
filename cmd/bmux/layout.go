@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/josephferrero/bmux/internal/client"
-	"github.com/josephferrero/bmux/internal/daemon"
-	"github.com/josephferrero/bmux/internal/protocol"
-	"github.com/josephferrero/bmux/internal/server"
+	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/daemon"
+	"github.com/bmux-dev/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/server"
 )
 
 // runLayout saves a session's windows as its folder's layout file, or trusts

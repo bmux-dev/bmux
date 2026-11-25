@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/josephferrero/bmux/internal/protocol"
+	"github.com/bmux-dev/bmux/internal/protocol"
 )
 
 func TestSyncOutputReleasesWholeUpdates(t *testing.T) {

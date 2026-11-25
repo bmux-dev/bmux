@@ -58,12 +58,12 @@ platform() {
 	case "$(uname -s)" in
 	Linux) os=linux ;;
 	Darwin) os=darwin ;;
-	*) fail "no prebuilt bmux for $(uname -s); install with Go instead: go install github.com/josephferrero/bmux/cmd/bmux@latest" ;;
+	*) fail "no prebuilt bmux for $(uname -s); install with Go instead: go install github.com/bmux-dev/bmux/cmd/bmux@latest" ;;
 	esac
 	case "$(uname -m)" in
 	x86_64 | amd64) arch=amd64 ;;
 	aarch64 | arm64) arch=arm64 ;;
-	*) fail "no prebuilt bmux for $(uname -m); install with Go instead: go install github.com/josephferrero/bmux/cmd/bmux@latest" ;;
+	*) fail "no prebuilt bmux for $(uname -m); install with Go instead: go install github.com/bmux-dev/bmux/cmd/bmux@latest" ;;
 	esac
 }
 
@@ -74,7 +74,7 @@ latest_tag() {
 	fetch "https://api.github.com/repos/$repo/releases?per_page=30" "$tmp/releases.json" ||
 		fail "couldn't list releases from GitHub; set BMUX_VERSION to pick one"
 	url=$(grep -o "\"browser_download_url\": *\"[^\"]*/$asset\"" "$tmp/releases.json" | head -n 1 | sed 's/.*"\(https[^"]*\)"$/\1/')
-	[ -n "$url" ] || fail "no release has $asset yet; install with Go instead: go install github.com/josephferrero/bmux/cmd/bmux@latest"
+	[ -n "$url" ] || fail "no release has $asset yet; install with Go instead: go install github.com/bmux-dev/bmux/cmd/bmux@latest"
 	tag=${url%/*}
 	printf '%s\n' "${tag##*/}"
 }

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/josephferrero/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/config"
 )
 
 func TestAlertSoundsUseTheFreedesktopThemeOnLinux(t *testing.T) {
