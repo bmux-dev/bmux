@@ -118,3 +118,98 @@ func TestRawPasteRejectionIsVisibleWithoutSendingOrEditing(t *testing.T) {
 		}
 	}
 }
+
+func TestRawPasteProjectCreateFormFields(t *testing.T) {
+	t.Run("dir field", func(t *testing.T) {
+		u, requests := navigationUI(t)
+		u.projects = projectPicker{
+			open:       true,
+			creating:   true,
+			field:      0,
+			dir:        "~/code/",
+			name:       "api",
+			makeDir:    true,
+			formErr:    "bad dir",
+			candidates: []string{"a", "b"},
+		}
+		u.handleRawPaste(&rawPasteEvent{Text: "bmux"})
+		if u.projects.dir != "~/code/bmux" || u.projects.name != "api" || !u.projects.makeDir {
+			t.Fatalf("dir paste wrong target: %+v", u.projects)
+		}
+		if u.projects.formErr != "" || u.projects.candidates != nil {
+			t.Fatalf("dir paste did not clear errors/candidates: %+v", u.projects)
+		}
+		select {
+		case r := <-requests:
+			t.Fatalf("unexpected request: %+v", r)
+		default:
+		}
+	})
+
+	t.Run("name field", func(t *testing.T) {
+		u, requests := navigationUI(t)
+		u.projects = projectPicker{
+			open:       true,
+			creating:   true,
+			field:      1,
+			dir:        "~/code/bmux",
+			name:       "my-",
+			makeDir:    true,
+			formErr:    "bad name",
+			candidates: []string{"a"},
+		}
+		u.handleRawPaste(&rawPasteEvent{Text: "session"})
+		if u.projects.name != "my-session" || u.projects.dir != "~/code/bmux" || !u.projects.makeDir {
+			t.Fatalf("name paste wrong target: %+v", u.projects)
+		}
+		if u.projects.formErr != "" || u.projects.candidates != nil {
+			t.Fatalf("name paste did not clear errors/candidates: %+v", u.projects)
+		}
+		select {
+		case r := <-requests:
+			t.Fatalf("unexpected request: %+v", r)
+		default:
+		}
+	})
+
+	t.Run("toggle field ignores paste", func(t *testing.T) {
+		u, requests := navigationUI(t)
+		u.projects = projectPicker{
+			open:     true,
+			creating: true,
+			field:    2,
+			dir:      "~/code/bmux",
+			name:     "api",
+			makeDir:  true,
+			formErr:  "keep",
+		}
+		u.handleRawPaste(&rawPasteEvent{Text: "ignored"})
+		if u.projects.dir != "~/code/bmux" || u.projects.name != "api" || !u.projects.makeDir || u.projects.formErr != "keep" {
+			t.Fatalf("toggle paste mutated state: %+v", u.projects)
+		}
+		select {
+		case r := <-requests:
+			t.Fatalf("unexpected request: %+v", r)
+		default:
+		}
+	})
+
+	t.Run("projects filter", func(t *testing.T) {
+		u, requests := navigationUI(t)
+		u.projects = projectPicker{
+			open:     true,
+			creating: false,
+			query:    "bm",
+			chosen:   3,
+		}
+		u.handleRawPaste(&rawPasteEvent{Text: "ux"})
+		if u.projects.query != "bmux" || u.projects.chosen != 0 {
+			t.Fatalf("filter paste wrong state: %+v", u.projects)
+		}
+		select {
+		case r := <-requests:
+			t.Fatalf("unexpected request: %+v", r)
+		default:
+		}
+	})
+}
