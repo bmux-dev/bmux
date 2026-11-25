@@ -101,7 +101,9 @@ func (h hookAgent) agent(label, command, configVar, configDir string, notes stri
 // hookEvent is the part of a hook's stdin JSON bmux reads.
 type hookEvent struct {
 	Event            string `json:"hook_event_name"`
+	EventCamel       string `json:"hookEventName"`
 	Session          string `json:"session_id"`
+	ConversationID   string `json:"conversationId"`
 	NotificationType string `json:"notification_type"`
 }
 
@@ -120,6 +122,8 @@ type Report struct {
 func HookReport(agent string, input io.Reader) (Report, bool) {
 	var h hookAgent
 	switch agent {
+	case agyHook.name:
+		h = agyHook
 	case claude.name:
 		h = claude
 	case codex.name:
@@ -130,6 +134,12 @@ func HookReport(agent string, input io.Reader) (Report, bool) {
 	var event hookEvent
 	if json.NewDecoder(io.LimitReader(input, 1<<20)).Decode(&event) != nil {
 		return Report{}, false
+	}
+	if event.Event == "" {
+		event.Event = event.EventCamel
+	}
+	if event.Session == "" {
+		event.Session = event.ConversationID
 	}
 	state := h.states(event)
 	if state == "" {

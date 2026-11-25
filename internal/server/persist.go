@@ -77,6 +77,7 @@ type paneSnapshot struct {
 
 // Built-in resume commands for recognized agents without a reported one.
 var agentContinue = map[string][]string{
+	"agy":      {"agy", "--continue"},
 	"claude":   {"claude", "--continue"},
 	"codex":    {"codex", "resume", "--last"},
 	"omp":      {"omp", "--continue"},

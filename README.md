@@ -147,7 +147,7 @@ switch terminal windows, open the picker or detach.
 
 ## Agents
 
-Run claude, codex, opencode, omp, pi, gemini or another coding agent in any
+Run agy, claude, codex, opencode, omp, pi, gemini or another coding agent in any
 pane; bmux recognizes it from the pane's foreground process, with no setup.
 The sidebar on the left lists your sessions, then every agent across them:
 
@@ -188,7 +188,7 @@ bmux integration install         # every agent found, or name some: install clau
 bmux integration uninstall codex
 ```
 
-Integrations exist for Claude Code, Codex, omp, opencode and pi; they add
+Integrations exist for Antigravity, Claude Code, Codex, omp, opencode and pi; they add
 hooks, an extension or a plugin to the agent's own config, keep your other
 settings and only run inside bmux panes. Any other agent can report with
 `bmux agent working|blocked|idle`; see
@@ -208,8 +208,8 @@ upgrade, a crash or a reboot, the next server brings back:
 - every session with its name, split layout and focused pane;
 - a fresh shell in each pane, in the directory that pane was in;
 - each agent, reopening its latest conversation in that directory
-  (`claude --continue`, `codex resume --last`, `opencode --continue`,
-  `omp --continue`, `pi --continue`), or the exact session its hooks reported.
+  (`agy --continue`, `claude --continue`, `codex resume --last`,
+  `opencode --continue`, `omp --continue`, `pi --continue`), or the exact session its hooks reported.
 
 Scrollback and other running programs don't come back: restored panes are new
 processes, and resumed agents reopen their saved conversation rather than

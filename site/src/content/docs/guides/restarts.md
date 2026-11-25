@@ -14,9 +14,9 @@ a crash or a reboot, restores them before accepting clients:
 - a fresh login shell in each pane, in the directory that pane's shell was in;
 - agents, by typing a resume command into the restored shell. Reported
   commands run as given. Otherwise recognized agents continue their latest
-  conversation in that directory: `claude --continue`, `codex resume --last`,
-  `opencode --continue`, `omp --continue`, `pi --continue`. When two panes
-  would continue the same agent in the same directory, only the first does;
+  conversation in that directory: `agy --continue`, `claude --continue`,
+  `codex resume --last`, `opencode --continue`, `omp --continue`, `pi --continue`.
+  When two panes would continue the same agent in the same directory, only the first does;
   the other gets a shell, so one conversation never opens twice.
 
 Nothing else that was running comes back: no scrollback, no editors, servers
