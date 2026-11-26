@@ -265,3 +265,73 @@ func TestCheckerAsksAtMostOncePerInterval(t *testing.T) {
 		t.Fatalf("clock set back: %v, %d requests", err, f.requests.Load())
 	}
 }
+
+func TestIsPrereleaseAndChannelFiltering(t *testing.T) {
+	if !IsPrerelease("0.7.8-beta.1") || IsPrerelease("0.7.8") || IsPrerelease("not-a-version") {
+		t.Fatalf("IsPrerelease unexpected results")
+	}
+	f := newFakeReleases(t)
+	full := []string{"bmux_linux_amd64.tar.gz", "checksums.txt"}
+	f.list = listOf(
+		releaseJSON("v0.7.8-beta.1", false, full...),
+		releaseJSON("v0.7.7", false, full...),
+	)
+
+	// Default/stable ignores v0.7.8-beta.1 and selects v0.7.7.
+	got, found, err := f.source().Latest(context.Background())
+	if err != nil || !found || got.Version != "0.7.7" {
+		t.Fatalf("stable Latest = %+v found=%v err=%v", got, found, err)
+	}
+
+	// Beta selects v0.7.8-beta.1.
+	betaSrc := f.source()
+	betaSrc.Channel = ChannelBeta
+	got, found, err = betaSrc.Latest(context.Background())
+	if err != nil || !found || got.Version != "0.7.8-beta.1" {
+		t.Fatalf("beta Latest = %+v found=%v err=%v", got, found, err)
+	}
+
+	// Once stable 0.7.8 ships, beta picks 0.7.8 over 0.7.8-beta.1.
+	f.list = listOf(
+		releaseJSON("v0.7.8", false, full...),
+		releaseJSON("v0.7.8-beta.2", false, full...),
+	)
+	got, found, err = betaSrc.Latest(context.Background())
+	if err != nil || !found || got.Version != "0.7.8" {
+		t.Fatalf("beta with newer stable = %+v found=%v err=%v", got, found, err)
+	}
+}
+
+func TestCheckerInvalidatesCacheWhenChannelChanges(t *testing.T) {
+	f := newFakeReleases(t)
+	full := []string{"bmux_linux_amd64.tar.gz", "checksums.txt"}
+	f.list = listOf(
+		releaseJSON("v0.7.8-beta.1", false, full...),
+		releaseJSON("v0.7.7", false, full...),
+	)
+	channel := ChannelStable
+	now := time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)
+	checker := Checker{
+		Source:   f.source(),
+		Channel:  func() string { return channel },
+		Cache:    filepath.Join(t.TempDir(), "state", "update-check.json"),
+		Interval: CheckInterval,
+		Now:      func() time.Time { return now },
+	}
+
+	if got, err := checker.Latest(context.Background()); err != nil || got != "0.7.7" || f.requests.Load() != 1 {
+		t.Fatalf("stable check: %q %v req=%d", got, err, f.requests.Load())
+	}
+	// Switching channel within the interval refreshes instead of returning stale stable cache.
+	channel = ChannelBeta
+	now = now.Add(time.Minute)
+	if got, err := checker.Latest(context.Background()); err != nil || got != "0.7.8-beta.1" || f.requests.Load() != 2 {
+		t.Fatalf("beta check after switch: %q %v req=%d", got, err, f.requests.Load())
+	}
+	// Switching back within the interval also refreshes rather than returning the cached beta.
+	channel = ChannelStable
+	now = now.Add(time.Minute)
+	if got, err := checker.Latest(context.Background()); err != nil || got != "0.7.7" || f.requests.Load() != 3 {
+		t.Fatalf("stable check after switch back: %q %v req=%d", got, err, f.requests.Load())
+	}
+}

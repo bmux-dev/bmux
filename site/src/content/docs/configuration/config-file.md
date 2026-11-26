@@ -78,6 +78,7 @@ width = 24
 | `scrollback.lines` | `10000` | History kept per pane, 100 to 200,000; `bmux reload` applies it to running panes |
 | `scrollback.max-mb` | `64` | Hard memory cap per pane in MiB (0 to 1,024; `0` = unlimited); drops oldest lines once exceeded, and `bmux reload` applies it to running panes |
 | `update.check` | `true` | Look for a new release once a day and show `↑` in the status bar; see [Updates](/bmux/start/installation/#updates) |
+| `update.channel` | `"stable"` | `"stable"` skips beta pre-releases; `"beta"` includes them in background checks and `bmux update` |
 | `hooks.EVENT` | none | Shell commands to run when an event happens; see [Hooks](#hooks) |
 | `keys.root.KEY` / `keys.prefix.KEY` | the keys above | Bind a key to an action, or `"none"`; see [Rebinding keys](/bmux/configuration/rebinding-keys/) |
 | `keys.pass-through` | `[]` | Programs that get Ctrl-h/j/k/l themselves, like Vim and Neovim do, e.g. `["fzf", "lazygit"]` |

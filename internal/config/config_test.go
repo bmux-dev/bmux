@@ -356,3 +356,26 @@ func TestValidResumeMatchesServerLimits(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUpdateChannelValidationAndEnv(t *testing.T) {
+	if got := Default().Update.Channel; got != "stable" {
+		t.Fatalf("default update.channel = %q, want stable", got)
+	}
+	cfg, err := Load(write(t, "[update]\nchannel = \"BETA\"\n"), noEnv)
+	if err != nil || cfg.Update.Channel != "beta" {
+		t.Fatalf("valid channel: %q %v", cfg.Update.Channel, err)
+	}
+	cfg, err = Load(write(t, ""), func(k string) string {
+		if k == "BMUX_UPDATE_CHANNEL" {
+			return "beta"
+		}
+		return ""
+	})
+	if err != nil || cfg.Update.Channel != "beta" {
+		t.Fatalf("env override: %q %v", cfg.Update.Channel, err)
+	}
+	cfg, err = Load(write(t, "[update]\nchannel = \"nightly\"\n"), noEnv)
+	if err == nil || !strings.Contains(err.Error(), "update.channel") || cfg.Update.Channel != "stable" {
+		t.Fatalf("invalid channel: %q %v", cfg.Update.Channel, err)
+	}
+}

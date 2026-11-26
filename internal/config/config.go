@@ -119,7 +119,8 @@ type Scrollback struct {
 // Update controls the daily check for new bmux releases; bmux update
 // installs one.
 type Update struct {
-	Check bool `toml:"check"`
+	Check   bool   `toml:"check"`
+	Channel string `toml:"channel"`
 }
 
 // HookEvents are the events [hooks] can name.
@@ -163,7 +164,7 @@ func Default() Config {
 		Restore:    Restore{Enabled: true},
 		Projects:   Projects{Roots: []string{"~/code", "~/src", "~/projects", "~/dev"}, Depth: 3},
 		Scrollback: Scrollback{Lines: 10000, MaxMB: DefaultScrollbackMaxMB},
-		Update:     Update{Check: true},
+		Update:     Update{Check: true, Channel: "stable"},
 	}
 }
 
@@ -231,6 +232,9 @@ func applyEnv(cfg *Config, env func(string) string) {
 	}
 	if env("BMUX_NO_UPDATE_CHECK") == "1" {
 		cfg.Update.Check = false
+	}
+	if v := env("BMUX_UPDATE_CHANNEL"); v != "" {
+		cfg.Update.Channel = v
 	}
 }
 
@@ -398,6 +402,11 @@ func (c *Config) repair() []string {
 		bad("scrollback.max-mb %d must be between %d and %d", c.Scrollback.MaxMB, MinScrollbackMaxMB, MaxScrollbackMaxMB)
 		c.Scrollback.MaxMB = d.Scrollback.MaxMB
 	}
+	c.Update.Channel = strings.ToLower(strings.TrimSpace(c.Update.Channel))
+	if c.Update.Channel != "stable" && c.Update.Channel != "beta" {
+		bad("update.channel %q must be \"stable\" or \"beta\"", c.Update.Channel)
+		c.Update.Channel = d.Update.Channel
+	}
 	for event, commands := range c.Hooks {
 		if !slices.Contains(HookEvents, event) {
 			bad("hooks.%s isn't an event; use one of %s", event, strings.Join(HookEvents, ", "))
@@ -496,6 +505,7 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 
 [update]
 # check = true              # look for a new release once a day; bmux update installs it
+# channel = "stable"        # "stable" or "beta"; beta includes pre-release builds
 
 [hooks]                     # shell commands run on events, with BMUX_* env vars and shell-escaped #{...} variables for the event's pane
 # Events: session-created, session-closed, window-created, pane-exited,

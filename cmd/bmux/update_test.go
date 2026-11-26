@@ -15,6 +15,12 @@ func TestUpdateRefusesBinariesItShouldntReplace(t *testing.T) {
 	if err := runUpdate("", []string{"now"}); err == nil || !strings.Contains(err.Error(), "usage") {
 		t.Fatalf("extra argument: %v", err)
 	}
+	if err := runUpdate("", []string{"--beta", "--stable"}); err == nil || !strings.Contains(err.Error(), "cannot combine") {
+		t.Fatalf("--beta --stable: %v", err)
+	}
+	if err := runUpdate("", []string{"--beta"}); err == nil || !strings.Contains(err.Error(), "development build") {
+		t.Fatalf("--beta on dev build: %v", err)
+	}
 
 	ok := func(string) error { return nil }
 	denied := func(string) error { return errors.New("permission denied") }

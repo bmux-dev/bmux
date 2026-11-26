@@ -5,6 +5,7 @@
 #
 # Environment:
 #   BMUX_VERSION=v0.5.1   install this release instead of the newest one
+#   BMUX_CHANNEL=beta     include beta pre-releases when picking latest (default stable)
 #   BMUX_INSTALL_DIR=DIR  install into DIR instead of ~/.local/bin
 #   BMUX_RELEASE_URL=URL  download URL/TAG/ASSET from a mirror (needs BMUX_VERSION)
 #
@@ -67,16 +68,19 @@ platform() {
 	esac
 }
 
-# latest_tag prints the newest release with an archive for this platform,
-# pre-releases included: every 0.x release is one, so GitHub's
-# /releases/latest has nothing to return.
+# latest_tag prints the newest release with an archive for this platform
+# matching $channel (stable skips pre-releases such as v0.7.8-beta.1).
 latest_tag() {
 	fetch "https://api.github.com/repos/$repo/releases?per_page=30" "$tmp/releases.json" ||
 		fail "couldn't list releases from GitHub; set BMUX_VERSION to pick one"
-	url=$(grep -o "\"browser_download_url\": *\"[^\"]*/$asset\"" "$tmp/releases.json" | head -n 1 | sed 's/.*"\(https[^"]*\)"$/\1/')
-	[ -n "$url" ] || fail "no release has $asset yet; install with Go instead: go install github.com/bmux-dev/bmux/cmd/bmux@latest"
-	tag=${url%/*}
-	printf '%s\n' "${tag##*/}"
+	tags=$(grep -o "\"browser_download_url\": *\"[^\"]*/$asset\"" "$tmp/releases.json" | sed 's|.*/download/\([^/]*\)/.*|\1|')
+	if [ "$1" = "beta" ]; then
+		tag=$(printf '%s\n' "$tags" | head -n 1)
+	else
+		tag=$(printf '%s\n' "$tags" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+	fi
+	[ -n "$tag" ] || fail "no $1 release has $asset yet; install with Go instead: go install github.com/bmux-dev/bmux/cmd/bmux@latest"
+	printf '%s\n' "$tag"
 }
 
 path_hint() {
@@ -93,6 +97,12 @@ main() {
 	asset="bmux_${os}_${arch}.tar.gz"
 	dir=${BMUX_INSTALL_DIR:-"$HOME/.local/bin"}
 
+	channel=${BMUX_CHANNEL:-stable}
+	case "$channel" in
+	stable | beta) ;;
+	*) fail "BMUX_CHANNEL must be stable or beta (got $channel)" ;;
+	esac
+
 	tmp=$(mktemp -d 2>/dev/null || mktemp -d -t bmux)
 	trap 'rm -rf "$tmp"' EXIT
 	trap 'exit 1' INT TERM
@@ -103,7 +113,7 @@ main() {
 	elif [ -n "${BMUX_RELEASE_URL:-}" ]; then
 		fail "BMUX_RELEASE_URL needs BMUX_VERSION"
 	else
-		tag=$(latest_tag)
+		tag=$(latest_tag "$channel")
 	fi
 	base=${BMUX_RELEASE_URL:-"https://github.com/$repo/releases/download"}
 	base="${base%/}/$tag"
