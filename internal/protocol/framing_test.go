@@ -76,3 +76,13 @@ func TestIncompletePasteCannotReachApplication(t *testing.T) {
 		t.Fatal("partial paste reached application")
 	}
 }
+
+func TestPasteBeginDoesNotPreallocateMaxInputBytes(t *testing.T) {
+	var assembly PasteAssembly
+	if _, _, err := assembly.Accept(Request{Op: "paste-begin", Size: MaxInputBytes}); err != nil {
+		t.Fatal(err)
+	}
+	if cap(assembly.text) > PasteChunkBytes {
+		t.Fatalf("paste-begin preallocated %d bytes, want <= %d", cap(assembly.text), PasteChunkBytes)
+	}
+}

@@ -112,7 +112,7 @@ func Ensure(socket string) error {
 	if err != nil {
 		return err
 	}
-	log, err := os.OpenFile(filepath.Join(filepath.Dir(socket), "server.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	log, err := os.OpenFile(filepath.Join(filepath.Dir(socket), "server.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY|syscall.O_NOFOLLOW, 0600)
 	if err != nil {
 		return err
 	}

@@ -149,4 +149,23 @@ func TestLayoutCommandsDriveTheLayoutFromATarget(t *testing.T) {
 			t.Errorf("%+v was accepted", r)
 		}
 	}
+
+	// Control characters or oversized layout commands must be rejected before pane creation.
+	s.mu.Lock()
+	panesBefore := len(s.panes)
+	s.mu.Unlock()
+	for _, r := range []protocol.Request{
+		{Op: "layout-command", Kind: "split", PaneID: 1, Args: []string{"echo ok\necho evil"}},
+		{Op: "layout-command", Kind: "new-window", PaneID: 1, Args: []string{strings.Repeat("a", maxLayoutCommand+1)}},
+	} {
+		if _, err := s.layoutCommand(r); err == nil {
+			t.Errorf("%s with invalid command args was accepted", r.Kind)
+		}
+	}
+	s.mu.Lock()
+	panesAfter := len(s.panes)
+	s.mu.Unlock()
+	if panesAfter != panesBefore {
+		t.Fatalf("rejected layout commands altered pane count: %d -> %d", panesBefore, panesAfter)
+	}
 }

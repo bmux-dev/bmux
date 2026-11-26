@@ -25,9 +25,12 @@ func ApplyTerminalDelta(prev, delta *TerminalFrame) *TerminalFrame {
 
 	h := 0
 	if prev != nil {
-		h = len(prev.Rows)
+		h = min(len(prev.Rows), MaxTerminalHeight)
 	}
 	for _, rd := range delta.RowDeltas {
+		if rd.Y >= MaxTerminalHeight {
+			continue
+		}
 		if rd.Y >= h {
 			h = rd.Y + 1
 		}

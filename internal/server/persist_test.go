@@ -14,6 +14,12 @@ import (
 
 func persistentServer(t *testing.T, path string) *Server {
 	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	s := New("/bin/sh")
 	if err := s.EnablePersistence(path); err != nil {
 		t.Fatal(err)
@@ -213,5 +219,59 @@ func TestUnreadableOrInvalidStateNeverBlocksStartup(t *testing.T) {
 	}
 	if m := s.sessions["missing-dirs"]; m.info.Dir != os.Getenv("HOME") || m.panes[7] == nil {
 		t.Fatalf("missing directories: dir %q panes %v", m.info.Dir, m.panes)
+	}
+}
+
+func TestPersistStateSecurityHardening(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "real.json")
+	if err := os.WriteFile(target, []byte(`{"version":1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "sessions.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadState(link); err == nil {
+		t.Fatal("loadState accepted a symlinked state file")
+	}
+
+	// Non-0700 parent dir must be rejected by writeState.
+	shared := filepath.Join(dir, "shared")
+	if err := os.Mkdir(shared, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Chmod(shared, 0o755)
+	if err := writeState(filepath.Join(shared, "sessions.json"), []byte(`{"version":1}`)); err == nil {
+		t.Fatal("writeState wrote into non-0700 directory")
+	}
+
+	// Layout nesting deeper than maxLayoutDepth must fail instead of blowing stack.
+	panes := map[int]paneSnapshot{1: {ID: 1, Dir: dir}, 2: {ID: 2, Dir: dir}}
+	deep := &layoutSnapshot{Pane: 1}
+	for i := 0; i <= maxLayoutDepth+2; i++ {
+		deep = &layoutSnapshot{Direction: "vertical", Ratio: 5000, First: deep, Second: &layoutSnapshot{Pane: 2}}
+	}
+	if _, err := deep.build(panes, map[int]bool{}); err == nil {
+		t.Fatal("layoutSnapshot.build accepted overly deep tree")
+	}
+
+	// Control characters in restored command are skipped rather than typed.
+	s, err := restoreSession(sessionSnapshot{
+		Name:   "ctrl",
+		Dir:    dir,
+		Layout: &layoutSnapshot{Pane: 1},
+		Panes:  []paneSnapshot{{ID: 1, Dir: dir, Command: "echo UNSAFE\necho INJECTED"}},
+	}, "/bin/sh", 80, 24, map[string]bool{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.stop()
+	time.Sleep(150 * time.Millisecond)
+	s.mu.Lock()
+	p := s.panes[1]
+	s.mu.Unlock()
+	if frame, _ := p.frame(0); strings.Contains(frameText(frame), "INJECTED") {
+		t.Fatalf("restoreSession executed control-char command:\n%s", frameText(frame))
 	}
 }

@@ -346,7 +346,7 @@ func restartServer(socket string) error {
 		// agent's marker that it spawned this shell, and every new pane would
 		// inherit it. The new server keeps the running server's environment;
 		// only servers that predate the request get this pane's.
-		cmd.Env = append(os.Environ(), "BMUX_SESSION=")
+		cmd.Env = withoutEnv(os.Environ(), "BMUX_SESSION", "BMUX_SESSION_ID", "BMUX_PANE")
 		if r, err := client.Request(socket, protocol.Request{Op: "environment"}); err == nil && len(r.Env) > 0 {
 			cmd.Env = r.Env
 		}
@@ -387,6 +387,24 @@ func restartServer(socket string) error {
 		fmt.Println("Return to them with bmux attach [NAME]; bare bmux creates another session")
 	}
 	return nil
+}
+
+func withoutEnv(environ []string, keys ...string) []string {
+	out := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		k, _, _ := strings.Cut(entry, "=")
+		drop := false
+		for _, target := range keys {
+			if k == target {
+				drop = true
+				break
+			}
+		}
+		if !drop {
+			out = append(out, entry)
+		}
+	}
+	return out
 }
 
 func attachTarget(socket string, names []string) (string, error) {

@@ -66,7 +66,7 @@ func TestTrustedLayoutFileBuildsWindowsAndRunsCommands(t *testing.T) {
 	dir := layoutProject(t, handLayout)
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
-	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "trust.json"))
+	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "state", "trust.json"))
 	// Trusted through a symlink, used through the real path: one file.
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(dir, link); err != nil {
@@ -157,6 +157,10 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 	dir := layoutProject(t, handLayout)
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
+	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "state", "trust.json"))
+	if _, err := TrustLayout(srv.trustPath(), dir); err != nil {
+		t.Fatal(err)
+	}
 	s := createIn(t, srv, "proj", dir)
 	s.mu.Lock()
 	awaitPane := s.panes[2]
@@ -165,7 +169,7 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 	if err := s.reportAgent(3, protocol.AgentIdle, "", []string{"pi", "--session", "a b"}); err != nil {
 		t.Fatal(err)
 	}
-	data, err := s.layout(dir)
+	data, err := s.layout(dir, srv.trustPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,5 +193,45 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 		if p.ID != original.Panes[i].ID || p.Dir != original.Panes[i].Dir {
 			t.Fatalf("pane %d: %+v, want %+v", i, p, original.Panes[i])
 		}
+	}
+}
+
+func TestLayoutSaveDropsUntrustedCommandsAndTrustStoreHardening(t *testing.T) {
+	dir := layoutProject(t, handLayout)
+	srv := New("/bin/sh")
+	t.Cleanup(srv.Close)
+	trustDir := filepath.Join(t.TempDir(), "state")
+	trustPath := filepath.Join(trustDir, "trust.json")
+	srv.SetLayoutTrust(trustPath)
+
+	s := createIn(t, srv, "untrusted", dir)
+	// Because dir's layout file is NOT trusted, saving must not carry over its commands.
+	data, err := s.layout(dir, srv.trustPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "LAYOUT_") {
+		t.Fatalf("s.layout copied commands from an untrusted layout:\n%s", data)
+	}
+
+	// TrustLayoutBytes trusts exact bytes without reading a swapped disk file.
+	diskData, err := os.ReadFile(filepath.Join(dir, LayoutFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := TrustLayoutBytes(trustPath, dir, diskData); err != nil {
+		t.Fatal(err)
+	}
+	if !layoutTrusted(trustPath, filepath.Join(dir, LayoutFileName), diskData) {
+		t.Fatal("TrustLayoutBytes did not record trust for exact bytes")
+	}
+
+	// Symlinked trust store must be rejected.
+	linkTrust := filepath.Join(trustDir, "symlink-trust.json")
+	if err := os.Symlink(trustPath, linkTrust); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readLayoutTrust(linkTrust); err == nil {
+		t.Fatal("readLayoutTrust accepted a symlinked trust store")
 	}
 }

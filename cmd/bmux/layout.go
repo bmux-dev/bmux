@@ -43,8 +43,8 @@ func runLayout(socket string, args []string) error {
 		if err := writeFileAtomic(file, []byte(response.Text)); err != nil {
 			return err
 		}
-		// You wrote it, so its commands may run.
-		if _, err := server.TrustLayout(trustPath, response.Dir); err != nil {
+		// You wrote it, so its exact bytes may run.
+		if _, err := server.TrustLayoutBytes(trustPath, response.Dir, []byte(response.Text)); err != nil {
 			return err
 		}
 		fmt.Println("Saved", file)
@@ -72,6 +72,9 @@ func writeFileAtomic(path string, data []byte) error {
 	defer os.Remove(tmp.Name())
 	if _, err = tmp.Write(data); err == nil {
 		err = tmp.Chmod(0644)
+	}
+	if err == nil {
+		err = tmp.Sync()
 	}
 	if closeErr := tmp.Close(); err == nil {
 		err = closeErr

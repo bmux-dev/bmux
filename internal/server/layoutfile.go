@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"unicode"
 
 	"github.com/BurntSushi/toml"
@@ -29,7 +31,33 @@ import (
 // LayoutFileName is the layout file looked for in a session's directory.
 const LayoutFileName = ".bmux.toml"
 
-const maxLayoutCommand = 8 << 10
+const (
+	maxLayoutCommand   = 8 << 10
+	maxLayoutFileBytes = 1 << 20
+)
+
+func readRegularBounded(path string, maxBytes int64) ([]byte, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, fmt.Errorf("%s exceeds %d-byte limit", path, maxBytes)
+	}
+	return data, nil
+}
 
 type layoutFile struct {
 	Active  int              `toml:"active,omitzero"` // 1-based window number
@@ -189,10 +217,17 @@ func layoutDigest(data []byte) string {
 
 func readLayoutTrust(path string) (layoutTrust, error) {
 	trust := layoutTrust{Version: 1, Files: map[string]string{}}
-	data, err := os.ReadFile(path)
+	info, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return trust, nil
 	}
+	if err != nil {
+		return trust, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return trust, fmt.Errorf("%s must not be a symlink", path)
+	}
+	data, err := readRegularBounded(path, maxLayoutFileBytes)
 	if err != nil {
 		return trust, err
 	}
@@ -224,23 +259,41 @@ func TrustLayout(trustPath, dir string) (string, error) {
 		return "", err
 	}
 	file = canonicalPath(file)
-	data, err := os.ReadFile(file)
+	data, err := readRegularBounded(file, maxLayoutFileBytes)
 	if err != nil {
 		return "", err
 	}
+	return file, trustLayoutData(trustPath, file, data)
+}
+
+// TrustLayoutBytes trusts exact layout bytes data for dir's layout file
+// without re-reading from disk, avoiding TOCTOU races after save.
+func TrustLayoutBytes(trustPath, dir string, data []byte) (string, error) {
+	file, err := filepath.Abs(filepath.Join(dir, LayoutFileName))
+	if err != nil {
+		return "", err
+	}
+	file = canonicalPath(file)
+	return file, trustLayoutData(trustPath, file, data)
+}
+
+func trustLayoutData(trustPath, file string, data []byte) error {
+	if int64(len(data)) > maxLayoutFileBytes {
+		return fmt.Errorf("%s exceeds %d-byte limit", file, maxLayoutFileBytes)
+	}
 	if _, err := parseLayout(data, "check", filepath.Dir(file)); err != nil {
-		return "", fmt.Errorf("%s: %v", file, err)
+		return fmt.Errorf("%s: %v", file, err)
 	}
 	trust, err := readLayoutTrust(trustPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	trust.Files[file] = layoutDigest(data)
 	encoded, err := json.MarshalIndent(trust, "", "  ")
 	if err != nil {
-		return "", err
+		return err
 	}
-	return file, writeState(trustPath, append(encoded, '\n'))
+	return writeState(trustPath, append(encoded, '\n'))
 }
 
 // createSession starts a session in dir, built from dir's layout file if it
@@ -248,7 +301,7 @@ func TrustLayout(trustPath, dir string) (string, error) {
 // out of an untrusted file, is the session's notice for its first client.
 func (s *Server) createSession(name, dir string, width, height int) (*session, error) {
 	file := filepath.Join(dir, LayoutFileName)
-	data, err := os.ReadFile(file)
+	data, err := readRegularBounded(file, maxLayoutFileBytes)
 	if errors.Is(err, os.ErrNotExist) {
 		return newSession(name, dir, s.shell, width, height)
 	}
@@ -295,14 +348,15 @@ func (s *Server) trustPath() string {
 }
 
 // layout returns the session's current windows as a layout file for dir,
-// keeping the commands of the layout file already there.
-func (s *session) layout(dir string) ([]byte, error) {
+// keeping the commands of the existing layout file only if it is trusted.
+func (s *session) layout(dir, trustPath string) ([]byte, error) {
 	snap, ok := s.persistentState()
 	if !ok {
 		return nil, fmt.Errorf("session has been terminated")
 	}
 	commands := make(map[int]string)
-	if data, err := os.ReadFile(filepath.Join(dir, LayoutFileName)); err == nil {
+	file := filepath.Join(dir, LayoutFileName)
+	if data, err := readRegularBounded(file, maxLayoutFileBytes); err == nil && layoutTrusted(trustPath, file, data) {
 		if old, err := parseLayout(data, "old", dir); err == nil {
 			for _, p := range old.Panes {
 				commands[p.ID] = p.Command

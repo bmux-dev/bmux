@@ -113,23 +113,21 @@ func (p *PasteAssembly) Accept(r Request) (Request, bool, error) {
 		if r.Size < 0 || r.Size > MaxInputBytes {
 			return Request{}, false, fmt.Errorf("paste exceeds input limit")
 		}
-		p.active, p.expected, p.paneID, p.text = true, r.Size, r.PaneID, make([]byte, 0, r.Size)
+		p.active, p.expected, p.paneID, p.text = true, r.Size, r.PaneID, make([]byte, 0, min(r.Size, PasteChunkBytes))
 		return Request{}, false, nil
 	case "paste-chunk":
 		if !p.active {
 			return Request{}, false, fmt.Errorf("no paste in progress")
 		}
 		if len(r.Text) > PasteChunkBytes || len(p.text)+len(r.Text) > p.expected {
-			p.active = false
-			p.text = nil
+			*p = PasteAssembly{}
 			return Request{}, false, fmt.Errorf("invalid paste chunk")
 		}
 		p.text = append(p.text, r.Text...)
 		return Request{}, false, nil
 	case "paste-end":
 		if !p.active || len(p.text) != p.expected {
-			p.active = false
-			p.text = nil
+			*p = PasteAssembly{}
 			return Request{}, false, fmt.Errorf("incomplete paste")
 		}
 		complete := Request{Op: "paste", PaneID: p.paneID, Text: string(p.text)}
