@@ -497,10 +497,10 @@ const DefaultFile = `# ~/.config/bmux/config.toml
 [update]
 # check = true              # look for a new release once a day; bmux update installs it
 
-[hooks]                     # shell commands run on events, with #{...} variables for the event's pane
+[hooks]                     # shell commands run on events, with BMUX_* env vars and shell-escaped #{...} variables for the event's pane
 # Events: session-created, session-closed, window-created, pane-exited,
 # client-attached, client-detached, agent-blocked, agent-idle. See bmux guide.
-# agent-blocked = ["notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"]
+# agent-blocked = ["notify-send 'bmux' \"$BMUX_SESSION: $BMUX_PANE_AGENT needs you\""]
 
 # Keys are written like Helix's: "C-h" is Ctrl-h, "A-x" Alt-x, "S-pageup"
 # Shift-PageUp, "|" or "minus" a plain key. "none" unbinds a key. Actions:

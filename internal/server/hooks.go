@@ -62,9 +62,10 @@ func runHook(event, command string, info protocol.PaneInfo, timeout time.Duratio
 func runCommand(command string, info protocol.PaneInfo, timeout time.Duration, extra ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", format.Expand(command, format.Vars(info)))
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", format.ExpandShell(command, format.Vars(info)))
 	cmd.Dir = hookDir(info)
-	cmd.Env = append(shellEnv(os.Environ(), info.SessionID, info.Session, info.Pane), extra...)
+	env := format.ApplyEnv(shellEnv(os.Environ(), info.SessionID, info.Session, info.Pane), info)
+	cmd.Env = append(env, extra...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = time.Second
