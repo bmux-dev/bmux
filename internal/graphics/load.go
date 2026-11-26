@@ -73,7 +73,8 @@ func fromRaw(cmd command, raw []byte) (loaded, string) {
 	if cmd.format == formatRGB {
 		bpp = 3
 	}
-	if w <= 0 || h <= 0 || int64(w)*int64(h) > maxPixels {
+	// Divide rather than multiply: s*v can overflow and wrap below the cap.
+	if w <= 0 || h <= 0 || int64(w) > maxPixels/int64(h) {
 		return loaded{}, "EINVAL:bad image size"
 	}
 	if int64(len(raw)) != int64(w)*int64(h)*int64(bpp) {
@@ -139,15 +140,18 @@ func readFile(name string, cmd command, temporary bool, limit int64) ([]byte, st
 	}
 	real, err := filepath.EvalSymlinks(name)
 	if err != nil {
-		return nil, "ENOENT:cannot read file"
+		return nil, "EINVAL:cannot read file"
 	}
-	if temporary && !(strings.Contains(real, tempMarker) && inTempDir(real)) {
+	if isPseudoFS(real, temporary) {
+		return nil, "EINVAL:cannot read file"
+	}
+	if temporary && !(strings.Contains(filepath.Base(real), tempMarker) && inTempDir(real)) {
 		return nil, "EINVAL:not a graphics temporary file"
 	}
 	// O_NONBLOCK keeps opening a FIFO from hanging; it is refused below.
 	f, err := os.OpenFile(real, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, "ENOENT:cannot read file"
+		return nil, "EINVAL:cannot read file"
 	}
 	defer f.Close()
 	info, err := f.Stat()
@@ -181,6 +185,20 @@ func inTempDir(real string) bool {
 			continue
 		}
 		if rel, err := filepath.Rel(root, real); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			return true
+		}
+	}
+	return false
+}
+
+// isPseudoFS reports whether the resolved path lies in a kernel or device
+// pseudo-filesystem (/proc, /sys, or /dev outside temporary /dev/shm files).
+func isPseudoFS(real string, temporary bool) bool {
+	for _, prefix := range []string{"/proc", "/sys", "/dev"} {
+		if real == prefix || strings.HasPrefix(real, prefix+"/") {
+			if prefix == "/dev" && temporary && strings.HasPrefix(real, "/dev/shm/") {
+				return false
+			}
 			return true
 		}
 	}

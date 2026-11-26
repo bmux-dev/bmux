@@ -511,3 +511,37 @@ func TestClosingAPaneFreesItsImages(t *testing.T) {
 		t.Fatal("closed pane stored a new image")
 	}
 }
+
+func TestFileTransmissionFollowsKittysPathRules(t *testing.T) {
+	good := testPNG(t, 2, 2, color.NRGBA{R: 255, A: 255})
+	p := newPane(DefaultLimits, Hooks{})
+
+	// The marker must be in the file's own name, not only a parent folder.
+	dir := filepath.Join(t.TempDir(), "tty-graphics-protocol-dir")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	nested := filepath.Join(dir, "plain.png")
+	if err := os.WriteFile(nested, good, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Handle([]byte("a=t,t=t,f=100,i=1;" + b64([]byte(nested)))); strings.Contains(got, "OK") {
+		t.Fatalf("t=t accepted a marker only in a parent folder: %q", got)
+	}
+	if _, err := os.Stat(nested); err != nil {
+		t.Fatalf("refused t=t file was deleted: %v", err)
+	}
+
+	// Kernel and device files are never read, and errors don't say whether
+	// a path exists.
+	missing := p.Handle([]byte("a=t,t=f,f=100,i=2;" + b64([]byte(filepath.Join(dir, "nope")))))
+	proc := p.Handle([]byte("a=t,t=f,f=100,i=3;" + b64([]byte("/proc/self/stat"))))
+	if strings.Contains(proc, "OK") || strings.Contains(missing, "ENOENT") {
+		t.Fatalf("/proc replied %q, missing file replied %q", proc, missing)
+	}
+
+	// s*v that overflows int64 must not slip under the pixel cap.
+	if got := p.Handle([]byte("a=t,f=32,s=4294967296,v=4294967296,i=4;" + b64([]byte{1, 2, 3, 4}))); !strings.Contains(got, "EINVAL") {
+		t.Fatalf("overflowing s*v replied %q", got)
+	}
+}
