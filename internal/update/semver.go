@@ -27,16 +27,10 @@ type semver struct {
 }
 
 func parse(v string) (semver, bool) {
-	if len(v) > 128 {
-		return semver{}, false
-	}
-	v, build, hasBuild := strings.Cut(v, "+")
-	if hasBuild && !validIdentifiers(build) {
-		return semver{}, false
-	}
+	v, _, _ = strings.Cut(v, "+")
 	core, pre, hasPre := strings.Cut(v, "-")
 	parts := strings.Split(core, ".")
-	if len(parts) != 3 || (hasPre && !validIdentifiers(pre)) {
+	if len(parts) != 3 || (hasPre && pre == "") {
 		return semver{}, false
 	}
 	var s semver
@@ -49,20 +43,13 @@ func parse(v string) (semver, bool) {
 	}
 	if hasPre {
 		s.pre = strings.Split(pre, ".")
-	}
-	return s, true
-}
-
-func validIdentifiers(raw string) bool {
-	if raw == "" {
-		return false
-	}
-	for _, id := range strings.Split(raw, ".") {
-		if id == "" || strings.Trim(id, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-") != "" {
-			return false
+		for _, id := range s.pre {
+			if id == "" || strings.Trim(id, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-") != "" {
+				return semver{}, false
+			}
 		}
 	}
-	return true
+	return s, true
 }
 
 // number parses a numeric identifier: digits, no leading zero.

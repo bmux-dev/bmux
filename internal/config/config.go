@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/BurntSushi/toml"
 )
@@ -253,24 +252,21 @@ func PrefixKey(prefix string) (rune, error) {
 	return 0, fmt.Errorf("prefix %q must be a Ctrl-letter like \"C-a\"", prefix)
 }
 
-// ValidResume follows the server's rules for resume commands.
+// ValidResume follows the server's rules for resume commands, limits
+// included, so a config the server would refuse is reported here.
 func ValidResume(argv []string) error {
 	if len(argv) == 0 {
 		return nil
 	}
 	if len(argv) > 64 {
-		return fmt.Errorf("resume command must have at most 64 arguments")
+		return fmt.Errorf("must have at most 64 arguments")
 	}
-	cmd := argv[0]
-	if cmd == "" || cmd == "." || cmd == ".." || strings.HasPrefix(cmd, "-") || strings.ContainsAny(cmd, "/\\ \t") {
+	if argv[0] == "" || strings.ContainsRune(argv[0], '/') {
 		return fmt.Errorf("must start with a command name on PATH")
 	}
 	total := 0
 	for _, arg := range argv {
 		total += len(arg) + 1
-		if !utf8.ValidString(arg) {
-			return fmt.Errorf("must be valid UTF-8")
-		}
 		for _, r := range arg {
 			if unicode.IsControl(r) {
 				return fmt.Errorf("must not contain control characters")
@@ -278,7 +274,7 @@ func ValidResume(argv []string) error {
 		}
 	}
 	if total > 8<<10 {
-		return fmt.Errorf("resume command must be at most %d bytes", 8<<10)
+		return fmt.Errorf("must be at most %d bytes", 8<<10)
 	}
 	return nil
 }

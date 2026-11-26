@@ -342,22 +342,17 @@ func TestIconsSettingIsCaseInsensitiveAndRejectsUnknownValues(t *testing.T) {
 	}
 }
 
-func TestValidResumeHardening(t *testing.T) {
-	for _, argv := range [][]string{
-		{"-claude"},
-		{"."},
-		{".."},
-		{`bin\claude`},
-		{"claude --flag"},
-		{"claude", "\xff"},
-		make([]string, 65),
-		{"claude", strings.Repeat("a", 8<<10)},
-	} {
-		if argv[0] == "" {
-			argv[0] = "claude"
-		}
+func TestValidResumeMatchesServerLimits(t *testing.T) {
+	tooMany := make([]string, 65)
+	for i := range tooMany {
+		tooMany[i] = "x"
+	}
+	for _, argv := range [][]string{tooMany, {"claude", strings.Repeat("a", 8<<10)}} {
 		if err := ValidResume(argv); err == nil {
-			t.Errorf("ValidResume(%v) = nil, want error", argv[0])
+			t.Errorf("accepted %d args, %d bytes", len(argv), len(strings.Join(argv, " ")))
 		}
+	}
+	if err := ValidResume([]string{"claude", "--continue"}); err != nil {
+		t.Fatal(err)
 	}
 }

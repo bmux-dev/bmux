@@ -94,8 +94,7 @@ main() {
 	dir=${BMUX_INSTALL_DIR:-"$HOME/.local/bin"}
 
 	tmp=$(mktemp -d 2>/dev/null || mktemp -d -t bmux)
-	stage=""
-	trap 'rm -rf "$tmp" "${stage:-}"' EXIT
+	trap 'rm -rf "$tmp"' EXIT
 	trap 'exit 1' INT TERM
 
 	if [ -n "${BMUX_VERSION:-}" ]; then
@@ -106,8 +105,6 @@ main() {
 	else
 		tag=$(latest_tag)
 	fi
-	printf '%s\n' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$' ||
-		fail "invalid release version tag: $tag"
 	base=${BMUX_RELEASE_URL:-"https://github.com/$repo/releases/download"}
 	base="${base%/}/$tag"
 
@@ -115,23 +112,20 @@ main() {
 	fetch "$base/$asset" "$tmp/$asset" || fail "couldn't download $base/$asset"
 	fetch "$base/checksums.txt" "$tmp/checksums.txt" || fail "couldn't download $base/checksums.txt"
 
+	# sha256sum writes "*name" for binary mode, and some tools write uppercase.
 	want=$(awk -v name="$asset" '{ file = $2; sub(/^\*/, "", file); if (file == name) { print $1; exit } }' "$tmp/checksums.txt" | tr '[:upper:]' '[:lower:]')
 	[ -n "$want" ] || fail "checksums.txt has no entry for $asset"
-	printf '%s\n' "$want" | grep -Eq '^[0-9a-f]{64}$' || fail "checksums.txt has malformed checksum for $asset"
 	got=$(sha256 "$tmp/$asset" | tr '[:upper:]' '[:lower:]')
 	[ "$got" = "$want" ] || fail "checksum mismatch for $asset (expected $want, got $got); nothing was installed"
 
 	tar -xzf "$tmp/$asset" -C "$tmp" bmux || fail "couldn't unpack $asset"
-	[ -f "$tmp/bmux" ] && [ ! -L "$tmp/bmux" ] || fail "archive $asset did not contain a regular bmux binary"
 
 	mkdir -p "$dir" || fail "couldn't create $dir; set BMUX_INSTALL_DIR to a directory you can write"
 	[ -w "$dir" ] || fail "can't write to $dir; set BMUX_INSTALL_DIR to a directory you can write"
 	# Same directory, so the rename is atomic and a running bmux keeps its file.
-	stage=$(mktemp "$dir/.bmux.install.XXXXXX")
-	cp "$tmp/bmux" "$stage"
-	chmod 755 "$stage"
-	mv -f "$stage" "$dir/bmux"
-	stage=""
+	cp "$tmp/bmux" "$dir/.bmux.install.$$"
+	chmod 755 "$dir/.bmux.install.$$"
+	mv -f "$dir/.bmux.install.$$" "$dir/bmux"
 
 	say "Installed $("$dir/bmux" --version) to $dir/bmux"
 

@@ -146,16 +146,13 @@ func headerLines(prefix, name string, version int) string {
 }
 
 // writeFile replaces path atomically, keeping an existing file's mode, and
-// creates its directory if needed without following symlinks.
+// creates its directory if needed.
 func writeFile(path string, data []byte, mode os.FileMode) error {
-	if info, err := os.Lstat(path); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("%s must not be a symlink", path)
-		}
+	if info, err := os.Stat(path); err == nil {
 		mode = info.Mode().Perm()
 	}
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".bmux-*")
@@ -181,21 +178,18 @@ func writeFile(path string, data []byte, mode os.FileMode) error {
 	return os.Rename(tmp.Name(), path)
 }
 
-// removeFile deletes a managed file, if it is one of ours and not a symlink.
+// removeFile deletes a managed file, if it is one of ours.
 func removeFile(path, name string) error {
-	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("%s must not be a symlink", path)
-	}
 	if version, err := fileVersion(path, name); err != nil || version == 0 {
 		return err
 	}
 	return os.Remove(path)
 }
 
-// dirFromEnv is the directory in variable when absolute, else under the home directory.
+// dirFromEnv is the directory in variable, else under the home directory.
 func dirFromEnv(variable string, parts ...string) func(Env) string {
 	return func(e Env) string {
-		if dir := e.Getenv(variable); dir != "" && filepath.IsAbs(dir) {
+		if dir := e.Getenv(variable); dir != "" {
 			return dir
 		}
 		return filepath.Join(append([]string{e.Home}, parts...)...)
