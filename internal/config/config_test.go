@@ -341,3 +341,18 @@ func TestIconsSettingIsCaseInsensitiveAndRejectsUnknownValues(t *testing.T) {
 		t.Fatalf("icons = %q, %v", cfg.UI.Icons, err)
 	}
 }
+
+func TestValidResumeMatchesServerLimits(t *testing.T) {
+	tooMany := make([]string, 65)
+	for i := range tooMany {
+		tooMany[i] = "x"
+	}
+	for _, argv := range [][]string{tooMany, {"claude", strings.Repeat("a", 8<<10)}} {
+		if err := ValidResume(argv); err == nil {
+			t.Errorf("accepted %d args, %d bytes", len(argv), len(strings.Join(argv, " ")))
+		}
+	}
+	if err := ValidResume([]string{"claude", "--continue"}); err != nil {
+		t.Fatal(err)
+	}
+}
