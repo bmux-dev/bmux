@@ -1,0 +1,119 @@
+name: Beta
+
+# Run manually from GitHub Actions (or `gh workflow run beta.yml`) to build
+# and publish a pre-release beta for quick upgrade-path testing without
+# touching Homebrew or offering the build to stable users.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target version (e.g. 0.7.8 or 0.7.8-beta.1); blank auto-picks next patch beta"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  beta:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
+        with:
+          go-version-file: go.mod
+
+      - id: tag
+        name: Pick and push beta tag
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          git fetch --tags --force
+          next_beta_for() {
+            local base_tag="v$1"
+            local max=0
+            local n
+            while IFS= read -r t; do
+              n=${t#"${base_tag}-beta."}
+              case "$n" in
+                '' | *[!0-9]*) continue ;;
+              esac
+              if [ "$n" -gt "$max" ]; then
+                max=$n
+              fi
+            done < <(git tag -l "${base_tag}-beta.*")
+            printf '%s-beta.%d\n' "$base_tag" "$((max + 1))"
+          }
+
+          if [ -z "$INPUT_VERSION" ]; then
+            latest=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1 || true)
+            [ -n "$latest" ] || latest="0.0.0"
+            major=${latest%%.*}
+            rest=${latest#*.}
+            minor=${rest%%.*}
+            patch=${rest#*.}
+            TAG=$(next_beta_for "$major.$minor.$((patch + 1))")
+          else
+            ver=${INPUT_VERSION#v}
+            if printf '%s\n' "$ver" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              TAG=$(next_beta_for "$ver")
+            elif printf '%s\n' "$ver" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+$'; then
+              TAG="v$ver"
+            else
+              echo "invalid beta version: $INPUT_VERSION" >&2
+              exit 1
+            fi
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "tag $TAG already exists" >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "bmux $TAG"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
+        with:
+          version: "v2.20.3"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ""
+
+      - name: Publish beta release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          SHORT_SHA: ${{ github.sha }}
+        run: |
+          notes=$(cat <<EOF
+          Beta pre-release built from \`${REF_NAME}\` (\`${SHORT_SHA}\`).
+
+          ### Install or upgrade to this beta
+          \`\`\`sh
+          bmux update --beta && bmux restart
+          # or fresh install:
+          curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | BMUX_CHANNEL=beta sh
+          \`\`\`
+
+          ### Return to stable
+          \`\`\`sh
+          bmux update --stable && bmux restart
+          \`\`\`
+          EOF
+          )
+          gh release edit "$TAG" --title "bmux $TAG" --notes "$notes" --draft=false --prerelease --latest=false

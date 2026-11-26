@@ -38,6 +38,12 @@ const (
 	maxBinaryBytes    = 256 << 20
 )
 
+// Release channels. Empty defaults to ChannelStable.
+const (
+	ChannelStable = "stable"
+	ChannelBeta   = "beta"
+)
+
 // Release is a published release with an archive for this platform.
 type Release struct {
 	Version      string // "0.6.0"
@@ -53,6 +59,7 @@ type Source struct {
 	Releases string
 	HTTP     *http.Client
 	OS, Arch string
+	Channel  string // ChannelStable (default when empty) or ChannelBeta
 }
 
 // GitHub is the source bmux uses: the repository's releases on GitHub, for
@@ -109,6 +116,9 @@ func (s Source) Latest(ctx context.Context) (Release, bool, error) {
 	for _, r := range releases {
 		v, ok := strings.CutPrefix(r.TagName, "v")
 		if r.Draft || !ok || !Valid(v) {
+			continue
+		}
+		if s.Channel != ChannelBeta && IsPrerelease(v) {
 			continue
 		}
 		candidate := Release{Version: v, Tag: r.TagName, Asset: s.AssetName()}

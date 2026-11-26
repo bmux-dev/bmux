@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bmux-dev/bmux/internal/client"
+	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/bmux-dev/bmux/internal/update"
 	"github.com/bmux-dev/bmux/internal/version"
@@ -24,19 +25,26 @@ import (
 func runUpdate(socket string, args []string) error {
 	flags := flag.NewFlagSet("update", flag.ContinueOnError)
 	check := flags.Bool("check", false, "only report whether a newer release exists")
+	beta := flags.Bool("beta", false, "check or install from the beta channel (includes pre-releases)")
+	stable := flags.Bool("stable", false, "check or install from the stable channel (can step back from a beta)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return fmt.Errorf("usage: bmux update [--check]")
+		return fmt.Errorf("usage: bmux update [--check] [--beta|--stable]")
+	}
+	if *beta && *stable {
+		return fmt.Errorf("cannot combine --beta and --stable")
 	}
 	current := version.String()
 	if current == version.Dev {
 		return fmt.Errorf("this is a development build, which bmux update doesn't replace; install a release with the install script or go install")
 	}
+	channel := resolveUpdateChannel(*beta, *stable)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	source := update.GitHub()
+	source.Channel = channel
 	release, found, err := source.Latest(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't look for releases: %w", err)
@@ -45,12 +53,25 @@ func runUpdate(socket string, args []string) error {
 		fmt.Printf("No release has a bmux for %s/%s yet; this is bmux %s\n", runtime.GOOS, runtime.GOARCH, current)
 		return nil
 	}
-	if !update.Newer(release.Version, current) {
+	newer := update.Newer(release.Version, current)
+	stepBack := *stable && update.IsPrerelease(current) && !update.IsPrerelease(release.Version) && release.Version != current
+	if !newer && !stepBack {
+		if channel == update.ChannelStable && update.IsPrerelease(current) {
+			fmt.Printf("bmux %s is ahead of the latest stable release (%s); run bmux update --stable to switch back to stable, or bmux update --beta to check for newer betas\n", current, release.Version)
+			return nil
+		}
 		fmt.Printf("bmux %s is the latest\n", current)
 		return nil
 	}
 	if *check {
-		fmt.Printf("bmux %s is available (this is %s): run bmux update\n", release.Version, current)
+		switch {
+		case stepBack:
+			fmt.Printf("bmux %s is the latest stable release (this is %s): run bmux update --stable to switch back\n", release.Version, current)
+		case *beta:
+			fmt.Printf("bmux %s is available (this is %s): run bmux update --beta\n", release.Version, current)
+		default:
+			fmt.Printf("bmux %s is available (this is %s): run bmux update\n", release.Version, current)
+		}
 		return nil
 	}
 	exe, err := os.Executable()
@@ -90,6 +111,20 @@ func replaceable(exe string, writable func(dir string) error) error {
 		return fmt.Errorf("can't write to %s (%v); re-run the install script with BMUX_INSTALL_DIR set to a directory you own, or run sudo bmux update", dir, err)
 	}
 	return nil
+}
+
+func resolveUpdateChannel(beta, stable bool) string {
+	if beta {
+		return update.ChannelBeta
+	}
+	if stable {
+		return update.ChannelStable
+	}
+	if path, err := config.Path(); err == nil {
+		cfg, _ := config.Load(path, os.Getenv)
+		return cfg.Update.Channel
+	}
+	return config.Default().Update.Channel
 }
 
 func writable(dir string) error {

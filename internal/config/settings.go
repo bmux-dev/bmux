@@ -101,6 +101,7 @@ var SettingTabs = []SettingTab{
 		),
 		group("Updates",
 			boolSetting("update.check", "Check for updates", "Look for a new release once a day", func(c *Config) *bool { return &c.Update.Check }),
+			enumSetting("update.channel", "Release channel", "stable: regular releases; beta: also pre-release builds", []string{"stable", "beta"}, false, func(c *Config) *string { return &c.Update.Channel }),
 		),
 	)},
 	{"Appearance", "◐", "\uf1fc", slices.Concat(

@@ -91,3 +91,38 @@ func TestUpdateHintReachesFramesAndFollowsTheSettings(t *testing.T) {
 		t.Fatalf("checked for releases %d times with update.check = false", calls)
 	}
 }
+
+func TestUpdateChannelHidesBetaHintOnStableAndAllowsStepBackRestartHint(t *testing.T) {
+	resetReleases(t)
+	s := editorNavigationSession(t)
+	srv := New("/bin/sh")
+	srv.sessions["navigation"] = s
+	path := useConfig(t, srv, "[update]\nchannel = \"beta\"\n")
+
+	checkOnce(srv, "0.7.7", func(context.Context) (string, error) { return "0.7.8-beta.1", nil })
+	if f, _ := s.snapshot(map[int]int{}, map[int]int{}, 0, true); f.Update == nil || f.Update.Version != "0.7.8-beta.1" {
+		t.Fatalf("beta channel hint = %+v", f.Update)
+	}
+
+	// Switching back to stable clears a cached beta hint immediately on reload.
+	if err := os.WriteFile(path, []byte("[update]\nchannel = \"stable\"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if r := srv.request(protocol.Request{Op: "reload-config"}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+	if f, _ := s.snapshot(map[int]int{}, map[int]int{}, 0, true); f.Update != nil {
+		t.Fatalf("beta hint stayed after switching to stable: %+v", f.Update)
+	}
+
+	// Stepping back from 0.7.8-beta.1 to stable 0.7.7 still shows the restart hint.
+	releases.mu.Lock()
+	releases.current = "0.7.8-beta.1"
+	releases.mu.Unlock()
+	if r := srv.request(protocol.Request{Op: "update-installed", Text: "0.7.7"}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+	if f, _ := s.snapshot(map[int]int{}, map[int]int{}, 0, true); f.Update == nil || !f.Update.Installed || f.Update.Version != "0.7.7" {
+		t.Fatalf("step-back installed hint = %+v", f.Update)
+	}
+}

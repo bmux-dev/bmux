@@ -4,7 +4,9 @@ name: Release
 # uploads them to a draft release. Write the notes, then publish it.
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
+      - "!v*-*"
 
 permissions:
   contents: read

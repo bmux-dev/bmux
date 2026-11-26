@@ -76,10 +76,14 @@ func (s *Server) updateInstalled(version string) error {
 func (s *Server) publishUpdate() {
 	releases.mu.Lock()
 	var hint *protocol.UpdateHint
+	cfg := currentSettings()
 	switch {
-	case update.Newer(releases.installed, releases.current):
+	case releases.installed != "" && releases.installed != releases.current &&
+		(update.Newer(releases.installed, releases.current) ||
+			(update.IsPrerelease(releases.current) && !update.IsPrerelease(releases.installed))):
 		hint = &protocol.UpdateHint{Version: releases.installed, Installed: true}
-	case currentSettings().updateCheck && update.Newer(releases.latest, releases.current):
+	case cfg.updateCheck && update.Newer(releases.latest, releases.current) &&
+		(cfg.updateChannel == update.ChannelBeta || !update.IsPrerelease(releases.latest)):
 		hint = &protocol.UpdateHint{Version: releases.latest}
 	}
 	old := updateHint.Load()

@@ -42,6 +42,8 @@ changelog:
 
 homebrew_casks:
   - name: bmux
+    # Skip pre-release tags like v0.7.8-beta.1 so Homebrew stays on stable releases.
+    skip_upload: auto
     repository:
       owner: bmux-dev
       name: homebrew-tap

@@ -247,7 +247,7 @@ func Serve(socket string, stop <-chan os.Signal) error {
 	// the cache sits next to the saved sessions so restarts don't re-ask.
 	if current := version.String(); current != version.Dev {
 		if state, err := StatePath(); err == nil {
-			checker := update.Checker{Source: update.GitHub(), Cache: filepath.Join(filepath.Dir(state), "update-check.json"), Interval: update.CheckInterval, Now: time.Now}
+			checker := update.Checker{Source: update.GitHub(), Channel: s.UpdateChannel, Cache: filepath.Join(filepath.Dir(state), "update-check.json"), Interval: update.CheckInterval, Now: time.Now}
 			go s.WatchReleases(current, checker.Latest, time.Hour, done)
 		}
 	}
