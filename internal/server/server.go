@@ -266,7 +266,7 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 		item.mu.Lock()
 		dir := item.info.Dir
 		item.mu.Unlock()
-		data, err := item.layout(dir)
+		data, err := item.layout(dir, s.trustPath())
 		if err != nil {
 			result.Error = err.Error()
 			break

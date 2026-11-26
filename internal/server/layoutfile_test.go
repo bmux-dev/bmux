@@ -66,7 +66,7 @@ func TestTrustedLayoutFileBuildsWindowsAndRunsCommands(t *testing.T) {
 	dir := layoutProject(t, handLayout)
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
-	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "trust.json"))
+	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "state", "trust.json"))
 	// Trusted through a symlink, used through the real path: one file.
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(dir, link); err != nil {
@@ -157,6 +157,10 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 	dir := layoutProject(t, handLayout)
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
+	srv.SetLayoutTrust(filepath.Join(t.TempDir(), "state", "trust.json"))
+	if _, err := TrustLayout(srv.trustPath(), dir); err != nil {
+		t.Fatal(err)
+	}
 	s := createIn(t, srv, "proj", dir)
 	s.mu.Lock()
 	awaitPane := s.panes[2]
@@ -165,7 +169,7 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 	if err := s.reportAgent(3, protocol.AgentIdle, "", []string{"pi", "--session", "a b"}); err != nil {
 		t.Fatal(err)
 	}
-	data, err := s.layout(dir)
+	data, err := s.layout(dir, srv.trustPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,5 +193,57 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 		if p.ID != original.Panes[i].ID || p.Dir != original.Panes[i].Dir {
 			t.Fatalf("pane %d: %+v, want %+v", i, p, original.Panes[i])
 		}
+	}
+}
+
+func TestLayoutSaveKeepsCommandsOnlyFromATrustedFile(t *testing.T) {
+	dir := layoutProject(t, handLayout)
+	srv := New("/bin/sh")
+	t.Cleanup(srv.Close)
+	trustPath := filepath.Join(t.TempDir(), "state", "trust.json")
+	srv.SetLayoutTrust(trustPath)
+
+	s := createIn(t, srv, "untrusted", dir)
+	// Saving must not copy an untrusted file's commands into a file that
+	// bmux layout save then trusts.
+	data, err := s.layout(dir, srv.trustPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "LAYOUT_") {
+		t.Fatalf("s.layout copied commands from an untrusted layout:\n%s", data)
+	}
+
+	// TrustLayoutBytes trusts exactly the bytes it is given.
+	diskData, err := os.ReadFile(filepath.Join(dir, LayoutFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := TrustLayoutBytes(trustPath, dir, diskData); err != nil {
+		t.Fatal(err)
+	}
+	if !layoutTrusted(trustPath, filepath.Join(dir, LayoutFileName), diskData) {
+		t.Fatal("TrustLayoutBytes did not record trust for exact bytes")
+	}
+}
+
+func TestLayoutFileLinkedToADeviceDoesNotHangCreate(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	dir := realDir(t, t.TempDir())
+	// git stores symlinks, so a cloned repo can ship this.
+	if err := os.Symlink("/dev/zero", filepath.Join(dir, LayoutFileName)); err != nil {
+		t.Fatal(err)
+	}
+	srv := New("/bin/sh")
+	t.Cleanup(srv.Close)
+	done := make(chan *session, 1)
+	go func() { done <- createIn(t, srv, "zero", dir) }()
+	select {
+	case s := <-done:
+		if notice := s.takeNotice(); !strings.Contains(notice, "started one pane instead") {
+			t.Fatalf("notice %q", notice)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("creating a session hung reading a .bmux.toml linked to /dev/zero")
 	}
 }

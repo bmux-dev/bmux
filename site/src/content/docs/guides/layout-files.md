@@ -58,4 +58,6 @@ SHA-256 in `trusted-layouts.json` next to the saved sessions.
 `bmux layout save` writes a session's current windows to its folder's
 `.bmux.toml` and trusts it. Pane directories are where each shell is now;
 agents get their resume command. bmux can't see what else a pane runs, so
-commands from the file being replaced are kept for panes without an agent.
+commands from the file being replaced are kept for panes without an agent,
+but only if that file was trusted; an untrusted file's commands are left out,
+since saving trusts the result.

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bmux-dev/bmux/internal/protocol"
@@ -357,8 +358,31 @@ func loadState(path string) (stateFile, error) {
 	return state, nil
 }
 
+// ensureStateDir makes dir, refusing a symlink, a directory another user
+// owns, or one others can write to: whoever can replace the saved sessions
+// chooses the resume commands typed into restored panes.
+func ensureStateDir(dir string) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	stat, err := os.Lstat(dir)
+	if err != nil {
+		return err
+	}
+	if !stat.IsDir() {
+		return fmt.Errorf("%s must be a directory, not a symlink", dir)
+	}
+	if owner, ok := stat.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Getuid()) {
+		return fmt.Errorf("%s is not owned by your user", dir)
+	}
+	if stat.Mode().Perm()&0o022 != 0 {
+		return fmt.Errorf("%s is writable by other users; chmod go-w it", dir)
+	}
+	return nil
+}
+
 func writeState(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := ensureStateDir(filepath.Dir(path)); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".sessions-*.json")
