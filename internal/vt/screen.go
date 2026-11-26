@@ -482,8 +482,6 @@ func (s *Screen) Resize(width int, height int) {
 		}
 	}
 	s.scroll = s.Bounds()
-	s.cur.Position = clampPos(s.cur.Position, width, height)
-	s.saved.Position = clampPos(s.saved.Position, width, height)
 }
 
 // resizeFlags keeps the first height rows' flags, adding rows without any.
@@ -724,7 +722,6 @@ func (s *Screen) SaveCursor() {
 func (s *Screen) RestoreCursor() {
 	old := s.cur.Position
 	s.cur = s.saved
-	s.cur.Position = clampPos(s.cur.Position, s.width, s.height)
 	s.syncCursorStyle()
 
 	if s.cb != nil && s.cb.CursorPosition != nil && (old.X != s.cur.X || old.Y != s.cur.Y) {
@@ -739,20 +736,6 @@ func (s *Screen) setCursorHidden(hidden bool) {
 	if changed && s.cb != nil && s.cb.CursorVisibility != nil {
 		s.cb.CursorVisibility(!hidden)
 	}
-}
-
-func clampPos(pos uv.Position, width, height int) uv.Position {
-	if width > 0 {
-		pos.X = min(max(pos.X, 0), width-1)
-	} else {
-		pos.X = 0
-	}
-	if height > 0 {
-		pos.Y = min(max(pos.Y, 0), height-1)
-	} else {
-		pos.Y = 0
-	}
-	return pos
 }
 
 // setCursorStyle sets the cursor style.

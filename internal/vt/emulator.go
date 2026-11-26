@@ -91,10 +91,6 @@ type Emulator struct {
 	// Indicates if the terminal is closed.
 	closed bool
 
-	// allowChecksum controls whether DECRQCRA rectangular checksum queries
-	// respond; disabled by default to prevent screen-content oracle leaks.
-	allowChecksum bool
-
 	// graphics handles Kitty graphics commands; nil drops them.
 	graphics Graphics
 	// The attached terminal's cell size in pixels; 0 when unknown.
@@ -552,6 +548,8 @@ func (e *Emulator) InputPipe() io.Writer {
 // appropriate escape sequences.
 func (e *Emulator) Paste(text string) {
 	if e.isModeSet(ansi.ModeBracketedPaste) {
+		// A pasted end marker would end the paste early and let the rest
+		// run as typed input; strip it, including any it reassembles.
 		for strings.Contains(text, ansi.BracketedPasteEnd) || strings.Contains(text, "\x9b201~") {
 			text = strings.ReplaceAll(text, ansi.BracketedPasteEnd, "")
 			text = strings.ReplaceAll(text, "\x9b201~", "")
@@ -561,12 +559,6 @@ func (e *Emulator) Paste(text string) {
 	}
 
 	_, _ = io.WriteString(e.pw, text)
-}
-
-// SetAllowChecksum controls whether DECRQCRA rectangular checksum queries
-// are answered.
-func (e *Emulator) SetAllowChecksum(allow bool) {
-	e.allowChecksum = allow
 }
 
 // SendText sends arbitrary text to the terminal.

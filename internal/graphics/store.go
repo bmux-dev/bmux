@@ -46,9 +46,6 @@ type Hooks struct {
 	// without blocking and return false when it can't, which counts every
 	// image of that pane as referenced.
 	Referenced func(owned bool) (map[uint32]struct{}, bool)
-	// AllowFiles enables Kitty t=f and t=t file-based image transmissions.
-	// Disabled by default so pane programs cannot read arbitrary host files.
-	AllowFiles bool
 }
 
 // Store holds every pane's images and enforces the server-wide cap.

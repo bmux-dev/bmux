@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/bmux-dev/bmux/internal/protocol"
@@ -1254,8 +1253,6 @@ func (u *ui) draw() {
 	u.screen.Show()
 }
 
-const maxFitClusterBytes = 256
-
 func fit(s string, width int) string {
 	if width <= 0 {
 		return ""
@@ -1264,20 +1261,13 @@ func fit(s string, width int) string {
 	used := 0
 	graphemes := uniseg.NewGraphemes(s)
 	for graphemes.Next() {
-		raw := graphemes.Str()
-		if len(raw) > maxFitClusterBytes {
-			cut := maxFitClusterBytes
-			for cut > 0 && !utf8.RuneStart(raw[cut]) {
-				cut--
-			}
-			raw = raw[:cut]
-		}
+		// C1 controls too: xterm acts on U+009B as CSI even in UTF-8.
 		cluster := strings.Map(func(r rune) rune {
 			if unicode.IsControl(r) {
 				return ' '
 			}
 			return r
-		}, raw)
+		}, graphemes.Str())
 		cw := displayWidth(cluster)
 		if used+cw > width {
 			break

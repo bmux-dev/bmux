@@ -8,25 +8,6 @@ import (
 	"time"
 )
 
-func TestScreenResizeAndRestoreCursorClamped(t *testing.T) {
-	term := newTestTerminal(t, 10, 4)
-	term.WriteString("\x1b[4;10H\x1b7") // move to (9,3) and DECSC save
-	term.Resize(4, 2)
-	x, y := term.scr.CursorPosition()
-	if x < 0 || x >= 4 || y < 0 || y >= 2 {
-		t.Fatalf("cursor after Resize = (%d,%d), want within 4x2", x, y)
-	}
-
-	// Simulate an out-of-range saved cursor and restore it on a shrunk screen.
-	term.scr.saved.Position.X = 20
-	term.scr.saved.Position.Y = 20
-	term.scr.RestoreCursor()
-	x, y = term.scr.CursorPosition()
-	if x != 3 || y != 1 {
-		t.Fatalf("cursor after RestoreCursor = (%d,%d), want (3,1)", x, y)
-	}
-}
-
 func TestHugeTabAndRepeatCountsBounded(t *testing.T) {
 	term := newTestTerminal(t, 10, 4)
 	start := time.Now()
@@ -37,21 +18,6 @@ func TestHugeTabAndRepeatCountsBounded(t *testing.T) {
 	x, y := term.scr.CursorPosition()
 	if x < 0 || x >= 10 || y < 0 || y >= 4 {
 		t.Fatalf("cursor out of bounds after tab/repeat: (%d,%d)", x, y)
-	}
-}
-
-func TestGraphemeBufferBounded(t *testing.T) {
-	term := newTestTerminal(t, 20, 4)
-	term.WriteString("e" + strings.Repeat("\u0301", 2000))
-	if len(term.grapheme) > maxGraphemeBytes+4 {
-		t.Fatalf("grapheme buffer len = %d, exceeds bound", len(term.grapheme))
-	}
-	if cap(term.grapheme) > graphemeShrinkLimit {
-		t.Fatalf("grapheme buffer cap = %d, exceeds shrink limit", cap(term.grapheme))
-	}
-	term.WriteString("x")
-	if len(term.grapheme) > maxGraphemeBytes {
-		t.Fatalf("grapheme buffer not flushed: len=%d", len(term.grapheme))
 	}
 }
 

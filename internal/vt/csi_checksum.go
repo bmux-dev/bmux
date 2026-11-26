@@ -14,9 +14,6 @@ import (
 // suites such as esctest and vttest read the screen this way. A program sees
 // only its own pane, so this reveals nothing it couldn't already know.
 func (e *Emulator) requestChecksum(params ansi.Params) {
-	if !e.allowChecksum {
-		return
-	}
 	id, _, _ := params.Param(0, 0)
 	width, height := e.Width(), e.Height()
 	top, _, _ := params.Param(2, 1)

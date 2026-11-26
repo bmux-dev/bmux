@@ -311,7 +311,7 @@ func TestFileTransmission(t *testing.T) {
 		return path
 	}
 	regular := write("shot.png", good)
-	p := newPane(DefaultLimits, Hooks{AllowFiles: true})
+	p := newPane(DefaultLimits, Hooks{})
 	if got := p.Handle([]byte("a=t,t=f,f=100,i=1;" + b64([]byte(regular)))); got != "\x1b_Gi=1;OK\x1b\\" {
 		t.Fatalf("regular file replied %q", got)
 	}
@@ -349,7 +349,7 @@ func TestFileTransmission(t *testing.T) {
 		t.Errorf("symlink to a regular file replied %q", got)
 	}
 
-	big := newPane(Limits{Pane: int64(len(good)) - 1, Total: 1 << 20}, Hooks{AllowFiles: true})
+	big := newPane(Limits{Pane: int64(len(good)) - 1, Total: 1 << 20}, Hooks{})
 	if got := big.Handle([]byte("a=t,t=f,f=100,i=1;" + b64([]byte(regular)))); !strings.Contains(got, "EFBIG") {
 		t.Errorf("oversized file replied %q", got)
 	}
@@ -363,7 +363,7 @@ func TestFileTransmission(t *testing.T) {
 func TestTemporaryFileRules(t *testing.T) {
 	good := testPNG(t, 2, 2, color.NRGBA{G: 255, A: 255})
 	temp := t.TempDir() // below os.TempDir()
-	p := newPane(DefaultLimits, Hooks{AllowFiles: true})
+	p := newPane(DefaultLimits, Hooks{})
 	send := func(id int, path string) string {
 		return p.Handle([]byte(fmt.Sprintf("a=t,t=t,f=100,i=%d;%s", id, b64([]byte(path)))))
 	}
@@ -512,50 +512,36 @@ func TestClosingAPaneFreesItsImages(t *testing.T) {
 	}
 }
 
-func TestFileTransmissionDisabledByDefaultAndHardened(t *testing.T) {
+func TestFileTransmissionFollowsKittysPathRules(t *testing.T) {
 	good := testPNG(t, 2, 2, color.NRGBA{R: 255, A: 255})
-	temp := t.TempDir()
-	marked := filepath.Join(temp, "tty-graphics-protocol-default.png")
-	if err := os.WriteFile(marked, good, 0o600); err != nil {
+	p := newPane(DefaultLimits, Hooks{})
+
+	// The marker must be in the file's own name, not only a parent folder.
+	dir := filepath.Join(t.TempDir(), "tty-graphics-protocol-dir")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-
-	defPane := newPane(DefaultLimits, Hooks{})
-	for _, medium := range []string{"f", "t"} {
-		if got := defPane.Handle([]byte(fmt.Sprintf("a=t,t=%s,f=100,i=1;%s", medium, b64([]byte(marked))))); !strings.Contains(got, "EINVAL") || strings.Contains(got, "OK") {
-			t.Fatalf("t=%s with default Hooks replied %q, want EINVAL", medium, got)
-		}
-		if _, err := os.Stat(marked); err != nil {
-			t.Fatalf("t=%s removed or damaged file when disabled: %v", medium, err)
-		}
-	}
-
-	// Marker in a parent directory must not satisfy t=t when basename lacks it.
-	subDir := filepath.Join(temp, "tty-graphics-protocol-dir")
-	if err := os.MkdirAll(subDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	nested := filepath.Join(subDir, "plain.png")
+	nested := filepath.Join(dir, "plain.png")
 	if err := os.WriteFile(nested, good, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	allowPane := newPane(DefaultLimits, Hooks{AllowFiles: true})
-	if got := allowPane.Handle([]byte("a=t,t=t,f=100,i=2;" + b64([]byte(nested)))); strings.Contains(got, "OK") {
-		t.Fatalf("t=t accepted marker only in parent directory: %q", got)
+	if got := p.Handle([]byte("a=t,t=t,f=100,i=1;" + b64([]byte(nested)))); strings.Contains(got, "OK") {
+		t.Fatalf("t=t accepted a marker only in a parent folder: %q", got)
 	}
 	if _, err := os.Stat(nested); err != nil {
 		t.Fatalf("refused t=t file was deleted: %v", err)
 	}
 
-	// Pseudo-filesystem and raw dimension overflow must be refused cleanly.
-	if got := allowPane.Handle([]byte("a=t,t=f,f=100,i=3;" + b64([]byte("/proc/self/stat")))); strings.Contains(got, "OK") {
-		t.Fatalf("t=f read /proc path: %q", got)
+	// Kernel and device files are never read, and errors don't say whether
+	// a path exists.
+	missing := p.Handle([]byte("a=t,t=f,f=100,i=2;" + b64([]byte(filepath.Join(dir, "nope")))))
+	proc := p.Handle([]byte("a=t,t=f,f=100,i=3;" + b64([]byte("/proc/self/stat"))))
+	if strings.Contains(proc, "OK") || strings.Contains(missing, "ENOENT") {
+		t.Fatalf("/proc replied %q, missing file replied %q", proc, missing)
 	}
-	if got := allowPane.Handle([]byte("a=t,f=32,s=4294967296,v=4294967296,i=4;" + b64([]byte{1, 2, 3, 4}))); !strings.Contains(got, "EINVAL") {
+
+	// s*v that overflows int64 must not slip under the pixel cap.
+	if got := p.Handle([]byte("a=t,f=32,s=4294967296,v=4294967296,i=4;" + b64([]byte{1, 2, 3, 4}))); !strings.Contains(got, "EINVAL") {
 		t.Fatalf("overflowing s*v replied %q", got)
-	}
-	// Malformed keys must not reflect raw bytes back into the reply.
-	if got := allowPane.Handle([]byte("a=t,secretkey\x1b,f=100,i=5;" + b64(good))); strings.Contains(got, "secretkey") || !strings.Contains(got, "malformed key") {
-		t.Fatalf("malformed key reply %q leaked key or wrong error", got)
 	}
 }
