@@ -230,6 +230,10 @@ func swap(path string, binary io.Reader) error {
 	if _, err = io.Copy(tmp, io.LimitReader(binary, maxBinaryBytes)); err == nil {
 		err = tmp.Chmod(0o755)
 	}
+	if err == nil {
+		// Flush before the rename, so a crash can't leave an empty bmux.
+		err = tmp.Sync()
+	}
 	if closeErr := tmp.Close(); err == nil {
 		err = closeErr
 	}

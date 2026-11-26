@@ -112,9 +112,10 @@ main() {
 	fetch "$base/$asset" "$tmp/$asset" || fail "couldn't download $base/$asset"
 	fetch "$base/checksums.txt" "$tmp/checksums.txt" || fail "couldn't download $base/checksums.txt"
 
-	want=$(awk -v name="$asset" '$2 == name { print $1 }' "$tmp/checksums.txt")
+	# sha256sum writes "*name" for binary mode, and some tools write uppercase.
+	want=$(awk -v name="$asset" '{ file = $2; sub(/^\*/, "", file); if (file == name) { print $1; exit } }' "$tmp/checksums.txt" | tr '[:upper:]' '[:lower:]')
 	[ -n "$want" ] || fail "checksums.txt has no entry for $asset"
-	got=$(sha256 "$tmp/$asset")
+	got=$(sha256 "$tmp/$asset" | tr '[:upper:]' '[:lower:]')
 	[ "$got" = "$want" ] || fail "checksum mismatch for $asset (expected $want, got $got); nothing was installed"
 
 	tar -xzf "$tmp/$asset" -C "$tmp" bmux || fail "couldn't unpack $asset"

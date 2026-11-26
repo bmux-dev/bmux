@@ -252,20 +252,29 @@ func PrefixKey(prefix string) (rune, error) {
 	return 0, fmt.Errorf("prefix %q must be a Ctrl-letter like \"C-a\"", prefix)
 }
 
-// ValidResume follows the server's rules for resume commands.
+// ValidResume follows the server's rules for resume commands, limits
+// included, so a config the server would refuse is reported here.
 func ValidResume(argv []string) error {
 	if len(argv) == 0 {
 		return nil
 	}
+	if len(argv) > 64 {
+		return fmt.Errorf("must have at most 64 arguments")
+	}
 	if argv[0] == "" || strings.ContainsRune(argv[0], '/') {
 		return fmt.Errorf("must start with a command name on PATH")
 	}
+	total := 0
 	for _, arg := range argv {
+		total += len(arg) + 1
 		for _, r := range arg {
 			if unicode.IsControl(r) {
 				return fmt.Errorf("must not contain control characters")
 			}
 		}
+	}
+	if total > 8<<10 {
+		return fmt.Errorf("must be at most %d bytes", 8<<10)
 	}
 	return nil
 }
