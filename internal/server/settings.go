@@ -23,6 +23,7 @@ type serverSettings struct {
 	scrollback                int                 // history lines kept per pane
 	scrollbackMaxBytes        int                 // hard per-pane byte budget; 0 = unlimited
 	updateCheck               bool                // look for new releases
+	updateChannel             string              // "stable" or "beta"
 	hooks                     map[string][]string // event -> shell commands
 	// paneFG and paneBG are the theme's default colors in panes, nil where the
 	// terminal's own show; themeBG is a themed pane's background even when
@@ -39,6 +40,9 @@ var (
 func init() { activeSettings.Store(settingsFrom(config.Default())) }
 
 func currentSettings() *serverSettings { return activeSettings.Load() }
+
+// UpdateChannel returns the configured release channel ("stable" or "beta").
+func (s *Server) UpdateChannel() string { return currentSettings().updateChannel }
 
 func samplesFor(d time.Duration) int {
 	return max(1, int((d+agentSampleInterval-1)/agentSampleInterval))
@@ -67,6 +71,7 @@ func settingsFrom(cfg config.Config) *serverSettings {
 		scrollback:         cfg.Scrollback.Lines,
 		scrollbackMaxBytes: cfg.Scrollback.MaxMB << 20,
 		updateCheck:        cfg.Update.Check,
+		updateChannel:      cfg.Update.Channel,
 		hooks:              cfg.Hooks,
 	}
 	if p, foreground, background := cfg.PaneColors(); foreground {

@@ -227,6 +227,22 @@ go test ./...
 git add "testdata/releases/$V" && git commit -m "test: compatibility fixtures for $V"
 ```
 
+### Beta releases
+
+To test an upgrade end to end without publishing a stable release or pushing to
+Homebrew, trigger the **Beta** workflow (`.github/workflows/beta.yml`) from GitHub
+Actions or with `gh workflow run beta.yml`:
+
+```sh
+gh workflow run beta.yml                  # auto-picks vX.Y.(Z+1)-beta.N
+gh workflow run beta.yml -f version=0.8.0 # auto-picks v0.8.0-beta.N
+```
+
+The workflow runs CI, pushes the `v...-beta.N` tag, builds the archives, and
+publishes them as a pre-release without touching Homebrew. Install or test with
+`bmux update --beta && bmux restart`, and switch back with
+`bmux update --stable && bmux restart`.
+
 ### When something fails
 
 - **Before publishing** (CI fails, GoReleaser fails, the draft looks wrong):

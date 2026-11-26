@@ -18,6 +18,7 @@ bmux
 | Variable | Effect |
 | --- | --- |
 | `BMUX_VERSION=v0.5.1` | Install that release instead of the newest |
+| `BMUX_CHANNEL=beta` | Also install beta pre-releases when picking the newest; default `stable` |
 | `BMUX_INSTALL_DIR=DIR` | Install into `DIR` instead of `~/.local/bin` |
 | `BMUX_RELEASE_URL=URL` | Download `URL/TAG/ASSET` from a mirror; needs `BMUX_VERSION` |
 
@@ -67,8 +68,8 @@ A release build looks for newer releases once a day. The server asks GitHub's
 releases API (`api.github.com/repos/bmux-dev/bmux/releases`), unauthenticated
 and with nothing about you, and caches the answer in `update-check.json` next
 to the saved sessions, so restarts don't ask again. Only releases with a binary
-for your platform count; while bmux is 0.x, pre-releases do too. A failed check
-is logged in `server.log` and retried the next day.
+for your platform count; on the default `stable` channel, beta pre-releases are
+skipped (0.x regular releases still count). A failed check is logged in `server.log` and retried the next day.
 
 When one is newer than the server, the status bar shows **↑** at its right end,
 or `↑ 0.8.0` when there's room, in space the bar leaves free. Clicking it, or
@@ -83,7 +84,11 @@ the top of the key list (Ctrl-a ?), says what to do:
 `checksums.txt`, checks the SHA-256, and only then replaces the binary in
 place (one rename, so it's never half-written). It doesn't restart the server,
 since that ends the programs running in panes; run `bmux restart` when you're
-ready. `bmux update --check` only reports whether a release is available.
+ready. `bmux update --check` only reports whether a release is available. Pass
+`--beta` to check or install beta pre-releases, or set `[update] channel = "beta"`
+in the [config file](/bmux/configuration/config-file/) (`BMUX_UPDATE_CHANNEL=beta`
+to override). Pass `--stable` to switch back from a beta to the latest stable
+release.
 
 It refuses, and says what to do instead, for a build from a checkout, a binary
 in a directory you can't write (re-run the install script with

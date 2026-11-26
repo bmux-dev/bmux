@@ -12,6 +12,13 @@ func Valid(v string) bool {
 	return ok
 }
 
+// IsPrerelease reports whether v is a valid semantic version with a
+// pre-release suffix such as 0.7.8-beta.1.
+func IsPrerelease(v string) bool {
+	s, ok := parse(v)
+	return ok && len(s.pre) > 0
+}
+
 // Newer reports whether version a comes after b by semver precedence:
 // 0.6.0 > 0.6.0-rc.2 > 0.6.0-rc.1 > 0.5.1. Build metadata (+...) is ignored.
 // Invalid versions are never newer.
