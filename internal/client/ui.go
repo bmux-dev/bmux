@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bmux-dev/bmux/internal/config"
 	"github.com/bmux-dev/bmux/internal/protocol"
@@ -1260,8 +1261,9 @@ func fit(s string, width int) string {
 	used := 0
 	graphemes := uniseg.NewGraphemes(s)
 	for graphemes.Next() {
+		// C1 controls too: xterm acts on U+009B as CSI even in UTF-8.
 		cluster := strings.Map(func(r rune) rune {
-			if r < 32 || r == 127 {
+			if unicode.IsControl(r) {
 				return ' '
 			}
 			return r

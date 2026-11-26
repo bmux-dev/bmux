@@ -3,6 +3,7 @@ package vt
 import (
 	"image/color"
 	"io"
+	"strings"
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/ultraviolet/screen"
@@ -547,6 +548,12 @@ func (e *Emulator) InputPipe() io.Writer {
 // appropriate escape sequences.
 func (e *Emulator) Paste(text string) {
 	if e.isModeSet(ansi.ModeBracketedPaste) {
+		// A pasted end marker would end the paste early and let the rest
+		// run as typed input; strip it, including any it reassembles.
+		for strings.Contains(text, ansi.BracketedPasteEnd) || strings.Contains(text, "\x9b201~") {
+			text = strings.ReplaceAll(text, ansi.BracketedPasteEnd, "")
+			text = strings.ReplaceAll(text, "\x9b201~", "")
+		}
 		_, _ = io.WriteString(e.pw, ansi.BracketedPasteStart)
 		defer io.WriteString(e.pw, ansi.BracketedPasteEnd) //nolint:errcheck
 	}

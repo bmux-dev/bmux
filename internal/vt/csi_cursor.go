@@ -7,11 +7,15 @@ import (
 // nextTab moves the cursor to the next tab stop n times. This respects the
 // horizontal scrolling region. This performs the same function as [ansi.CHT].
 func (e *Emulator) nextTab(n int) {
+	if n <= 0 {
+		return
+	}
+	n = min(n, max(e.Width(), 1))
 	x, y := e.scr.CursorPosition()
 	scroll := e.scr.ScrollRegion()
 	for range n {
 		ts := e.tabstops.Next(x)
-		if ts < x {
+		if ts <= x {
 			break
 		}
 		x = ts
@@ -31,6 +35,10 @@ func (e *Emulator) nextTab(n int) {
 // move past the leftmost valid column, the cursor remains at the leftmost
 // valid column and the operation completes.
 func (e *Emulator) prevTab(n int) {
+	if n <= 0 {
+		return
+	}
+	n = min(n, max(e.Width(), 1))
 	x, _ := e.scr.CursorPosition()
 	leftmargin := 0
 	scroll := e.scr.ScrollRegion()
@@ -40,7 +48,7 @@ func (e *Emulator) prevTab(n int) {
 
 	for range n {
 		ts := e.tabstops.Prev(x)
-		if ts > x {
+		if ts >= x {
 			break
 		}
 		x = ts
@@ -108,9 +116,10 @@ func (e *Emulator) reportedCursorPosition() (x, y int) {
 // equivalent to typing the same character n times. This performs the same as
 // [ansi.REP].
 func (e *Emulator) repeatPreviousCharacter(n int) {
-	if e.lastChar == 0 {
+	if n <= 0 || e.lastChar == 0 {
 		return
 	}
+	n = min(n, max(e.Width()*e.Height(), 1))
 	for range n {
 		e.handlePrint(e.lastChar)
 	}
