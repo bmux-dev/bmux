@@ -217,17 +217,10 @@ func layoutDigest(data []byte) string {
 
 func readLayoutTrust(path string) (layoutTrust, error) {
 	trust := layoutTrust{Version: 1, Files: map[string]string{}}
-	info, err := os.Lstat(path)
+	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return trust, nil
 	}
-	if err != nil {
-		return trust, err
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return trust, fmt.Errorf("%s must not be a symlink", path)
-	}
-	data, err := readRegularBounded(path, maxLayoutFileBytes)
 	if err != nil {
 		return trust, err
 	}

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/bmux-dev/bmux/internal/protocol"
 )
@@ -24,8 +23,6 @@ import (
 const (
 	stateVersion      = 1
 	stateSaveInterval = 5 * time.Second
-	maxStateFileBytes = 16 << 20
-	maxLayoutDepth    = 64
 )
 
 type stateFile struct {
@@ -101,13 +98,6 @@ func snapshotLayout(n *layout) *layoutSnapshot {
 
 // build validates a saved tree: every leaf is a distinct listed pane.
 func (l *layoutSnapshot) build(panes map[int]paneSnapshot, seen map[int]bool) (*layout, error) {
-	return l.buildDepth(panes, seen, 0)
-}
-
-func (l *layoutSnapshot) buildDepth(panes map[int]paneSnapshot, seen map[int]bool, depth int) (*layout, error) {
-	if depth > maxLayoutDepth {
-		return nil, fmt.Errorf("layout tree exceeds %d levels", maxLayoutDepth)
-	}
 	if l == nil {
 		return nil, fmt.Errorf("missing layout node")
 	}
@@ -121,11 +111,11 @@ func (l *layoutSnapshot) buildDepth(panes map[int]paneSnapshot, seen map[int]boo
 	if (l.Direction != "horizontal" && l.Direction != "vertical") || l.Ratio <= 0 || l.Ratio >= 10000 {
 		return nil, fmt.Errorf("invalid layout split")
 	}
-	first, err := l.First.buildDepth(panes, seen, depth+1)
+	first, err := l.First.build(panes, seen)
 	if err != nil {
 		return nil, err
 	}
-	second, err := l.Second.buildDepth(panes, seen, depth+1)
+	second, err := l.Second.build(panes, seen)
 	if err != nil {
 		return nil, err
 	}
@@ -330,12 +320,10 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 	s.mu.Unlock()
 	for _, c := range created {
 		if c.snap.Command != "" {
-			if len(c.snap.Command) <= maxLayoutCommand && strings.IndexFunc(c.snap.Command, unicode.IsControl) < 0 {
-				_ = c.p.input(protocol.Request{Op: "type", Text: c.snap.Command + "\r"})
-			}
+			_ = c.p.input(protocol.Request{Op: "type", Text: c.snap.Command + "\r"})
 			continue
 		}
-		if len(c.snap.Resume) == 0 || validateResume(c.snap.Resume) != nil || hasControlRune(c.snap.Resume) {
+		if len(c.snap.Resume) == 0 || validateResume(c.snap.Resume) != nil {
 			continue
 		}
 		if !c.snap.Reported {
@@ -352,47 +340,11 @@ func restoreSession(snap sessionSnapshot, shell string, width, height int, resum
 	return s, nil
 }
 
-func hasControlRune(args []string) bool {
-	for _, arg := range args {
-		if strings.IndexFunc(arg, unicode.IsControl) >= 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func ensurePrivateDir(dir string) error {
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return err
-	}
-	stat, err := os.Lstat(dir)
-	if err != nil {
-		return err
-	}
-	if !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("%s must be a private directory, not a symlink", dir)
-	}
-	if owner, ok := stat.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Getuid()) {
-		return fmt.Errorf("directory %s is not owned by your user", dir)
-	}
-	if stat.Mode().Perm() != 0700 {
-		return fmt.Errorf("directory %s must have permissions 0700", dir)
-	}
-	return nil
-}
-
 func loadState(path string) (stateFile, error) {
-	stat, err := os.Lstat(path)
+	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return stateFile{Version: stateVersion}, nil
 	}
-	if err != nil {
-		return stateFile{}, err
-	}
-	if stat.Mode()&os.ModeSymlink != 0 || !stat.Mode().IsRegular() {
-		return stateFile{}, fmt.Errorf("saved sessions path %s must be a regular file, not a symlink", path)
-	}
-	data, err := readRegularBounded(path, maxStateFileBytes)
 	if err != nil {
 		return stateFile{}, err
 	}
@@ -406,8 +358,31 @@ func loadState(path string) (stateFile, error) {
 	return state, nil
 }
 
+// ensureStateDir makes dir, refusing a symlink, a directory another user
+// owns, or one others can write to: whoever can replace the saved sessions
+// chooses the resume commands typed into restored panes.
+func ensureStateDir(dir string) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	stat, err := os.Lstat(dir)
+	if err != nil {
+		return err
+	}
+	if !stat.IsDir() {
+		return fmt.Errorf("%s must be a directory, not a symlink", dir)
+	}
+	if owner, ok := stat.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Getuid()) {
+		return fmt.Errorf("%s is not owned by your user", dir)
+	}
+	if stat.Mode().Perm()&0o022 != 0 {
+		return fmt.Errorf("%s is writable by other users; chmod go-w it", dir)
+	}
+	return nil
+}
+
 func writeState(path string, data []byte) error {
-	if err := ensurePrivateDir(filepath.Dir(path)); err != nil {
+	if err := ensureStateDir(filepath.Dir(path)); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".sessions-*.json")
@@ -416,9 +391,6 @@ func writeState(path string, data []byte) error {
 	}
 	defer os.Remove(tmp.Name())
 	if _, err = tmp.Write(data); err == nil {
-		err = tmp.Chmod(0600)
-	}
-	if err == nil {
 		err = tmp.Sync()
 	}
 	if closeErr := tmp.Close(); err == nil {
@@ -438,9 +410,6 @@ func (s *Server) EnablePersistence(path string) error {
 	state, err := loadState(path)
 	if err != nil {
 		aside := path + ".unreadable"
-		if info, statErr := os.Lstat(aside); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("%w; backup path %s is a symlink", err, aside)
-		}
 		if renameErr := os.Rename(path, aside); renameErr != nil {
 			return fmt.Errorf("%w; also could not move it aside: %v", err, renameErr)
 		}

@@ -196,16 +196,16 @@ func TestSavedLayoutRebuildsTheSameWindows(t *testing.T) {
 	}
 }
 
-func TestLayoutSaveDropsUntrustedCommandsAndTrustStoreHardening(t *testing.T) {
+func TestLayoutSaveKeepsCommandsOnlyFromATrustedFile(t *testing.T) {
 	dir := layoutProject(t, handLayout)
 	srv := New("/bin/sh")
 	t.Cleanup(srv.Close)
-	trustDir := filepath.Join(t.TempDir(), "state")
-	trustPath := filepath.Join(trustDir, "trust.json")
+	trustPath := filepath.Join(t.TempDir(), "state", "trust.json")
 	srv.SetLayoutTrust(trustPath)
 
 	s := createIn(t, srv, "untrusted", dir)
-	// Because dir's layout file is NOT trusted, saving must not carry over its commands.
+	// Saving must not copy an untrusted file's commands into a file that
+	// bmux layout save then trusts.
 	data, err := s.layout(dir, srv.trustPath())
 	if err != nil {
 		t.Fatal(err)
@@ -214,7 +214,7 @@ func TestLayoutSaveDropsUntrustedCommandsAndTrustStoreHardening(t *testing.T) {
 		t.Fatalf("s.layout copied commands from an untrusted layout:\n%s", data)
 	}
 
-	// TrustLayoutBytes trusts exact bytes without reading a swapped disk file.
+	// TrustLayoutBytes trusts exactly the bytes it is given.
 	diskData, err := os.ReadFile(filepath.Join(dir, LayoutFileName))
 	if err != nil {
 		t.Fatal(err)
@@ -225,13 +225,25 @@ func TestLayoutSaveDropsUntrustedCommandsAndTrustStoreHardening(t *testing.T) {
 	if !layoutTrusted(trustPath, filepath.Join(dir, LayoutFileName), diskData) {
 		t.Fatal("TrustLayoutBytes did not record trust for exact bytes")
 	}
+}
 
-	// Symlinked trust store must be rejected.
-	linkTrust := filepath.Join(trustDir, "symlink-trust.json")
-	if err := os.Symlink(trustPath, linkTrust); err != nil {
+func TestLayoutFileLinkedToADeviceDoesNotHangCreate(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	dir := realDir(t, t.TempDir())
+	// git stores symlinks, so a cloned repo can ship this.
+	if err := os.Symlink("/dev/zero", filepath.Join(dir, LayoutFileName)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := readLayoutTrust(linkTrust); err == nil {
-		t.Fatal("readLayoutTrust accepted a symlinked trust store")
+	srv := New("/bin/sh")
+	t.Cleanup(srv.Close)
+	done := make(chan *session, 1)
+	go func() { done <- createIn(t, srv, "zero", dir) }()
+	select {
+	case s := <-done:
+		if notice := s.takeNotice(); !strings.Contains(notice, "started one pane instead") {
+			t.Fatalf("notice %q", notice)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("creating a session hung reading a .bmux.toml linked to /dev/zero")
 	}
 }

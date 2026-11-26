@@ -373,8 +373,11 @@ build. Either outcome worth telling is `session.notice`, which
 `takeNotice` hands to the first frame of the first attachment
 (`Frame.Notice`). `layout` encodes `persistentState` back into the file
 format, relative to the session directory, keeping the replaced file's
-commands by pane ID; a session built from a file keeps its pane IDs, so
-save and build round-trip.
+commands by pane ID only when that file is trusted (save trusts what it
+writes, so copying an untrusted file's commands would trust them); a session
+built from a file keeps its pane IDs, so save and build round-trip. Layout
+files are read non-blocking and capped at 1 MiB, so a `.bmux.toml` that links
+to a device can't hang the server.
 
 ## Configuration
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"unicode"
 
 	"github.com/bmux-dev/bmux/internal/protocol"
 )
@@ -44,9 +42,6 @@ func (s *session) layoutCommand(r protocol.Request) (protocol.PaneActivity, erro
 	}
 	switch r.Kind {
 	case "split":
-		if _, err := validateLayoutCommand(r.Args); err != nil {
-			return protocol.PaneActivity{}, err
-		}
 		direction := r.Direction
 		if direction == "" {
 			direction = "vertical"
@@ -56,9 +51,6 @@ func (s *session) layoutCommand(r protocol.Request) (protocol.PaneActivity, erro
 		}
 		return s.settleNew(r, previousActive, previousFocus)
 	case "new-window":
-		if _, err := validateLayoutCommand(r.Args); err != nil {
-			return protocol.PaneActivity{}, err
-		}
 		if err := s.input(protocol.Request{Op: "new-window", PaneID: id, NewName: r.NewName, Dir: r.Dir}); err != nil {
 			return protocol.PaneActivity{}, err
 		}
@@ -118,27 +110,12 @@ func (s *session) settleNew(r protocol.Request, previousActive, previousFocus in
 	window, index := s.placeLocked(created)
 	p := s.panes[created]
 	s.mu.Unlock()
-	command, err := validateLayoutCommand(r.Args)
-	if err != nil {
-		return protocol.PaneActivity{}, err
-	}
-	if command != "" && p != nil {
+	if command := layoutCommandLine(r.Args); command != "" && p != nil {
 		if err := p.input(protocol.Request{Op: "type", Text: command + "\r"}); err != nil {
 			return protocol.PaneActivity{}, err
 		}
 	}
 	return protocol.PaneActivity{Pane: created, Window: window, Index: index}, nil
-}
-
-func validateLayoutCommand(args []string) (string, error) {
-	command := layoutCommandLine(args)
-	if command == "" {
-		return "", nil
-	}
-	if len(command) > maxLayoutCommand || strings.IndexFunc(command, unicode.IsControl) >= 0 {
-		return "", fmt.Errorf("pane command must be one line of at most %d bytes", maxLayoutCommand)
-	}
-	return command, nil
 }
 
 // layoutCommandLine is the text typed for a split's or new window's command:

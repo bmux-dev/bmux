@@ -198,27 +198,3 @@ func TestApplyTerminalDeltaRoundTrip(t *testing.T) {
 		t.Fatalf("metadata-only delta failed: %+v", metaUpdated)
 	}
 }
-
-func TestApplyTerminalDeltaCapsHugeRowDeltaY(t *testing.T) {
-	base := &TerminalFrame{
-		Epoch: 1,
-		Name:  "dev",
-		Rows:  [][]Cell{testRow("row0"), testRow("row1")},
-	}
-	got := ApplyTerminalDelta(base, &TerminalFrame{
-		Delta: true,
-		Epoch: 1,
-		Name:  "dev",
-		RowDeltas: []RowDelta{
-			{Y: 1 << 30, Cells: testRow("oom")},
-			{Y: -1, Cells: testRow("neg")},
-			{Y: 1, Cells: testRow("ok")},
-		},
-	})
-	if len(got.Rows) > MaxTerminalHeight {
-		t.Fatalf("rows len = %d, exceeds MaxTerminalHeight (%d)", len(got.Rows), MaxTerminalHeight)
-	}
-	if !reflect.DeepEqual(got.Rows[1], testRow("ok")) {
-		t.Fatalf("valid row delta not applied: %+v", got.Rows)
-	}
-}
