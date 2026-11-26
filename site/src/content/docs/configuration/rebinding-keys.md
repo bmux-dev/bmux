@@ -62,15 +62,16 @@ A key can run a shell command instead of an action, like tmux's
 [keys.prefix]
 "g" = "run-shell bmux split -h -- lazygit"   # lazygit in a new split
 "T" = "run-shell make test"                   # the last line shows in the notice box
-"N" = "run-shell bmux new-window -c #{pane_current_path} -- nvim"
-"L" = "run-shell bmux pipe-pane -o 'cat >> ~/#{session_name}-#{pane_id}.log'"  # toggle logging
+"N" = 'run-shell bmux new-window -c "$BMUX_PANE_PATH" -- nvim'
+"L" = "run-shell bmux pipe-pane -o 'cat >> ~/${BMUX_SESSION}-${BMUX_PANE}.log'"  # toggle logging
 ```
 
 The server runs the command for the focused pane, in the background, the way
-it runs [hooks](/bmux/configuration/config-file/#hooks): `#{...}`
-[variables](/bmux/reference/commands/#format-variables) filled in, in the
-pane's directory, with its `BMUX_SESSION`, `BMUX_SESSION_ID` and `BMUX_PANE`,
-for up to a minute. The last line it prints shows in the notice box, or what
+it runs [hooks](/bmux/configuration/config-file/#hooks): `BMUX_*` metadata
+environment variables (`BMUX_SESSION`, `BMUX_SESSION_ID`, `BMUX_PANE`,
+`BMUX_PANE_PATH`, `BMUX_WINDOW_NAME`, `BMUX_PANE_TITLE`, ...) and shell-escaped
+`#{...}` [variables](/bmux/reference/commands/#format-variables) filled in, in
+the pane's directory, for up to a minute. The last line it prints shows in the notice box, or what
 went wrong if it fails. For a long-running program, start it in a pane (`bmux
 split -- …`, `bmux new-window -- …`) so the key returns at once. Ctrl-a ?
 lists these keys with their commands.

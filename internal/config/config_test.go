@@ -40,7 +40,7 @@ func TestDefaultFileDocumentsTheDefaults(t *testing.T) {
 	want.Agents.Extra = []string{}
 	want.Keys = Keys{PassThrough: []string{}, Root: map[string]string{}, Prefix: map[string]string{}}
 	want.Restore.Resume = map[string][]string{"claude": {"claude", "--continue"}, "codex": {"codex", "resume", "--last"}}
-	want.Hooks = map[string][]string{"agent-blocked": {"notify-send 'bmux' '#{session_name}: #{pane_agent} needs you'"}}
+	want.Hooks = map[string][]string{"agent-blocked": {`notify-send 'bmux' "$BMUX_SESSION: $BMUX_PANE_AGENT needs you"`}}
 	if err != nil || !reflect.DeepEqual(cfg, want) {
 		t.Fatalf("documented defaults:\n got %+v\nwant %+v\n%v", cfg, want, err)
 	}
