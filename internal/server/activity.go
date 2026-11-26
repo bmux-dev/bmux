@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/bmux-dev/bmux/internal/protocol"
 )
@@ -238,12 +239,16 @@ func validateResume(argv []string) error {
 	if len(argv) > maxResumeArgs {
 		return fmt.Errorf("resume command must have at most %d arguments", maxResumeArgs)
 	}
-	if argv[0] == "" || strings.ContainsRune(argv[0], '/') {
-		return fmt.Errorf("resume command must start with a command name on PATH, not a path")
+	cmd := argv[0]
+	if cmd == "" || cmd == "." || cmd == ".." || strings.HasPrefix(cmd, "-") || strings.ContainsAny(cmd, "/\\ \t") {
+		return fmt.Errorf("resume command must start with a command name on PATH, not a path or option")
 	}
 	total := 0
 	for _, arg := range argv {
 		total += len(arg) + 1
+		if !utf8.ValidString(arg) {
+			return fmt.Errorf("resume command must be valid UTF-8")
+		}
 		for _, r := range arg {
 			if unicode.IsControl(r) {
 				return fmt.Errorf("resume command must not contain control characters")

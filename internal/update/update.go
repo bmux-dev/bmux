@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -120,7 +121,8 @@ func (s Source) Latest(ctx context.Context) (Release, bool, error) {
 				candidate.ChecksumsURL = a.URL
 			}
 		}
-		if candidate.ArchiveURL == "" || candidate.ChecksumsURL == "" {
+		if candidate.ArchiveURL == "" || candidate.ChecksumsURL == "" ||
+			!validHTTPSURL(candidate.ArchiveURL) || !validHTTPSURL(candidate.ChecksumsURL) {
 			continue
 		}
 		if !found || Newer(v, best.Version) {
@@ -180,6 +182,11 @@ func (s Source) get(ctx context.Context, url string, limit int64) ([]byte, error
 	return body, nil
 }
 
+func validHTTPSURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	return err == nil && parsed.Scheme == "https" && parsed.Host != ""
+}
+
 // checksumFor finds name's SHA-256 in a sha256sum-format file, as
 // GoReleaser writes it.
 func checksumFor(sums []byte, name string) (string, error) {
@@ -188,6 +195,9 @@ func checksumFor(sums []byte, name string) (string, error) {
 		fields := strings.Fields(lines.Text())
 		if len(fields) == 2 && strings.TrimPrefix(fields[1], "*") == name {
 			if len(fields[0]) != sha256.Size*2 {
+				break
+			}
+			if _, err := hex.DecodeString(fields[0]); err != nil {
 				break
 			}
 			return strings.ToLower(fields[0]), nil
@@ -202,6 +212,7 @@ func replace(path string, archive []byte) error {
 	if err != nil {
 		return fmt.Errorf("unpacking the archive: %w", err)
 	}
+	defer zr.Close()
 	tr := tar.NewReader(zr)
 	for {
 		h, err := tr.Next()
@@ -214,7 +225,7 @@ func replace(path string, archive []byte) error {
 		if h.Name != "bmux" || h.Typeflag != tar.TypeReg {
 			continue
 		}
-		if h.Size > maxBinaryBytes {
+		if h.Size < 0 || h.Size > maxBinaryBytes {
 			return fmt.Errorf("the archive's bmux is larger than %d bytes", maxBinaryBytes)
 		}
 		return swap(path, tr)
@@ -227,8 +238,15 @@ func swap(path string, binary io.Reader) error {
 		return fmt.Errorf("can't write next to %s: %w", path, err)
 	}
 	defer os.Remove(tmp.Name())
-	if _, err = io.Copy(tmp, io.LimitReader(binary, maxBinaryBytes)); err == nil {
+	var n int64
+	if n, err = io.Copy(tmp, io.LimitReader(binary, maxBinaryBytes+1)); err == nil && n > maxBinaryBytes {
+		err = fmt.Errorf("the archive's bmux is larger than %d bytes", maxBinaryBytes)
+	}
+	if err == nil {
 		err = tmp.Chmod(0o755)
+	}
+	if err == nil {
+		err = tmp.Sync()
 	}
 	if closeErr := tmp.Close(); err == nil {
 		err = closeErr

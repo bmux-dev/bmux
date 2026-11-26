@@ -72,7 +72,7 @@ function report(state) {
 function remember(ctx) {
   try {
     const file = ctx?.sessionManager?.getSessionFile?.();
-    if (typeof file === "string" && path.isAbsolute(file)) sessionFile = file;
+    if (typeof file === "string" && path.isAbsolute(file) && file.length <= 4096 && !/[\x00-\x1f\x7f]/.test(file)) sessionFile = file;
   } catch {}
 }
 
@@ -139,7 +139,7 @@ func piDir(e Env) string { return dirFromEnv("PI_CODING_AGENT_DIR", ".pi", "agen
 // ompDir follows omp: PI_CODING_AGENT_DIR is the whole agent directory, else
 // PI_CONFIG_DIR names one under the home directory, else ~/.omp/agent.
 func ompDir(e Env) string {
-	if dir := e.Getenv("PI_CODING_AGENT_DIR"); dir != "" {
+	if dir := e.Getenv("PI_CODING_AGENT_DIR"); dir != "" && filepath.IsAbs(dir) {
 		return dir
 	}
 	if dir := e.Getenv("PI_CONFIG_DIR"); dir != "" {
@@ -301,7 +301,7 @@ async function opencodeV1() {
         case "session.status":
           if (p.status?.type === "idle") busy.delete(p.sessionID);
           else busy.add(p.sessionID);
-          if (p.sessionID && !children.has(p.sessionID)) current = p.sessionID;
+          if (typeof p.sessionID === "string" && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(p.sessionID) && !children.has(p.sessionID)) current = p.sessionID;
           break;
         case "session.idle":
           busy.delete(p.sessionID);

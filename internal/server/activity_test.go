@@ -506,3 +506,18 @@ func TestForegroundAgentSkipsIdleShell(t *testing.T) {
 		t.Fatalf("idle shell foregroundAgent() = (%q, %v), want (\"\", nil)", detected, err)
 	}
 }
+
+func TestValidateResumeHardening(t *testing.T) {
+	for _, argv := range [][]string{
+		{"-claude"},
+		{"."},
+		{".."},
+		{`bin\claude`},
+		{"claude --flag"},
+		{"claude", "\xff"},
+	} {
+		if err := validateResume(argv); err == nil {
+			t.Errorf("validateResume(%v) = nil, want error", argv)
+		}
+	}
+}

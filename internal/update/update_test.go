@@ -265,3 +265,39 @@ func TestCheckerAsksAtMostOncePerInterval(t *testing.T) {
 		t.Fatalf("clock set back: %v, %d requests", err, f.requests.Load())
 	}
 }
+
+func TestSemverAndUpdateSecurityHardening(t *testing.T) {
+	for _, v := range []string{
+		"1.0.0+../evil",
+		"1.0.0+",
+		"1.0.0+a..b",
+		"1.0.0+" + strings.Repeat("a", 130),
+	} {
+		if Valid(v) {
+			t.Errorf("Valid(%q) = true, want false", v)
+		}
+	}
+	if !Valid("1.0.0+build.123") {
+		t.Fatal("Valid(1.0.0+build.123) = false, want true")
+	}
+
+	if _, err := checksumFor([]byte(strings.Repeat("z", 64)+"  bmux_linux_amd64.tar.gz\n"), "bmux_linux_amd64.tar.gz"); err == nil {
+		t.Fatal("checksumFor accepted non-hex checksum")
+	}
+
+	// Latest must skip releases whose asset or checksum URL is not valid HTTPS.
+	f := newFakeReleases(t)
+	f.list = func(base string) string {
+		return fmt.Sprintf(`[{
+			"tag_name": "v0.9.0",
+			"draft": false,
+			"assets": [
+				{"name": "bmux_linux_amd64.tar.gz", "browser_download_url": "http://insecure.example/bmux.tar.gz"},
+				{"name": "checksums.txt", "browser_download_url": "%s/v0.9.0/checksums.txt"}
+			]
+		}]`, base)
+	}
+	if _, found, err := f.source().Latest(context.Background()); err != nil || found {
+		t.Fatalf("Latest selected insecure HTTP asset URL: found=%v err=%v", found, err)
+	}
+}

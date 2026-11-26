@@ -341,3 +341,23 @@ func TestIconsSettingIsCaseInsensitiveAndRejectsUnknownValues(t *testing.T) {
 		t.Fatalf("icons = %q, %v", cfg.UI.Icons, err)
 	}
 }
+
+func TestValidResumeHardening(t *testing.T) {
+	for _, argv := range [][]string{
+		{"-claude"},
+		{"."},
+		{".."},
+		{`bin\claude`},
+		{"claude --flag"},
+		{"claude", "\xff"},
+		make([]string, 65),
+		{"claude", strings.Repeat("a", 8<<10)},
+	} {
+		if argv[0] == "" {
+			argv[0] = "claude"
+		}
+		if err := ValidResume(argv); err == nil {
+			t.Errorf("ValidResume(%v) = nil, want error", argv[0])
+		}
+	}
+}

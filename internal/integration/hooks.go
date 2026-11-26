@@ -107,8 +107,9 @@ type hookEvent struct {
 	NotificationType string `json:"notification_type"`
 }
 
-// sessionID is what agents use for session ids: letters, digits, - and _.
-var sessionID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
+// sessionID is what agents use for session ids: letters, digits, - and _,
+// never starting with - so it cannot be interpreted as a CLI option.
+var sessionID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$`)
 
 // Report is what a hook tells bmux: a `bmux agent` state, the sidebar label,
 // and the command that resumes this exact session (nil when unknown).
