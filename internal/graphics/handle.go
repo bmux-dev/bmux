@@ -83,7 +83,7 @@ func (p *Pane) transmit(cmd command, data []byte) string {
 	if cmd.id > MaxAppID {
 		return reply(cmd, "EINVAL:image id out of range")
 	}
-	img, errText := load(cmd, data, p.store.limits.Pane)
+	img, errText := load(cmd, data, p.store.limits.Pane, p.hooks.AllowFiles)
 	if errText != "" {
 		return reply(cmd, errText)
 	}
@@ -127,21 +127,24 @@ func (p *Pane) display(cmd command) string {
 // image's size over the client's cell size, keeping the aspect ratio when only
 // one is given.
 func (p *Pane) grid(cmd command, info Info) (cols, rows int) {
+	if info.Width <= 0 || info.Height <= 0 {
+		return 1, 1
+	}
 	cw, ch := defaultCellWidth, defaultCellHeight
 	if p.hooks.CellPixels != nil {
 		if w, h := p.hooks.CellPixels(); w > 0 && h > 0 {
 			cw, ch = w, h
 		}
 	}
-	cols, rows = cmd.cols, cmd.rows
-	ceil := func(a, b int) int { return (a + b - 1) / b }
+	cols, rows = min(cmd.cols, maxGridSide), min(cmd.rows, maxGridSide)
+	ceil := func(a, b int64) int { return int((a + b - 1) / b) }
 	switch {
 	case cols <= 0 && rows <= 0:
-		cols, rows = ceil(info.Width, cw), ceil(info.Height, ch)
+		cols, rows = ceil(int64(info.Width), int64(cw)), ceil(int64(info.Height), int64(ch))
 	case rows <= 0:
-		rows = ceil(info.Height*cols*cw, info.Width*ch)
+		rows = ceil(int64(info.Height)*int64(cols)*int64(cw), int64(info.Width)*int64(ch))
 	case cols <= 0:
-		cols = ceil(info.Width*rows*ch, info.Height*cw)
+		cols = ceil(int64(info.Width)*int64(rows)*int64(ch), int64(info.Height)*int64(cw))
 	}
 	return max(1, min(cols, maxGridSide)), max(1, min(rows, maxGridSide))
 }

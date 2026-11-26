@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,8 +34,8 @@ type loaded struct {
 
 // load turns a transmission's payload into a PNG no larger than limit bytes.
 // The error text is a Kitty error ("EINVAL:...") ready to send to the app.
-func load(cmd command, data []byte, limit int64) (loaded, string) {
-	raw, errText := payload(cmd, data, limit)
+func load(cmd command, data []byte, limit int64, allowFiles bool) (loaded, string) {
+	raw, errText := payload(cmd, data, limit, allowFiles)
 	if errText != "" {
 		return loaded{}, errText
 	}
@@ -73,15 +74,16 @@ func fromRaw(cmd command, raw []byte) (loaded, string) {
 	if cmd.format == formatRGB {
 		bpp = 3
 	}
-	if w <= 0 || h <= 0 || int64(w)*int64(h) > maxPixels {
+	if w <= 0 || h <= 0 || int64(w) > maxPixels || int64(h) > maxPixels || int64(w) > maxPixels/int64(h) {
 		return loaded{}, "EINVAL:bad image size"
 	}
-	if int64(len(raw)) != int64(w)*int64(h)*int64(bpp) {
+	pixels := int64(w) * int64(h)
+	if pixels > int64(math.MaxInt)/4 || int64(len(raw)) != pixels*int64(bpp) {
 		return loaded{}, "EINVAL:pixel data does not match s and v"
 	}
 	img := &image.NRGBA{Pix: raw, Stride: w * 4, Rect: image.Rect(0, 0, w, h)}
 	if bpp == 3 {
-		pix := make([]byte, w*h*4)
+		pix := make([]byte, int(pixels*4))
 		for i, j := 0, 0; i < len(raw); i, j = i+3, j+4 {
 			pix[j], pix[j+1], pix[j+2], pix[j+3] = raw[i], raw[i+1], raw[i+2], 0xFF
 		}
@@ -95,9 +97,9 @@ func fromRaw(cmd command, raw []byte) (loaded, string) {
 }
 
 // payload returns the transmitted bytes: decoded from the sequence itself
-// (t=d) or read from a file on this machine (t=f, t=t). Shared memory (t=s)
-// is refused. Nothing here is ever forwarded to the attached terminal.
-func payload(cmd command, data []byte, limit int64) ([]byte, string) {
+// (t=d) or read from a file on this machine (t=f, t=t) when allowFiles is true.
+// Shared memory (t=s) is refused. Nothing here is ever forwarded to the attached terminal.
+func payload(cmd command, data []byte, limit int64, allowFiles bool) ([]byte, string) {
 	switch cmd.medium {
 	case 'd':
 		if int64(len(data)) > limit/3*4+8 {
@@ -115,6 +117,9 @@ func payload(cmd command, data []byte, limit int64) ([]byte, string) {
 		}
 		return raw, ""
 	case 'f', 't':
+		if !allowFiles {
+			return nil, "EINVAL:file transmission disabled"
+		}
 		name, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			name, err = base64.RawStdEncoding.DecodeString(strings.TrimRight(string(data), "="))
@@ -139,15 +144,18 @@ func readFile(name string, cmd command, temporary bool, limit int64) ([]byte, st
 	}
 	real, err := filepath.EvalSymlinks(name)
 	if err != nil {
-		return nil, "ENOENT:cannot read file"
+		return nil, "EINVAL:cannot read file"
 	}
-	if temporary && !(strings.Contains(real, tempMarker) && inTempDir(real)) {
+	if isPseudoFS(real, temporary) {
+		return nil, "EINVAL:cannot read file"
+	}
+	if temporary && !(strings.Contains(filepath.Base(real), tempMarker) && inTempDir(real)) {
 		return nil, "EINVAL:not a graphics temporary file"
 	}
 	// O_NONBLOCK keeps opening a FIFO from hanging; it is refused below.
 	f, err := os.OpenFile(real, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, "ENOENT:cannot read file"
+		return nil, "EINVAL:cannot read file"
 	}
 	defer f.Close()
 	info, err := f.Stat()
@@ -181,6 +189,20 @@ func inTempDir(real string) bool {
 			continue
 		}
 		if rel, err := filepath.Rel(root, real); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			return true
+		}
+	}
+	return false
+}
+
+// isPseudoFS reports whether the resolved path lies in a kernel or device
+// pseudo-filesystem (/proc, /sys, or /dev outside temporary /dev/shm files).
+func isPseudoFS(real string, temporary bool) bool {
+	for _, prefix := range []string{"/proc", "/sys", "/dev"} {
+		if real == prefix || strings.HasPrefix(real, prefix+"/") {
+			if prefix == "/dev" && temporary && strings.HasPrefix(real, "/dev/shm/") {
+				return false
+			}
 			return true
 		}
 	}

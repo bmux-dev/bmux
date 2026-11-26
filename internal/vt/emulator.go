@@ -3,6 +3,7 @@ package vt
 import (
 	"image/color"
 	"io"
+	"strings"
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/ultraviolet/screen"
@@ -89,6 +90,10 @@ type Emulator struct {
 
 	// Indicates if the terminal is closed.
 	closed bool
+
+	// allowChecksum controls whether DECRQCRA rectangular checksum queries
+	// respond; disabled by default to prevent screen-content oracle leaks.
+	allowChecksum bool
 
 	// graphics handles Kitty graphics commands; nil drops them.
 	graphics Graphics
@@ -547,11 +552,21 @@ func (e *Emulator) InputPipe() io.Writer {
 // appropriate escape sequences.
 func (e *Emulator) Paste(text string) {
 	if e.isModeSet(ansi.ModeBracketedPaste) {
+		for strings.Contains(text, ansi.BracketedPasteEnd) || strings.Contains(text, "\x9b201~") {
+			text = strings.ReplaceAll(text, ansi.BracketedPasteEnd, "")
+			text = strings.ReplaceAll(text, "\x9b201~", "")
+		}
 		_, _ = io.WriteString(e.pw, ansi.BracketedPasteStart)
 		defer io.WriteString(e.pw, ansi.BracketedPasteEnd) //nolint:errcheck
 	}
 
 	_, _ = io.WriteString(e.pw, text)
+}
+
+// SetAllowChecksum controls whether DECRQCRA rectangular checksum queries
+// are answered.
+func (e *Emulator) SetAllowChecksum(allow bool) {
+	e.allowChecksum = allow
 }
 
 // SendText sends arbitrary text to the terminal.

@@ -6,9 +6,12 @@ import (
 	"bytes"
 	"image/color"
 	"io"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
 )
+
+const maxOscFieldBytes = 4096
 
 // handleOsc handles an OSC escape sequence.
 func (e *Emulator) handleOsc(cmd int, data []byte) {
@@ -26,7 +29,7 @@ func (e *Emulator) handleTitle(cmd int, data []byte) {
 	}
 	switch cmd {
 	case 0: // Set window title and icon name
-		name := string(parts[1])
+		name := truncateUTF8(string(parts[1]), maxOscFieldBytes)
 		e.iconName, e.title = name, name
 		if e.cb.Title != nil {
 			e.cb.Title(name)
@@ -35,13 +38,13 @@ func (e *Emulator) handleTitle(cmd int, data []byte) {
 			e.cb.IconName(name)
 		}
 	case 1: // Set icon name
-		name := string(parts[1])
+		name := truncateUTF8(string(parts[1]), maxOscFieldBytes)
 		e.iconName = name
 		if e.cb.IconName != nil {
 			e.cb.IconName(name)
 		}
 	case 2: // Set window title
-		name := string(parts[1])
+		name := truncateUTF8(string(parts[1]), maxOscFieldBytes)
 		e.title = name
 		if e.cb.Title != nil {
 			e.cb.Title(name)
@@ -116,7 +119,7 @@ func (e *Emulator) handleWorkingDirectory(cmd int, data []byte) {
 		return
 	}
 
-	path := string(parts[1])
+	path := truncateUTF8(string(parts[1]), maxOscFieldBytes)
 	e.cwd = path
 
 	if e.cb.WorkingDirectory != nil {
@@ -130,7 +133,20 @@ func (e *Emulator) handleHyperlink(cmd int, data []byte) {
 		// Invalid, ignore
 		return
 	}
+	if len(parts[1]) > maxOscFieldBytes || len(parts[2]) > maxOscFieldBytes {
+		return
+	}
 
 	e.scr.cur.Link.Params = string(parts[1])
 	e.scr.cur.Link.URL = string(parts[2])
+}
+
+func truncateUTF8(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	for maxBytes > 0 && !utf8.RuneStart(s[maxBytes]) {
+		maxBytes--
+	}
+	return s[:maxBytes]
 }

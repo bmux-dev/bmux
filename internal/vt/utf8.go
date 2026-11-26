@@ -7,6 +7,14 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+const (
+	// maxGraphemeBytes bounds buffered non-ASCII runes/combining marks before
+	// forcing segmentation so adversarial sequences cannot grow memory or trigger
+	// quadratic clustering passes.
+	maxGraphemeBytes    = 256
+	graphemeShrinkLimit = 4096
+)
+
 // printableASCII reports whether r is a character that can never join the
 // grapheme cluster beside it. No ASCII character is a combining mark, a ZWJ, a
 // spacing mark or a regional indicator, and CR and LF are not printable, so a
@@ -129,6 +137,8 @@ func (e *Emulator) handlePrint(r rune) {
 			return
 		}
 		e.flushGrapheme()
+	} else if len(e.grapheme) >= maxGraphemeBytes {
+		e.flushGrapheme()
 	}
 
 	e.grapheme = utf8.AppendRune(e.grapheme, r)
@@ -162,7 +172,11 @@ func (e *Emulator) flushGrapheme() {
 		e.handleGraphemeBytes(cluster, width)
 		graphemes = graphemes[len(cluster):]
 	}
-	e.grapheme = e.grapheme[:0] // Reset the grapheme buffer.
+	if cap(e.grapheme) > graphemeShrinkLimit {
+		e.grapheme = nil
+	} else {
+		e.grapheme = e.grapheme[:0] // Reset the grapheme buffer.
+	}
 }
 
 // handleSingleRune writes a single-rune grapheme directly without allocating a string.

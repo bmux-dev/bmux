@@ -21,11 +21,21 @@ func TestChecksumOfRectangularArea(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			term := newTestTerminal(t, 10, 4)
+			term.SetAllowChecksum(true)
 			read := replies(term)
 			term.WriteString(tc.input + tc.query)
 			if got := read(); got != tc.want {
 				t.Fatalf("reply %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestChecksumDisabledByDefault(t *testing.T) {
+	term := newTestTerminal(t, 10, 4)
+	read := replies(term)
+	term.WriteString("SECRET\x1b[7;0;1;1;1;6*y")
+	if got := read(); got != "" {
+		t.Fatalf("expected DECRQCRA reply to be disabled by default, got %q", got)
 	}
 }

@@ -1,6 +1,7 @@
 package graphics
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -48,7 +49,7 @@ func parseCommand(control []byte) (command, error) {
 		key, value, ok := strings.Cut(field, "=")
 		if !ok || len(key) != 1 {
 			if field != "" && bad == nil {
-				bad = fmt.Errorf("malformed key %q", field)
+				bad = errors.New("malformed key")
 			}
 			continue
 		}

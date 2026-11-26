@@ -140,3 +140,21 @@ func TestDoubleClickCopyClearsTheSelection(t *testing.T) {
 		t.Fatalf("double-click copied %q", got)
 	}
 }
+
+func TestFitSanitizesC1ControlRunesAndOversizedClusters(t *testing.T) {
+	got := fit("a\u009b[31mb\u009dc\x07d\x7fe", 13)
+	if strings.ContainsAny(got, "\u009b\u009d\x07\x7f\x1b") {
+		t.Fatalf("fit left control rune in output: %q", got)
+	}
+	if !strings.Contains(got, "a [31mb c d e") {
+		t.Fatalf("fit output = %q", got)
+	}
+	cluster := "e" + strings.Repeat("\u0301", 400)
+	capped := fit(cluster+"ok", 8)
+	if len(capped) > maxFitClusterBytes+32 {
+		t.Fatalf("fit retained oversized cluster (%d bytes)", len(capped))
+	}
+	if displayWidth(capped) != 8 {
+		t.Fatalf("fit width = %d, want 8", displayWidth(capped))
+	}
+}
