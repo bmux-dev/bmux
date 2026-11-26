@@ -2,6 +2,14 @@
 
 All releases during `0.x` are pre-releases on [GitHub Releases](https://github.com/bmux-dev/bmux/releases). When the protocol version changes between releases, run `bmux restart` after upgrading to switch the server onto the new version.
 
+## v0.7.7 — 2026-11-26
+
+- Added an opt-in beta release channel (`bmux update --beta`, `--stable`, `[update] channel`, `BMUX_UPDATE_CHANNEL`, and `BMUX_CHANNEL=beta` in `install.sh`) plus a manual `.github/workflows/beta.yml` workflow that builds and publishes pre-releases without touching Homebrew.
+- Added a hard per-pane scrollback memory cap (`scrollback.max-mb`, default `64` MiB, `0` = unlimited, live-reloadable via `bmux reload`).
+- Hardened untrusted input and CI boundaries: context-aware shell quoting for `#{...}` plus `BMUX_PANE_*` environment variables in hooks/`run-shell`/`if-shell`/`pipe-pane`, CSI repeat-count caps, bracketed-paste end-marker stripping, C1 control filtering in the status bar, 4 KiB OSC field caps, Kitty file-path rules & raw image dimension overflow checks, `layout save` trust preservation and bounded non-blocking layout reads, atomic `F_DUPFD_CLOEXEC` PTY duplication, state-directory permission checks, pinned GitHub Actions SHAs with Dependabot, and `Sync()` before swapping updated binaries.
+- Fixed Ctrl-click link copying without a browser (OSC 52) and Homebrew Caskroom detection in `bmux update`; overhauled `README.md`, live-agent workflow demo, `CONTRIBUTING.md`, and `CHANGELOG.md`.
+- Protocol version 11 unchanged: run `bmux restart` when convenient to bring the server onto `v0.7.7`.
+
 ## v0.7.6 — 2026-11-25
 
 - Added first-class Google Antigravity CLI (`agy`) support: foreground detection, `agy --continue` restore, lifecycle hooks in `~/.gemini/config/hooks.json`, and the `bmux` skill via `bmux integration install agy`.
