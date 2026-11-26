@@ -8,7 +8,7 @@ agent status sidebar, and modeless mouse selection, with no plugin manager.
 
 | | Version | Focus |
 | --- | --- | --- |
-| **Shipped** | [v0.7.6](#already-built) | Antigravity (`agy`) support, Homebrew tap, `bmux-dev/bmux` module path, redesigned docs & demo ([Releases](https://github.com/bmux-dev/bmux/releases)) |
+| **Shipped** | [v0.7.7](#already-built) | `scrollback.max-mb` memory cap, security hardening, opt-in beta release channel, Ctrl-click SSH copy ([Releases](https://github.com/bmux-dev/bmux/releases)) |
 | **Now** | [v0.8](#v08-hardening) | Everything 1.0 needs: memory caps, bug fixes, compatibility, quality |
 | **Later** | [v1.0](#v10-stable) | v0.8, once it's stable: no new features |
 | | [Ideas](#ideas) | Worktree actions, popups, hints, multi-client, notifications |
@@ -89,6 +89,7 @@ Worth doing, not yet scheduled. Open or upvote an issue if one matters to you.
 
 | Milestone | Highlights |
 | --- | --- |
+| **v0.7.7** | Hard per-pane `scrollback.max-mb` memory cap; opt-in beta release channel (`bmux update --beta`/`--stable`); shell/VT/Kitty/layout security hardening; Ctrl-click OSC 52 link copy ([#226](https://github.com/bmux-dev/bmux/pull/226), [#227](https://github.com/bmux-dev/bmux/pull/227), [#231](https://github.com/bmux-dev/bmux/pull/231)–[#237](https://github.com/bmux-dev/bmux/pull/237), [#239](https://github.com/bmux-dev/bmux/pull/239)) |
 | **v0.7.6** | First-class Antigravity (`agy`) detection, hooks, skill, and `agy --continue` restore; Homebrew cask tap (`brew install --cask bmux-dev/tap/bmux`); `github.com/bmux-dev/bmux` module migration; redesigned docs site and demo |
 | **v0.7.5** | 6.9× faster build output (`200k` lines in `0.06 s`), `~1.5 ms` median echo latency, `~4.5×` lower scrollback RAM (`26 MiB` vs `115 MiB`), `0 Hz` idle redraws, and Protocol v11 row deltas ([#190](https://github.com/bmux-dev/bmux/pull/190)) |
 | **v0.7.0–v0.7.4** | Git worktree grouping & single-click sidebar (`v0.7.2`, [#149](https://github.com/bmux-dev/bmux/issues/149)), 25 Neovim colorscheme presets & `bmux theme`, floating notice boxes (`ui.notice-position`), OpenCode V2 integration, `esctest` conformance, compatibility fixture tests, and `BMUX_PPROF_DIR` profiling |
