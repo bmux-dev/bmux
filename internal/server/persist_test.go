@@ -14,6 +14,14 @@ import (
 
 func persistentServer(t *testing.T, path string) *Server {
 	t.Helper()
+	// t.TempDir's subfolders follow the umask, which may leave them
+	// writable by others; the state folder must not be.
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	s := New("/bin/sh")
 	if err := s.EnablePersistence(path); err != nil {
 		t.Fatal(err)
@@ -213,5 +221,25 @@ func TestUnreadableOrInvalidStateNeverBlocksStartup(t *testing.T) {
 	}
 	if m := s.sessions["missing-dirs"]; m.info.Dir != os.Getenv("HOME") || m.panes[7] == nil {
 		t.Fatalf("missing directories: dir %q panes %v", m.info.Dir, m.panes)
+	}
+}
+
+func TestStateDirectoryMustNotBeWritableByOthers(t *testing.T) {
+	shared := filepath.Join(t.TempDir(), "shared")
+	if err := os.Mkdir(shared, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(shared, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeState(filepath.Join(shared, "sessions.json"), []byte(`{"version":1}`)); err == nil {
+		t.Fatal("saved sessions into a world-writable directory")
+	}
+	// The usual 0755 left by a 022 umask is fine.
+	if err := os.Chmod(shared, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeState(filepath.Join(shared, "sessions.json"), []byte(`{"version":1}`)); err != nil {
+		t.Fatal(err)
 	}
 }

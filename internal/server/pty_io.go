@@ -10,11 +10,10 @@ import (
 // poller. Merely changing flags on an already-wrapped File is insufficient.
 // Requiring deadlines proves Close can wake concurrent Read and Write.
 func pollablePTY(f *os.File) (*os.File, error) {
-	fd, err := unix.Dup(int(f.Fd()))
+	fd, err := unix.FcntlInt(f.Fd(), unix.F_DUPFD_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}
-	unix.CloseOnExec(fd)
 	if err = unix.SetNonblock(fd, true); err != nil {
 		_ = unix.Close(fd)
 		return nil, err
