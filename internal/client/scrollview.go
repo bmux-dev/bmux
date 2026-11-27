@@ -383,7 +383,7 @@ func (u *ui) runSearch(query string, up bool) {
 		u.notice("No search yet: / searches down, ? searches up")
 		return
 	}
-	u.view.query, u.view.up = query, up
+	u.view.query = query
 	direction := "down"
 	if up {
 		direction = "up"

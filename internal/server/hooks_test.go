@@ -168,3 +168,73 @@ func TestHooksPreventShellInjectionFromPaneMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestRunShellMessageWakesIdleAttachedClient(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := New("/bin/sh")
+	finished := make(chan error, 1)
+	go func() { finished <- srv.Serve(l) }()
+	defer func() { srv.Close(); <-finished }()
+
+	if r := srv.request(protocol.Request{Op: "create", Name: "hook-msg", Dir: t.TempDir(), Width: 80, Height: 24}); r.Error != "" {
+		t.Fatal(r.Error)
+	}
+	s := srv.sessions["hook-msg"]
+
+	c, err := net.Dial("tcp", l.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	enc, dec := json.NewEncoder(c), json.NewDecoder(c)
+	if err := enc.Encode(protocol.Request{Version: protocol.Version, Op: "attach", Name: "hook-msg", Width: 80, Height: 24}); err != nil {
+		t.Fatal(err)
+	}
+	var r protocol.Response
+	if err := dec.Decode(&r); err != nil || r.Error != "" {
+		t.Fatalf("attach: %+v %v", r, err)
+	}
+	frames := make(chan *protocol.Frame, 32)
+	go func() {
+		for {
+			var resp protocol.Response
+			if dec.Decode(&resp) != nil {
+				close(frames)
+				return
+			}
+			if resp.Frame != nil {
+				frames <- resp.Frame
+			}
+		}
+	}()
+
+	// Drain initial attach frame before triggering run-shell on an idle session.
+	select {
+	case <-frames:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for initial frame")
+	}
+
+	if err := s.runShell(1, "echo hello-hook"); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case f, ok := <-frames:
+			if !ok {
+				t.Fatal("attachment closed before receiving run-shell message")
+			}
+			if f.Message == "hello-hook" {
+				return
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for idle client wake-up after run-shell showMessage")
+		}
+	}
+}

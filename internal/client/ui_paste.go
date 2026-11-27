@@ -61,6 +61,8 @@ func (u *ui) handleRawPaste(e *rawPasteEvent) {
 	} else if u.closeConfirm != 0 || u.closeWindow != 0 {
 		// Pasted text never confirms closing a pane or window.
 		u.closeConfirm, u.closeWindow, u.closeCommand = 0, 0, ""
+	} else if u.welcome || u.help || u.integrations.open || u.sidebarFocus {
+		// Overlays and focused sidebar never forward pasted text to the pane.
 	} else {
 		u.resumeLive()
 		u.send(protocol.Request{Op: "paste", Text: e.Text})

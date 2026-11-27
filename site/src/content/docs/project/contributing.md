@@ -112,8 +112,8 @@ its effect.
 A release is a tag on `main`. Pushing it runs CI and then GoReleaser
 (`.github/workflows/release.yml`), which uploads `bmux_<os>_<arch>.tar.gz` for
 Linux and macOS on amd64 and arm64, plus `checksums.txt`, to a **draft**
-release. Nothing is public until you publish the draft. The version comes from
-the tag: no file in the code holds it.
+release. Nothing is public—and the Homebrew tap is not updated—until you publish
+the draft. The version comes from the tag: no file in the code holds it.
 
 You need push access and the [GitHub CLI](https://cli.github.com/) (`gh`),
 logged in. Set the version once; the commands below use it:
@@ -201,8 +201,18 @@ says whether the protocol changed and, if it did, to run `bmux restart`
 (programs running in panes end; sessions, windows, layouts, directories and
 agent conversations come back).
 
+Publishing a stable release automatically updates `Casks/bmux.rb` in
+`bmux-dev/homebrew-tap` (so aborting a draft never touches Homebrew). For `0.x`
+pre-releases:
+
 ```sh
-gh release edit "$V" --title "bmux $V" --notes-file notes.md --draft=false --prerelease --latest
+gh release edit "$V" --title "bmux $V" --notes-file notes.md --draft=false --prerelease
+```
+
+For non-prerelease (`1.0+`) releases, mark the release as latest instead:
+
+```sh
+gh release edit "$V" --title "bmux $V" --notes-file notes.md --draft=false --prerelease=false --latest
 ```
 
 ### 6. Try it

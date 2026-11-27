@@ -50,3 +50,45 @@ func TestMarkOnboardedKeepsTheRestOfTheFile(t *testing.T) {
 		t.Fatalf("broken file changed: %q", data)
 	}
 }
+
+func TestMarkOnboardedPreservesSymlink(t *testing.T) {
+	root := t.TempDir()
+	dotfilesDir := filepath.Join(root, "dotfiles")
+	configDir := filepath.Join(root, "xdg", "bmux")
+	if err := os.MkdirAll(dotfilesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	targetPath := filepath.Join(dotfilesDir, "config.toml")
+	if err := os.WriteFile(targetPath, []byte("theme = \"dark\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	linkPath := filepath.Join(configDir, "config.toml")
+	if err := os.Symlink(targetPath, linkPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := MarkOnboarded(linkPath); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Lstat(linkPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected %s to remain a symlink", linkPath)
+	}
+	dest, err := os.Readlink(linkPath)
+	if err != nil || dest != targetPath {
+		t.Fatalf("symlink target = %q (%v), want %q", dest, err, targetPath)
+	}
+	data, err := os.ReadFile(targetPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "onboarding = false") || !strings.Contains(string(data), "theme = \"dark\"") {
+		t.Fatalf("target file missing expected content:\n%s", data)
+	}
+}

@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/bmux-dev/bmux/security/advisories/new
+    about: Please report security issues privately through GitHub Security Advisories rather than public issues.
   - name: Documentation & Guides
     url: https://bmux-dev.github.io/bmux/
     about: Configuration reference, keybindings, SSH/clipboard behavior, and troubleshooting.

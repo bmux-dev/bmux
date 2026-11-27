@@ -2,9 +2,27 @@ package main
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestUpdateSkipsRuntimePrepareBeforeRunning(t *testing.T) {
+	c, ok := findCommand("update")
+	if !ok || c.server != noSocket {
+		t.Fatalf("update server mode = %v, ok=%v; want noSocket", c.server, ok)
+	}
+	badRuntime := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(badRuntime, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("BMUX_RUNTIME_DIR", badRuntime)
+	err := run([]string{"update", "--check"})
+	if err == nil || !strings.Contains(err.Error(), "development build") {
+		t.Fatalf("update --check with invalid runtime dir failed before runUpdate: %v", err)
+	}
+}
 
 func TestUpdateRefusesBinariesItShouldntReplace(t *testing.T) {
 	// Tests run as a checkout build, which bmux update leaves alone, before

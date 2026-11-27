@@ -39,23 +39,3 @@ release:
 
 changelog:
   disable: true
-
-homebrew_casks:
-  - name: bmux
-    # Skip pre-release tags like v0.7.8-beta.1 so Homebrew stays on stable releases.
-    skip_upload: auto
-    repository:
-      owner: bmux-dev
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: "https://bmux-dev.github.io/bmux/"
-    description: "The batteries-included terminal multiplexer built for coding agents"
-    license: "MIT"
-    binaries:
-      - bmux
-    hooks:
-      post:
-        install_steps: |
-          on_macos do
-            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/bmux"]
-          end
