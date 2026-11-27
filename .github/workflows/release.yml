@@ -1,21 +1,26 @@
 name: Release
 
 # Pushing a v* tag runs CI, then builds release archives and checksums and
-# uploads them to a draft release. Write the notes, then publish it.
+# uploads them to a draft release. Publishing a non-prerelease release updates
+# the Homebrew tap cask.
 on:
   push:
     tags:
       - "v*"
       - "!v*-*"
+  release:
+    types: [published]
 
 permissions:
   contents: read
 
 jobs:
   ci:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/ci.yml
 
   release:
+    if: github.event_name == 'push'
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -29,6 +34,23 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
+        with:
+          version: "v2.20.3"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  homebrew:
+    if: github.event_name == 'release' && !contains(github.event.release.tag_name, '-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
       - id: homebrew-tap-token
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
         with:
@@ -37,10 +59,23 @@ jobs:
           owner: bmux-dev
           repositories: homebrew-tap
 
-      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
-        with:
-          version: "v2.20.3"
-          args: release --clean
+      - name: Update Homebrew tap cask
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.homebrew-tap-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_TOKEN: ${{ steps.homebrew-tap-token.outputs.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -eu
+          gh release download "$TAG" --pattern checksums.txt
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/bmux-dev/homebrew-tap.git" tap
+          ./scripts/render-homebrew-cask.sh "${TAG#v}" checksums.txt > tap/Casks/bmux.rb
+          cd tap
+          if git diff --quiet -- Casks/bmux.rb; then
+            echo "Casks/bmux.rb already up to date for $TAG"
+            exit 0
+          fi
+          git config user.name "bmux-bot"
+          git config user.email "noreply@github.com"
+          git add Casks/bmux.rb
+          git commit -m "Brew cask update: $TAG"
+          git push origin main

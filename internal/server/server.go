@@ -380,7 +380,6 @@ func (s *Server) request(r protocol.Request) protocol.Response {
 			break
 		}
 		item.showMessage(r.Text)
-		item.notify()
 	case "pipe-pane":
 		// Text is the command, "" to stop; Kind "toggle" is -o.
 		if item == nil {

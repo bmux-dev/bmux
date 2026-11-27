@@ -213,3 +213,27 @@ func TestRawPasteProjectCreateFormFields(t *testing.T) {
 		}
 	})
 }
+
+func TestRawPasteIgnoredWhileOverlayOrSidebarFocused(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(*ui)
+	}{
+		{"welcome", func(u *ui) { u.welcome = true }},
+		{"help", func(u *ui) { u.help = true }},
+		{"integrations", func(u *ui) { u.integrations.open = true }},
+		{"sidebar", func(u *ui) { u.sidebarFocus = true }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, requests := navigationUI(t)
+			tc.setup(u)
+			u.handleRawPaste(&rawPasteEvent{Text: "echo pwned\n"})
+			select {
+			case r := <-requests:
+				t.Fatalf("paste leaked to pane while %s active: %+v", tc.name, r)
+			default:
+			}
+		})
+	}
+}

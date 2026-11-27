@@ -13,6 +13,7 @@ import (
 
 	"github.com/bmux-dev/bmux/internal/client"
 	"github.com/bmux-dev/bmux/internal/config"
+	"github.com/bmux-dev/bmux/internal/daemon"
 	"github.com/bmux-dev/bmux/internal/protocol"
 	"github.com/bmux-dev/bmux/internal/update"
 	"github.com/bmux-dev/bmux/internal/version"
@@ -93,9 +94,16 @@ func runUpdate(socket string, args []string) error {
 	}
 	fmt.Printf("Updated bmux %s → %s (%s)\n", current, release.Version, exe)
 	// A running server shows the restart hint; with none running, the next
-	// start runs the new binary anyway.
-	if _, err := client.Request(socket, protocol.Request{Op: "update-installed", Text: release.Version}); err == nil {
-		fmt.Println("Run bmux restart to switch the server; programs running in panes end, sessions come back.")
+	// start runs the new binary anyway. Resolve the runtime socket best-effort
+	// here so `sudo bmux update` (where root may not own HOME's cache dir) can
+	// still replace the system binary cleanly.
+	if socket == "" {
+		socket, _ = daemon.Prepare()
+	}
+	if socket != "" {
+		if _, err := client.Request(socket, protocol.Request{Op: "update-installed", Text: release.Version}); err == nil {
+			fmt.Println("Run bmux restart to switch the server; programs running in panes end, sessions come back.")
+		}
 	}
 	return nil
 }

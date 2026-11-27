@@ -149,7 +149,7 @@ func setupFixture(repoAbs, workRoot, binDir, bmuxBin, theme string) (*fixture, e
 	fx.baseEnv = cleanEnv(map[string]string{
 		"PATH":                 helperBin + string(os.PathListSeparator) + binDir + string(os.PathListSeparator) + os.Getenv("PATH"),
 		"HOME":                 fx.homeDir,
-		"USER":                 "jferrero",
+		"USER":                 "bmux",
 		"XDG_CONFIG_HOME":      fx.configDir,
 		"XDG_STATE_HOME":       fx.stateDir,
 		"BMUX_RUNTIME_DIR":     fx.runtimeDir,

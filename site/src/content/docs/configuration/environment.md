@@ -17,7 +17,7 @@ export them in your shell startup file.
 | `BMUX_TERMINAL_PADDING` | `1` preserves physical-terminal padding |
 | `BMUX_SOUND` | `0` turns off agent alert sounds |
 | `BMUX_RUNTIME_DIR` | Custom runtime directory; default follows the [runtime directory rules](/bmux/reference/runtime-files/) |
-| `BMUX_NO_UPDATE_CHECK` | Non-empty value (`1`) disables background update checks (same as `[update] check = false`) |
+| `BMUX_NO_UPDATE_CHECK` | `1` disables background update checks (same as `[update] check = false`) |
 | `BMUX_UPDATE_CHANNEL` | Overrides `update.channel` (`stable` or `beta`) |
 | `BMUX_PPROF_DIR` | Directory where opted-in clients and servers create private `pprof` sockets; disabled by default. See [CPU and allocation profiles](/bmux/reference/troubleshooting/#cpu-and-allocation-profiles) |
 

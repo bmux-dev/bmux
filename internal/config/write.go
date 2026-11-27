@@ -7,8 +7,19 @@ import (
 )
 
 // writeAtomic replaces the file at path with data, keeping its permissions,
-// so a reader never sees half a config file.
+// so a reader never sees half a config file. If path is a symlink, it writes
+// atomically to the resolved target so dotfile symlinks stay intact.
 func writeAtomic(path string, data []byte) error {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	} else if info, lerr := os.Lstat(path); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
+		if link, rerr := os.Readlink(path); rerr == nil {
+			if !filepath.IsAbs(link) {
+				link = filepath.Join(filepath.Dir(path), link)
+			}
+			path = link
+		}
+	}
 	mode := os.FileMode(0o644)
 	if info, err := os.Stat(path); err == nil {
 		mode = info.Mode().Perm()

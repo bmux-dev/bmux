@@ -214,6 +214,18 @@ func TestScrollbackSearchAsksTheServerAndHighlightsMatches(t *testing.T) {
 	if u.view.cursor != (point{0, 104}) {
 		t.Fatalf("after N: %+v", u.view.cursor)
 	}
+	// Repeating N keeps going opposite to the original search; n still goes up.
+	u.key(runeKey('N'))
+	if r := <-rpcs; r.Direction != "down" {
+		t.Fatalf("second N %+v", r)
+	}
+	u.key(runeKey('n'))
+	if r := <-rpcs; r.Direction != "up" {
+		t.Fatalf("n after N %+v", r)
+	}
+	if u.view.cursor != (point{4, 101}) {
+		t.Fatalf("after n: %+v", u.view.cursor)
+	}
 	// No match leaves the cursor and says so.
 	u.key(runeKey('?'))
 	for _, r := range "nothing" {
@@ -221,7 +233,7 @@ func TestScrollbackSearchAsksTheServerAndHighlightsMatches(t *testing.T) {
 	}
 	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	<-rpcs
-	if u.view.cursor != (point{0, 104}) || !strings.Contains(u.message, "no match") {
+	if u.view.cursor != (point{4, 101}) || !strings.Contains(u.message, "no match") {
 		t.Fatalf("no match: cursor %+v message %q", u.view.cursor, u.message)
 	}
 	// Esc in the prompt cancels the search and stays in the view.
