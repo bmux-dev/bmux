@@ -204,7 +204,7 @@ pane = 2
 
 [[panes]]
 id = 1
-command = "fake-agent working Claude"
+command = "fake-agent working agy"
 
 [[panes]]
 id = 2
@@ -215,13 +215,13 @@ command = "fake-agent blocked Codex"
 	}
 
 	apiAuthLayout := `[[windows]]
-name = "claude"
+name = "agy"
 [windows.layout]
 pane = 1
 
 [[panes]]
 id = 1
-command = "fake-agent blocked-interactive Claude"
+command = "fake-agent blocked-interactive agy"
 `
 	if err := os.WriteFile(filepath.Join(fx.projectsDir, "api-auth", ".bmux.toml"), []byte(apiAuthLayout), 0o644); err != nil {
 		return nil, err
@@ -266,13 +266,13 @@ command = "fake-agent idle OpenCode"
 	}
 
 	cliLayout := `[[windows]]
-name = "claude"
+name = "agy"
 [windows.layout]
 pane = 1
 
 [[panes]]
 id = 1
-command = "fake-agent idle Claude"
+command = "fake-agent idle agy"
 `
 	if err := os.WriteFile(filepath.Join(fx.projectsDir, "cli", ".bmux.toml"), []byte(cliLayout), 0o644); err != nil {
 		return nil, err
@@ -630,7 +630,7 @@ func captureDemo(fx *fixture, renderer, theme, outDir string) error {
 	must(rec.send("\r"))
 	recordFor(1800 * time.Millisecond)
 
-	// Chapter 2: Focus sidebar (Ctrl-h), move into AGENTS and jump to blocked Claude in api-auth worktree
+	// Chapter 2: Focus sidebar (Ctrl-h), move into AGENTS and jump to blocked agy in api-auth worktree
 	markChapter("sidebar")
 	must(rec.send("\x08"))
 	recordFor(600 * time.Millisecond)

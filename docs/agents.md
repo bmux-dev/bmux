@@ -36,7 +36,7 @@ but window N does, the error says to write `api:N.`.
 $ bmux agents
 TARGET  AGENT   STATE    SEQ
 api:1   omp     blocked  57   needs you
-web:2   claude  working  61
+web:2   agy     working  61
 ops:1   omp     idle     12   (this pane)
 ```
 
@@ -152,7 +152,7 @@ runs until stopped, in a pane of its own. Whenever another agent pane becomes
 is idle and types one line into it, as if the user had:
 
 ```
-[bmux] web:1 (claude) is blocked and waiting on the user, seq 57. Read it with bmux capture --json web:1; answer with bmux send web:1 --if-seq 57.
+[bmux] web:1 (agy) is blocked and waiting on the user, seq 57. Read it with bmux capture --json web:1; answer with bmux send web:1 --if-seq 57.
 ```
 
 It types one change at a time, keeps only each pane's newest change, drops

@@ -71,7 +71,7 @@ width = 24
 | `agents.extra` | `[]` | More program names to recognize as agents |
 | `agents.working-after` / `agents.waiting-after` | `"2s"` / `"2s"` | How long an agent must draw before it counts as working, and stay quiet before it counts as waiting (1s to 1m) |
 | `restore.enabled` | `true` | Save and restore sessions. When false, nothing is restored or saved and the existing save file is left alone. |
-| `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `claude = ["claude", "--continue", "--model", "opus"]`; `[]` restores it as a plain shell |
+| `restore.resume.AGENT` | built-in | Replace an agent's resume command, e.g. `agy = ["agy", "--continue", "--mode", "accept-edits"]`; `[]` restores it as a plain shell |
 | `projects.roots` | `["~/code", "~/src", "~/projects", "~/dev"]` | Folders the [new-session popup](/bmux/guides/project-picker/) lists for git repositories; absolute or `~/` paths. Missing ones are skipped. |
 | `projects.depth` | `3` | How many levels below each root to look (1 to 6) |
 | `projects.start-dir` | `""` | Folder the new-session popup's Create tab starts in, and what its relative paths are relative to, e.g. `"~"`; absolute or `~/` path. Empty means the directory bmux was started in. |
