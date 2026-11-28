@@ -16,7 +16,7 @@ are dropped when it leaves the foreground. Agents bmux doesn't recognize can
 still report themselves.
 
 After `--`, a report can include the command that reopens this conversation,
-such as `bmux agent idle claude -- claude --resume "$SESSION_ID"`. It replaces
+such as `bmux agent idle agy -- agy --resume "$SESSION_ID"`. It replaces
 the built-in resume command when the server restarts. The first word must be
 a command name on `PATH`; at most 64 arguments and 8 KiB, no control
 characters.

@@ -16,8 +16,8 @@ and shows what happened; **Esc** closes it. The same from a shell:
 ```sh
 bmux integration status            # installed, update available, available or not found
 bmux integration install           # every agent on PATH, and updates
-bmux integration install claude    # or name them
-bmux integration uninstall claude
+bmux integration install agy       # or name them
+bmux integration uninstall agy
 ```
 
 | Agent | What it installs | Reports |

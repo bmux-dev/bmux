@@ -22,7 +22,7 @@ and Linux.
 
 <p align="center">
   <a href="https://bmux-dev.github.io/bmux/#demo">
-    <img alt="bmux demo: opening a git worktree project, approving a blocked coding agent, live sidebar status updates, and session picker previews" src="site/public/demo/demo.webp" width="100%" />
+    <img alt="bmux demo: opening a git worktree project, approving a blocked coding agent, live sidebar status updates, and session picker previews" src="site/public/demo/demo.webp?v=2" width="100%" />
   </a>
   <br />
   <sub>Project &amp; git worktree picker (<code>Ctrl-a n</code>) · Live coding-agent sidebar (<code>Ctrl-h</code>) · Session previews (<code>Ctrl-a s</code>) · <a href="https://bmux-dev.github.io/bmux/#demo">Full 30fps demo →</a></sub>
@@ -44,7 +44,7 @@ brew install --cask bmux-dev/tap/bmux
 curl -fsSL https://raw.githubusercontent.com/bmux-dev/bmux/main/install.sh | sh
 ```
 
-**From source** (Go 1.27.3+ — Go is only needed when building from source; Homebrew and `install.sh` ship self-contained static binaries):
+**From source** (Go 1.26+ — Go is only needed when building from source; Homebrew and `install.sh` ship self-contained static binaries):
 
 ```sh
 go install github.com/bmux-dev/bmux/cmd/bmux@latest
@@ -67,7 +67,7 @@ go install github.com/bmux-dev/bmux/cmd/bmux@latest
 
 ## Agents
 
-Run **Claude Code, Codex, Antigravity (`agy`), Gemini CLI, OpenCode, omp, pi**, or any custom CLI in any pane. bmux detects it from the pane's foreground process with zero setup and lists your sessions (grouped by git worktree with optional `ui.show-branch` labels) alongside every running agent in the sidebar:
+Run **Antigravity (`agy`), Codex, Claude Code, Gemini CLI, OpenCode, omp, pi**, or any custom CLI in any pane. bmux detects it from the pane's foreground process with zero setup and lists your sessions (grouped by git worktree with optional `ui.show-branch` labels) alongside every running agent in the sidebar:
 
 | Indicator | State |
 | --- | --- |
@@ -83,7 +83,7 @@ bmux never scrapes agent state from screen text. For exact `working`/`blocked`/`
 
 ```sh
 bmux integration status          # what's installed and on PATH
-bmux integration install         # every agent found, or name one: install claude
+bmux integration install         # every agent found, or name one: install agy
 bmux integration uninstall codex
 ```
 
@@ -237,7 +237,7 @@ extra = ["myagent"]
 waiting-after = "5s"
 
 [restore.resume]
-claude = ["claude", "--continue", "--model", "opus"]
+agy = ["agy", "--continue", "--mode", "accept-edits"]
 
 [keys.root]
 "C-l" = "none"              # restore Ctrl-l clear-screen in shells
